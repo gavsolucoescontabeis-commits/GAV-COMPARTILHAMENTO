@@ -9,3 +9,10 @@ comment on column public.gav_drive_folders.auto_publish_new is
 -- Status review_status = BLOQUEADO impede republicação automática
 -- de arquivos que a administração decidiu ocultar.
 -- Publicação automática nunca retroage aos arquivos antigos pendentes.
+
+-- Atualizar os status permitidos para manter exceções ao publicar automaticamente.
+alter table public.gav_documents
+  drop constraint if exists gav_documents_review_status_check;
+alter table public.gav_documents
+  add constraint gav_documents_review_status_check
+  check (review_status in ('PENDENTE','APROVADO','REJEITADO','BLOQUEADO','REMOVIDO'));
