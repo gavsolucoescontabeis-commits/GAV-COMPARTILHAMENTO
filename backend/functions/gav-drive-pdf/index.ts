@@ -45,14 +45,14 @@ Deno.serve(async req=>{
    if(!m)err("Você não tem acesso aos documentos desta empresa.",403);
   }
   const doc=get(await s.from("gav_documents").select("id,drive_file_id,drive_folder_link_id,mime_type,file_name,published_at,review_status").eq("id",document).eq("company_id",company).maybeSingle());
-  if(!doc)err("PDF não encontrado.",404);
+  if(!doc)err("Documento não encontrado.",404);
   if(!admin&&(doc.review_status!=="APROVADO"||!doc.published_at))err("PDF não liberado ao cliente.",403);
-  if(doc.mime_type!=="application/pdf")err("Somente PDFs.",415);
+  if(!["application/pdf","image/jpeg","image/png","image/webp"].includes(doc.mime_type))err("Tipo de arquivo não permitido.",415);
   const folder=get(await s.from("gav_drive_folders").select("drive_folder_id").eq("id",doc.drive_folder_link_id).eq("company_id",company).eq("is_active",true).maybeSingle());
   if(!folder)err("Vínculo de pasta inativo.",403);
   const access=await driveAccess(b,admin);
   let node=await info(doc.drive_file_id,access);
-  if(node.trashed||node.mimeType!=="application/pdf"||Number(node.size||0)>25000000)err("PDF excluído ou acima de 25 MB.",409);
+  if(node.trashed||node.mimeType!==doc.mime_type||Number(node.size||0)>25000000)err("Arquivo removido, alterado ou acima de 25 MB.",409);
   let parents=node.parents||[],seen=new Set<string>(),valid=false;
   for(let depth=0;depth<24&&parents.length;depth++){
    if(parents.includes(folder.drive_folder_id)){valid=true;break}
@@ -61,13 +61,13 @@ Deno.serve(async req=>{
   }
   if(!valid)err("Este PDF foi movido para fora da pasta autorizada.",403);
   const r=await fetch("https://www.googleapis.com/drive/v3/files/"+encodeURIComponent(doc.drive_file_id)+"?alt=media",{headers:{Authorization:"Bearer "+access}});
-  if(!r.ok||!r.body)err("Não foi possível transferir o PDF original.",502);
+  if(!r.ok||!r.body)err("Não foi possível transferir o documento original.",502);
   EdgeRuntime.waitUntil(s.from("gav_audit_events")
    .insert({actor_user_id:user.id,company_id:company,document_id:doc.id,action:b.mode==="download"?"PDF_BAIXADO":"PDF_VISUALIZADO"})
    .then(({error})=>{if(error)console.warn("Falha ao registrar acesso",error.code)}));
   const name=doc.file_name.replace(/[\r\n]/g,"_");
   const mode=b.mode==="download"?"attachment":"inline";
   const fileSize=r.headers.get("content-length");
-  return new Response(r.body,{headers:{...cors,"Content-Type":"application/pdf","X-Content-Type-Options":"nosniff","Content-Disposition":mode+"; filename*=UTF-8''"+encodeURIComponent(name),...(fileSize?{"Content-Length":fileSize}:{})}});
+  return new Response(r.body,{headers:{...cors,"Content-Type":doc.mime_type,"X-Content-Type-Options":"nosniff","Content-Disposition":mode+"; filename*=UTF-8''"+encodeURIComponent(name),...(fileSize?{"Content-Length":fileSize}:{})}});
  }catch(e:any){return new Response(JSON.stringify({error:String(e.message||"Erro")}),{status:e.status||500,headers:{...cors,"Content-Type":"application/json"}})}
 });
