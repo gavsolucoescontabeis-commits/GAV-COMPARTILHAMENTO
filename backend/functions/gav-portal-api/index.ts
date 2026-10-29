@@ -52,7 +52,7 @@ Deno.serve(async req=>{
   }
   if(action==="documents"){
    companyOnly();
-   let q=supa.from("gav_documents").select("id,company_id,file_name,relative_path,category,year,month,review_status,published_at").eq("company_id",companyId).order("file_name");
+   let q=supa.from("gav_documents").select("id,company_id,file_name,mime_type,relative_path,category,year,month,review_status,published_at").eq("company_id",companyId).order("file_name");
    if(!isAdmin)q=q.eq("review_status","APROVADO").not("published_at","is",null);
    return reply({documents:check(await q.limit(1000))});
   }
@@ -72,6 +72,20 @@ Deno.serve(async req=>{
    const link=check(await supa.from("gav_drive_folders").upsert({company_id:companyId,drive_folder_id:c.folder_id,drive_parent_id:c.expected_parent_id,approved_by:user.id,is_active:true},{onConflict:"company_id,drive_folder_id"}).select());
    check(await supa.from("gav_drive_candidates").update({verified_at:new Date().toISOString()}).eq("company_id",companyId));
    return reply({folder:folder.name,linked:link.length});
+  }
+  if(action==="publishMonth"||action==="revokeMonth"){
+   adminOnly();
+   const y=Number(b.year),m=Number(b.month),c=String(b.category||"");
+   if(!["FOLHA","ADMISSOES","RESCISOES","FERIAS","GUIAS_IMPOSTOS","OUTROS"].includes(c)||!Number.isInteger(y)||y<2000||y>2100||!Number.isInteger(m)||m<1||m>13)error("Selecione uma pasta mensal válida.",400);
+   const linked=check(await supa.from("gav_drive_folders").select("id").eq("company_id",companyId).eq("is_active",true));
+   if(!linked.length)error("Empresa sem pasta autorizada.",409);
+   const folders=linked.map((v:any)=>v.id);
+   const rows=check(await supa.from("gav_documents").select("id").eq("company_id",companyId).eq("category",c).eq("year",y).eq("month",m).in("drive_folder_link_id",folders).limit(500));
+   if(!rows.length)error("Não há arquivos nessa competência.",404);
+   const ids=rows.map((v:any)=>v.id);
+   const changes=action==="publishMonth"?{review_status:"APROVADO",published_at:new Date().toISOString()}:{review_status:"PENDENTE",published_at:null};
+   const result=check(await supa.from("gav_documents").update(changes).eq("company_id",companyId).in("id",ids).select("id"));
+   return reply({ok:true,updated:result.length});
   }
   if(action==="publish"||action==="unpublish"){
    adminOnly();
