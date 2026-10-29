@@ -5,14 +5,27 @@ const origin="https://gavsolucoescontabeis-commits.github.io";
 const cors={"Access-Control-Allow-Origin":origin,"Access-Control-Allow-Headers":"authorization,apikey,content-type,x-client-info","Access-Control-Allow-Methods":"POST,OPTIONS","Cache-Control":"no-store"};
 const err=(message:string,status=400):never=>{throw {message,status}};
 const get=(r:any)=>{if(r.error)err("Falha no servidor de documentos.",502);return r.data};
+// Credencial Google em cache restrito à instância, renovada quando necessário.
+let googleAccessCache:{value:string;expires:number}={value:"",expires:0};
 async function driveAccess(body:any,admin:boolean){
- if(admin&&typeof body.googleToken==="string"&&body.googleToken.length>30)return body.googleToken;
+ if(googleAccessCache.value&&Date.now()<googleAccessCache.expires)return googleAccessCache.value;
  const id=Deno.env.get("GOOGLE_OAUTH_CLIENT_ID"),secret=Deno.env.get("GOOGLE_OAUTH_CLIENT_SECRET");
- if(!id||!secret)err("Credenciais Google do backend ainda não configuradas.",409);
- const ref=get(await s.rpc("gav_read_drive_refresh"));if(!ref)err("Google Drive ainda não conectado.",409);
- const r=await fetch("https://oauth2.googleapis.com/token",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:new URLSearchParams({grant_type:"refresh_token",client_id:id,client_secret:secret,refresh_token:ref})});
- if(!r.ok)err("A autorização do Google precisa ser renovada.",409);
- return (await r.json()).access_token;
+ if(id&&secret){
+  const ref=get(await s.rpc("gav_read_drive_refresh"));
+  if(ref){
+   const r=await fetch("https://oauth2.googleapis.com/token",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:new URLSearchParams({grant_type:"refresh_token",client_id:id,client_secret:secret,refresh_token:ref})});
+   if(r.ok){
+    const j=await r.json();
+    if(j.access_token){
+     googleAccessCache={value:j.access_token,expires:Date.now()+Math.max(60,Math.min(Number(j.expires_in||3600)-120,2400))*1000};
+     return j.access_token;
+    }
+   }
+   console.warn("GAV: refresh Google indisponível");
+  }
+ }
+ if(admin&&typeof body.googleToken==="string"&&body.googleToken.length>30)return body.googleToken;
+ err("A conexão do Drive precisa ser renovada pela administração GAV.",409);
 }
 async function info(id:string,t:string){
  const u=new URL("https://www.googleapis.com/drive/v3/files/"+encodeURIComponent(id));u.searchParams.set("fields","id,parents,trashed,mimeType,size");
@@ -49,8 +62,12 @@ Deno.serve(async req=>{
   if(!valid)err("Este PDF foi movido para fora da pasta autorizada.",403);
   const r=await fetch("https://www.googleapis.com/drive/v3/files/"+encodeURIComponent(doc.drive_file_id)+"?alt=media",{headers:{Authorization:"Bearer "+access}});
   if(!r.ok||!r.body)err("Não foi possível transferir o PDF original.",502);
-  await s.from("gav_audit_events").insert({actor_user_id:user.id,company_id:company,document_id:doc.id,action:"PDF_ABERTO"});
+  EdgeRuntime.waitUntil(s.from("gav_audit_events")
+   .insert({actor_user_id:user.id,company_id:company,document_id:doc.id,action:b.mode==="download"?"PDF_BAIXADO":"PDF_VISUALIZADO"})
+   .then(({error})=>{if(error)console.warn("Falha ao registrar acesso",error.code)}));
   const name=doc.file_name.replace(/[\r\n]/g,"_");
-  return new Response(r.body,{headers:{...cors,"Content-Type":"application/pdf","X-Content-Type-Options":"nosniff","Content-Disposition":"inline; filename*=UTF-8''"+encodeURIComponent(name)}});
+  const mode=b.mode==="download"?"attachment":"inline";
+  const fileSize=r.headers.get("content-length");
+  return new Response(r.body,{headers:{...cors,"Content-Type":"application/pdf","X-Content-Type-Options":"nosniff","Content-Disposition":mode+"; filename*=UTF-8''"+encodeURIComponent(name),...(fileSize?{"Content-Length":fileSize}:{})}});
  }catch(e:any){return new Response(JSON.stringify({error:String(e.message||"Erro")}),{status:e.status||500,headers:{...cors,"Content-Type":"application/json"}})}
 });
