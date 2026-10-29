@@ -2,7 +2,7 @@
 
 Portal de documentos para clientes e gestão administrativa da GAV Soluções Contábeis.
 
-## Versão atual: v0.8.0 (interface + preparação do backend)
+## Versão atual: v0.8.1 (marca transparente + backend isolado)
 
 Arquivo principal: `index.html`, já publicado na branch `main`. Github Pages: [abrir protótipo](https://gavsolucoescontabeis-commits.github.io/GAV-COMPARTILHAMENTO/).
 
@@ -19,13 +19,13 @@ Arquivo principal: `index.html`, já publicado na branch `main`. Github Pages: [
 
 A página acompanha a branch `main` pelo GitHub Pages. Não instalar ZIP nem trocar de endereço a cada atualização; acessar pelo navegador. A propagação de commits pode levar alguns instantes e o navegador pode precisar atualizar o cache.
 
-**Identidade visual:** imagens originais de `GAV-Site/NOME E LOGO.jpeg` e `GAV-Site/IMAGEM LEAO.jpeg` incorporadas à interface v0.8.0, preservando o layout aprovado.
+**Identidade visual:** a v0.8.1 usa `assets/logo-gav-sem-fundo.svg` e `assets/leao-gav-sem-fundo.svg`, com transparência visual aplicada aos arquivos originais fornecidos pelo usuário (fundo preto removido e desenho dourado preservado). O layout aprovado permanece.
 
 ## Preparação para o primeiro acesso real
 
-- `backend/SCHEMA_PILOTO_PREPARACAO.sql`: proposta de banco separado com RLS por usuário/empresa, escopos de serviço, vinculação explícita das pastas do Drive e documentos não publicados por padrão. **Ainda não foi aplicado**.
+- `backend/SCHEMA_PILOTO_PREPARACAO.sql`: banco separado de GAV Compartilhamento **criado e migrações aplicadas** no Supabase em 29/10/2026, com 10 tabelas, RLS por usuário/empresa, escopos de serviço, vínculo explícito do Drive e documentos não publicados por padrão. A carteira inicial de 18 empresas TTM foi gravada no banco privado. **O frontend ainda usa o login de demonstração; não há cliente real habilitado.**
 - A empresa piloto deverá ser autorizada e ter seu ID real de pasta do Google Drive vinculado via backend OAuth.
-- Sem essa conexão e um projeto independente de autenticação/banco, o site continua sendo **demonstração**; os arquivos não foram sincronizados e os dados locais não são persistência centralizada.
+- O banco existe, mas **o login real do frontend e a conexão Google Drive OAuth ainda não foram implantados**; os PDFs não foram sincronizados nem publicados. Os dados gravados apenas no navegador continuam sendo demonstrativos.
 - Não reutilizar o projeto Supabase Ministério Infantil; não habilitar compartilhamento por nome aproximado ou pasta detectada.
 
 ## Funcionalidades de teste
