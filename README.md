@@ -2,7 +2,7 @@
 
 Portal de documentos para clientes e gestão administrativa da GAV Soluções Contábeis.
 
-## Versão atual: v0.6 (demonstração)
+## Versão atual: v0.6.1 (demonstração)
 
 Arquivo principal: `index.html`, já publicado na branch `main`. Github Pages: [abrir protótipo](https://gavsolucoescontabeis-commits.github.io/GAV-COMPARTILHAMENTO/).
 
@@ -13,12 +13,12 @@ Arquivo principal: `index.html`, já publicado na branch `main`. Github Pages: [
 - Área do cliente com documentos fictícios, organizados por categorias, competência e ano.
 - Painel administrativo com empresas, categorias e controle de processamento de folhas.
 - Leitor de pastas com seleção individual das empresas a considerar para compartilhamento. Os quatro escritórios/origens aparecem em botões destacados no painel administrativo e na leitura de pastas, inclusive em celular.
-- Pré-cadastro TTM: importação em lote por colunas CÓDIGO, EMPRESA, CNPJ (texto TSV ou CSV separado por ponto e vírgula). Salva somente no navegador; não inclui empresas ou CNPJs reais no GitHub. O vínculo com pastas físicas prioriza o código e exige conferência quando o nome diverge.
+- **Pré-cadastro TTM já realizado (18 empresas):** os nomes, códigos e CNPJs ficam no arquivo `ttm-registry.enc.json`, criptografado por AES-256-GCM com chave derivada por PBKDF2. A chave não está no repositório. A relação abre automaticamente na área administrativa após o usuário informar sua chave; nenhuma importação manual é necessária. O vínculo com pastas físicas prioriza o código e exige conferência quando o nome diverge.
 - Origens: `TTM`, `REL GAV`, `DS CONTÁBIL` e `AVULSOS` (pastas sem numeração).
 - Padrão BAT: `ADM`, `RES`, `FER`, `X2026`, meses `0126`, `012026`, `1325` etc.
 - Exportação CSV da seleção e da conferência; nenhuma pasta selecionada por padrão.
 
-A leitura de pastas é **manual e local no navegador**: usa nomes, caminhos, datas e tamanhos de arquivos. O conteúdo não é enviado. A seleção é temporária e não constitui autorização real para clientes nem sincronização contínua com Google Drive. O pré-cadastro importado fica somente no armazenamento local do navegador atual, sem sincronização com outros computadores ou celulares.
+A leitura de pastas é **manual e local no navegador**: usa nomes, caminhos, datas e tamanhos de arquivos. O conteúdo não é enviado. A seleção é temporária e não constitui autorização real para clientes nem sincronização contínua com Google Drive. O cadastro TTM cifrado está no repositório e pode ser aberto com a chave administrativa de teste em outro navegador, mas o aplicativo **não** oferece autenticação de produção, controle centralizado de permissões ou banco de dados compartilhado. Não usar para documentos reais.
 
 ## Próxima etapa de produção
 
