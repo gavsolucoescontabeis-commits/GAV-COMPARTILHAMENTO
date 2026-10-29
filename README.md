@@ -2,7 +2,7 @@
 
 Portal de documentos para clientes e gestão administrativa da GAV Soluções Contábeis.
 
-## Versão atual: v0.7 (demonstração)
+## Versão atual: v0.7.1 (demonstração)
 
 Arquivo principal: `index.html`, já publicado na branch `main`. Github Pages: [abrir protótipo](https://gavsolucoescontabeis-commits.github.io/GAV-COMPARTILHAMENTO/).
 
