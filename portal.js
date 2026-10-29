@@ -19,7 +19,7 @@ const showError=e=>{notice=e?.message||String(e);busy=false;render()};
 const current=()=>companies.find(c=>c.id===selected);
 const fmt=v=>v&&v.length===14?v.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/,"$1.$2.$3/$4-$5"):v;
 async function invoke(fn,action,body={}){
- const token=session?.access_token;if(!token)throw Error("Faça login novamente.");
+ const currentSession=await sb.auth.getSession();session=currentSession.data.session;const token=session?.access_token;if(!token)throw Error("Faça login novamente.");
  const r=await fetch(ROOT+"/functions/v1/"+fn,{method:"POST",headers:{"Content-Type":"application/json",apikey:PUB,Authorization:"Bearer "+token},body:JSON.stringify({action,...body})});
  const ct=r.headers.get("Content-Type")||"";
  if(fn==="gav-drive-pdf"&&r.ok)return await r.blob();
@@ -38,7 +38,7 @@ async function syncPilot({interactive=false}={}){
  autoSyncLastAttempt=now;
  autoSyncRunning=true;
  try{
-  const result=await invoke("gav-drive-index","index",{companyId:pilot.id,...(googleToken?{googleToken}:{})});
+  const result=await invoke("gav-drive-index","index",{companyId:pilot.id});
   autoSyncLastResult="Última verificação: "+new Date().toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})+" · "+result.newFiles+" novos";
   if(selected===pilot.id){await loadDocs();render()}
   if(result.newFiles&&interactive)toastMessage(result.newFiles+" novo(s) arquivo(s); "+result.autoPublished+" liberado(s) automaticamente.");
@@ -264,5 +264,5 @@ async function handle(e){
 }
 document.addEventListener("visibilitychange",()=>{if(!document.hidden)void syncPilot()});
 setInterval(()=>{if(!document.hidden)void syncPilot()},15*60*1000);
-sb.auth.onAuthStateChange((event,s)=>{if(event==="SIGNED_OUT"){clearPdfCache();role="";session=null;render()}});
+sb.auth.onAuthStateChange((event,s)=>{if(event==="TOKEN_REFRESHED"&&s)session=s;if(event==="SIGNED_OUT"){clearPdfCache();role="";session=null;render()}});
 await bootstrap();
