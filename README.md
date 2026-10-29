@@ -1,54 +1,35 @@
-# GAV Compartilhar Docs
+# GAV Compartilhamento · Portal de documentos
 
-Portal de documentos para clientes e gestão administrativa da GAV Soluções Contábeis.
+**Versão atual: v0.9.0 (piloto de autenticação e Google Drive)**
 
-## Versão atual: v0.8.1 (marca transparente + backend isolado)
+Portal: https://gavsolucoescontabeis-commits.github.io/GAV-COMPARTILHAMENTO/
 
-Arquivo principal: `index.html`, já publicado na branch `main`. Github Pages: [abrir protótipo](https://gavsolucoescontabeis-commits.github.io/GAV-COMPARTILHAMENTO/).
+A demonstração visual anterior (v0.8.1, sem autenticação real) foi **preservada**, acessível acrescentando `?demo=1` à URL do portal. As configurações novas foram implementadas de forma aditiva, sem reutilizar o banco do Ministério Infantil.
 
-**Atenção:** login e dados de demonstração não oferecem autenticação ou autorização de produção. Não disponibilizar documentos reais a clientes nesta versão.
+## Estado real em 29/10/2026
 
-## Fonte de continuidade
+- Banco Supabase isolado `kiunegfjbfhvvlkxqvos`, com 18 empresas TTM e RLS habilitada.
+- Login Google de administrador e login CNPJ/senha de clientes programados no `portal.js`. O login só deve ser considerado validado após o primeiro teste de autorização, pois não existiam usuários em `auth.users` quando o código foi enviado.
+- Administrador GAV validado por conta Google verificada e vinculada no servidor, não por senha/chave fictícia.
+- Funções Supabase implantadas e ativas, com verificação JWT: `gav-portal-api`, `gav-drive-index`, `gav-drive-pdf`.
+- Pasta piloto de JM Rocha previamente identificada no banco privado. A vinculação exige confirmar o nome e parentesco com a pasta TTM usando a API real do Google Drive.
+- Indexação lê os metadados reais dos PDFs e não publica nenhum automaticamente. A administração pode publicar ou revogar cada documento.
+- A função que entrega o PDF confere vínculo da empresa, aprovação, pasta ativa e pertença atual do arquivo à hierarquia autorizada antes de transferir o arquivo original.
+- **Nenhum documento real foi sincronizado ou publicado** até o momento; o acesso de clientes ainda não foi liberado.
+- Segredos OAuth de leitura permanente precisam ser cadastrados no painel Supabase em *Edge Functions > Secrets*: `GOOGLE_OAUTH_CLIENT_ID` e `GOOGLE_OAUTH_CLIENT_SECRET`, retirados do JSON **privado** gerado no Google Cloud. Nunca enviar o JSON ou os segredos ao GitHub.
+- O status *Testando* no Google Cloud geralmente limita refresh tokens com escopo do Drive a 7 dias. Não usar como integração permanente de clientes sem uma estratégia de publicação/verificação e tratamento de expiração.
 
-- [Fonte mestra pública (sem dados nominais de clientes)](docs/FONTE_MESTRA_GAV_COMPARTILHAMENTO.md).
-- A **fonte privada com nomes de empresas e regras específicas** deve permanecer apenas na aba Fontes do projeto ChatGPT, **não** neste repositório público.
+## Arquivos e serviços
 
-## Acesso permanente
+- `index.html` — identidade visual anterior mantida; entrada para módulo autenticado.
+- `portal.js` — interface em produção, autenticação e painel de revisão.
+- `backend/SCHEMA_PILOTO_PREPARACAO.sql` — esquema original aplicado no Supabase.
+- `backend/functions/gav-portal-api/index.ts` e `backend/functions/gav-drive-pdf/index.ts` — cópias versionadas das funções implantadas.
+- `gav-drive-index` — rotina implantada no Supabase, versão ainda não espelhada no repositório.
+- `docs/FONTE_MESTRA_GAV_COMPARTILHAMENTO.md` — continuidade do projeto sem detalhes privados.
 
-**Aplicativo (sem instalação):** https://gavsolucoescontabeis-commits.github.io/GAV-COMPARTILHAMENTO/
+## Segurança e limitações
 
-A página acompanha a branch `main` pelo GitHub Pages. Não instalar ZIP nem trocar de endereço a cada atualização; acessar pelo navegador. A propagação de commits pode levar alguns instantes e o navegador pode precisar atualizar o cache.
+Não publicar CNPJs, arquivos de clientes, tokens OAuth, chaves Google, `service_role` ou URLs privadas no repositório público. Não tratar arquivos do Drive como públicos por possuir link. Os clientes devem ter vínculos de empresa explícitos e os PDFs precisam de aprovação individual.
 
-**Identidade visual:** a v0.8.1 usa `assets/logo-gav-sem-fundo.svg` e `assets/leao-gav-sem-fundo.svg`, com transparência visual aplicada aos arquivos originais fornecidos pelo usuário (fundo preto removido e desenho dourado preservado). O layout aprovado permanece.
-
-## Preparação para o primeiro acesso real
-
-- `backend/SCHEMA_PILOTO_PREPARACAO.sql`: banco separado de GAV Compartilhamento **criado e migrações aplicadas** no Supabase em 29/10/2026, com 10 tabelas, RLS por usuário/empresa, escopos de serviço, vínculo explícito do Drive e documentos não publicados por padrão. A carteira inicial de 18 empresas TTM foi gravada no banco privado. **O frontend ainda usa o login de demonstração; não há cliente real habilitado.**
-- A empresa piloto deverá ser autorizada e ter seu ID real de pasta do Google Drive vinculado via backend OAuth.
-- O banco existe, mas **o login real do frontend e a conexão Google Drive OAuth ainda não foram implantados**; os PDFs não foram sincronizados nem publicados. Os dados gravados apenas no navegador continuam sendo demonstrativos.
-- Não reutilizar o projeto Supabase Ministério Infantil; não habilitar compartilhamento por nome aproximado ou pasta detectada.
-
-## Funcionalidades de teste
-
-- Área do cliente com documentos fictícios, organizados por categorias, competência e ano.
-- Painel administrativo com empresas, categorias e controle de processamento de folhas.
-- Leitor de pastas e empresas por escritório, inclusive em celular. Em TTM, escolha a pasta principal apenas uma vez; somente arquivos dentro de pastas de empresas previamente cadastradas são considerados. Arquivos soltos, pastas estranhas, outros escritórios e raízes desconhecidas são ignorados (apenas contagem dos ignorados). As pastas reconhecidas devem ser filhas diretas da raiz TTM, ou a própria pasta da empresa selecionada.
-- Botão **Conferir arquivos** nas empresas localizadas abre nomes, categorias e competências identificados. Não abre conteúdo de PDF e não é sincronização do Google Drive. Diferenças no nome das pastas permanecem pendentes de conferência.
-- Seleção individual permanece opcional, para planejar futuras autorizações, sem liberar arquivos nem criar contas reais.
-- **Cadastro individual de novas empresas (v0.7):** menu administrativo **Cadastrar nova empresa**, com seleção de escritório (TTM, REL GAV, DS CONTÁBIL ou AVULSOS), código, nome, CNPJ validado e pasta; preenchimento sugerido para o nome da pasta; bloqueio de CNPJ/código/pasta duplicados; inclusão automática no painel administrativo e no controle de processamento. Os novos dados são guardados apenas no navegador atual, sem permitir login de clientes reais.
-- **Pré-cadastro TTM já realizado (18 empresas):** os nomes, códigos e CNPJs ficam no arquivo `ttm-registry.enc.json`, criptografado por AES-256-GCM com chave derivada por PBKDF2. A chave não está no repositório. A relação abre automaticamente na área administrativa após o usuário informar sua chave; nenhuma importação manual é necessária. O vínculo com pastas físicas prioriza o código e exige conferência quando o nome diverge.
-- Origens: `TTM`, `REL GAV`, `DS CONTÁBIL` e `AVULSOS` (pastas sem numeração).
-- Padrão BAT: `ADM`, `RES`, `FER`, `X2026`, meses `0126`, `012026`, `1325` etc.
-- Exportação CSV da seleção e da conferência; nenhuma pasta selecionada por padrão.
-
-A relação da DS CONTÁBIL ainda não foi inserida em lote; não registrar CNPJs nem nomes de uma imagem sem leitura confiável. A leitura de pastas é **manual e local no navegador**: usa nomes, caminhos, datas e tamanhos de arquivos. O conteúdo não é enviado. A seleção é temporária e não constitui autorização real para clientes nem sincronização contínua com Google Drive. O cadastro TTM cifrado está no repositório e pode ser aberto com a chave administrativa de teste em outro navegador, mas o aplicativo **não** oferece autenticação de produção, controle centralizado de permissões ou banco de dados compartilhado. Não usar para documentos reais.
-
-## Próxima etapa de produção
-
-1. Configurar backend isolado, autenticação segura e controle de acesso por CNPJ.
-2. Integrar Google Drive com autorização apropriada para pastas selecionadas.
-3. Vincular CNPJ à pasta do Drive de forma inequívoca, distinguindo o escritório de origem.
-4. Importar apenas metadados autorizados, colocar dúvidas de classificação em conferência e disponibilizar somente documentos explicitamente publicados.
-5. Testar a leitura e o acesso com uma empresa piloto antes de liberar as demais.
-
-Identidade visual: GAV Soluções Contábeis (preto, branco, dourado e logomarca oficial).
+O portal está em **piloto técnico**. Falta testar o primeiro login real, confirmar autorização Drive e credenciais secretas, indexar os PDFs da empresa piloto, testar a abertura do PDF e habilitar uma conta de cliente real antes de ampliar o uso.
