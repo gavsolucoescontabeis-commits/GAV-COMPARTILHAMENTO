@@ -2,7 +2,7 @@
 
 Portal de documentos para clientes e gestão administrativa da GAV Soluções Contábeis.
 
-## Versão atual: v0.5 (demonstração)
+## Versão atual: v0.5.1 (demonstração)
 
 Arquivo principal: `index.html`, já publicado na branch `main`. Github Pages: [abrir protótipo](https://gavsolucoescontabeis-commits.github.io/GAV-COMPARTILHAMENTO/).
 
@@ -12,8 +12,8 @@ Arquivo principal: `index.html`, já publicado na branch `main`. Github Pages: [
 
 - Área do cliente com documentos fictícios, organizados por categorias, competência e ano.
 - Painel administrativo com empresas, categorias e controle de processamento de folhas.
-- Leitor de pastas com seleção individual das empresas a considerar para compartilhamento.
-- Origens: `TTM`, `HELGAVE`, `DS CONTÁBIL` e `AVULSOS` (pastas sem numeração).
+- Leitor de pastas com seleção individual das empresas a considerar para compartilhamento. Os quatro escritórios/origens aparecem em botões destacados no painel administrativo e na leitura de pastas, inclusive em celular.
+- Origens: `TTM`, `REL GAV`, `DS CONTÁBIL` e `AVULSOS` (pastas sem numeração).
 - Padrão BAT: `ADM`, `RES`, `FER`, `X2026`, meses `0126`, `012026`, `1325` etc.
 - Exportação CSV da seleção e da conferência; nenhuma pasta selecionada por padrão.
 
