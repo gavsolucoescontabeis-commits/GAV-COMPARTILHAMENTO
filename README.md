@@ -2,7 +2,7 @@
 
 Portal de documentos para clientes e gestão administrativa da GAV Soluções Contábeis.
 
-## Versão atual: v0.7.3 (demonstração)
+## Versão atual: v0.8.0 (interface + preparação do backend)
 
 Arquivo principal: `index.html`, já publicado na branch `main`. Github Pages: [abrir protótipo](https://gavsolucoescontabeis-commits.github.io/GAV-COMPARTILHAMENTO/).
 
@@ -12,6 +12,21 @@ Arquivo principal: `index.html`, já publicado na branch `main`. Github Pages: [
 
 - [Fonte mestra pública (sem dados nominais de clientes)](docs/FONTE_MESTRA_GAV_COMPARTILHAMENTO.md).
 - A **fonte privada com nomes de empresas e regras específicas** deve permanecer apenas na aba Fontes do projeto ChatGPT, **não** neste repositório público.
+
+## Acesso permanente
+
+**Aplicativo (sem instalação):** https://gavsolucoescontabeis-commits.github.io/GAV-COMPARTILHAMENTO/
+
+A página acompanha a branch `main` pelo GitHub Pages. Não instalar ZIP nem trocar de endereço a cada atualização; acessar pelo navegador. A propagação de commits pode levar alguns instantes e o navegador pode precisar atualizar o cache.
+
+**Identidade visual:** imagens originais de `GAV-Site/NOME E LOGO.jpeg` e `GAV-Site/IMAGEM LEAO.jpeg` incorporadas à interface v0.8.0, preservando o layout aprovado.
+
+## Preparação para o primeiro acesso real
+
+- `backend/SCHEMA_PILOTO_PREPARACAO.sql`: proposta de banco separado com RLS por usuário/empresa, escopos de serviço, vinculação explícita das pastas do Drive e documentos não publicados por padrão. **Ainda não foi aplicado**.
+- A empresa piloto deverá ser autorizada e ter seu ID real de pasta do Google Drive vinculado via backend OAuth.
+- Sem essa conexão e um projeto independente de autenticação/banco, o site continua sendo **demonstração**; os arquivos não foram sincronizados e os dados locais não são persistência centralizada.
+- Não reutilizar o projeto Supabase Ministério Infantil; não habilitar compartilhamento por nome aproximado ou pasta detectada.
 
 ## Funcionalidades de teste
 
