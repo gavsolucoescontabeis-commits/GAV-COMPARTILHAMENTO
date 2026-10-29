@@ -1,4 +1,4 @@
--- GAV COMPARTILHAMENTO: esquema proposto, NÃO APLICADO
+-- GAV COMPARTILHAMENTO: esquema aplicado no projeto Supabase isolado em 29/10/2026
 -- Implementar apenas em projeto Supabase separado e autorizado, nunca no Ministério Infantil.
 -- O script cria tabelas com RLS; clientes nunca podem inserir/alterar documentos ou autorizações.
 -- Autorização externa do Google Drive deverá ser feita num backend/Edge Function separado.
@@ -54,14 +54,17 @@ CREATE TABLE IF NOT EXISTS public.gav_drive_folders (
   approved_by uuid NOT NULL REFERENCES auth.users(id) ON DELETE RESTRICT,
   approved_at timestamptz NOT NULL DEFAULT now(),
   is_active boolean NOT NULL DEFAULT false,
-  UNIQUE (company_id,drive_folder_id)
+  UNIQUE (company_id,drive_folder_id),
+  UNIQUE (company_id,id)
 );
 CREATE INDEX IF NOT EXISTS gav_drive_folders_company_idx ON public.gav_drive_folders(company_id);
 
 CREATE TABLE IF NOT EXISTS public.gav_documents (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   company_id uuid NOT NULL REFERENCES public.gav_companies(id) ON DELETE CASCADE,
-  drive_folder_link_id uuid NOT NULL REFERENCES public.gav_drive_folders(id) ON DELETE RESTRICT,
+  drive_folder_link_id uuid NOT NULL,
+  CONSTRAINT gav_document_company_folder_fk FOREIGN KEY(company_id,drive_folder_link_id)
+    REFERENCES public.gav_drive_folders(company_id,id) ON DELETE RESTRICT,
   drive_file_id text NOT NULL,
   file_name text NOT NULL,
   mime_type text,
@@ -200,4 +203,10 @@ CREATE POLICY gav_docs_read ON public.gav_documents
        AND m.user_id=(SELECT auth.uid()) AND m.active)
   )
  );
+CREATE INDEX IF NOT EXISTS gav_documents_company_folder_fk_idx ON public.gav_documents(company_id,drive_folder_link_id);
+CREATE INDEX IF NOT EXISTS gav_drive_folders_approved_by_idx ON public.gav_drive_folders(approved_by);
+CREATE INDEX IF NOT EXISTS gav_service_progress_approved_by_idx ON public.gav_service_progress(approved_by);
+CREATE INDEX IF NOT EXISTS gav_sync_runs_company_id_idx ON public.gav_sync_runs(company_id);
+CREATE INDEX IF NOT EXISTS gav_audit_events_actor_idx ON public.gav_audit_events(actor_user_id);
+CREATE INDEX IF NOT EXISTS gav_audit_events_document_idx ON public.gav_audit_events(document_id);
 COMMIT;
