@@ -149,3 +149,17 @@ Decisão do usuário: o portal deve ser **o mais simples possível** para empres
 **Arquivos removidos:** ao sincronizar, arquivos que sumiram da pasta autorizada passam para status `REMOVIDO` e deixam de aparecer. Arquivos que voltam à pasta podem ser reconsiderados sem desrespeitar bloqueios manuais `BLOQUEADO`.
 
 **Não regressão:** preservar layout preto/dourado e logos oficiais, separação Folha × Admissões × Rescisões × Férias × Guias e Impostos, download direto/visualização das imagens e PDFs e controle de permissões backend. Todas as alterações novas são aditivas aos componentes aprovados e não devem transformar a interface em nova demonstração.
+
+---
+
+## Aditivo 29/10/2026 — Publicação automática com painel fechado e botão Baixar (v0.9.5)
+
+O administrador definiu o fluxo cotidiano: gera documento, salva na pasta local do Google Drive sincronizada, e **não precisa abrir o portal nem clicar Publicar** para novos arquivos de pastas autorizadas. O documento se torna disponível ao cliente após a sincronização local → Google Drive → indexação no Supabase, restrito à empresa vinculada.
+
+**Agendamento técnico efetivado:** `pg_cron` + `pg_net` no Supabase a cada **15 minutos**, execução servidor mesmo com navegador fechado. O job ativo `gav-drive-pilot-sync-15m` percorre apenas empresas com `gav_drive_folders.is_active=true` e `auto_publish_new=true`, evitando novos clientes sem vínculo conferido. Headers são montados a partir do Supabase Vault (JWT anon legado apenas como autenticação gateway + segredo interno distinto). A Edge Function `gav-drive-index` mantém `verify_jwt=true`, valida o segredo agendado via RPC acessível apenas ao `service_role`; requisições normais seguem exigindo administrador Google autorizado. **Teste efetivo:** chamada autenticada respondeu HTTP 200 e indexou 400 arquivos de 45 pastas; tentativa com token incorreto respondeu HTTP 403. O cron está ativo no banco, mas a pontualidade dos próximos ciclos e o acesso offline ao Google ainda dependem da infraestrutura e autorização OAuth válidas.
+
+**Visual:** todos os controles de download exibem exclusivamente **Baixar** (independentemente de PDF ou imagem), inclusive dentro do visualizador. Não mostrar `Baixar PDF` e `Baixar imagem` em botões de largura diferente.
+
+**Exceções:** Revogar mantém status `BLOQUEADO`; o sistema não republica por sincronizar. Arquivos removidos da pasta recebem `REMOVIDO` e não aparecem. Documentos históricos anteriores à aprovação automática não foram liberados retroativamente sem conferência, dada a possibilidade de materiais de outras empresas na pasta piloto. A liberação desses arquivos por competência ainda é um ato administrativo excepcional, não uma etapa recorrente para documentos novos.
+
+**Limites conhecidos:** o ciclo não é instantâneo (até o próximo agendamento após o Google Drive concluir o upload), a autorização OAuth pode expirar se projeto Google Cloud estiver no modo Testando e ainda faltam provisionar/testar os primeiros acessos reais dos clientes. Não declarar que o acesso de clientes já está liberado nem expor segredos no GitHub.
