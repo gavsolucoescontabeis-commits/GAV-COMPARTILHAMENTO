@@ -106,7 +106,7 @@ function files(items){
   const date=d.month&&d.year?M[d.month-1]+"/"+d.year:d.year?String(d.year):"SEM COMPETÊNCIA";
   const status=role==="admin"?(d.published_at?" · PUBLICADO":" · A CONFERIR"):"";
   const isImage=String(d.mime_type||"").startsWith("image/"),kind=isImage?"IMG":"PDF",typeLabel=isImage?"imagem":"PDF";
-  return `<div class="gav-doc-row"><span class="gav-doc-file" aria-hidden="true">${kind}</span><div class="gav-doc-main"><strong class="gav-doc-name">${esc(d.file_name)}</strong><span class="gav-doc-detail">${esc(date)}${status}</span></div><div class="gav-doc-actions"><button class="btn btn-line btn-small gav-btn-preview" data-do="pdf" data-val="${esc(d.id)}" aria-label="Visualizar ${esc(d.file_name)}">Visualizar</button><button class="btn btn-dark btn-small gav-btn-download" data-do="download" data-val="${esc(d.id)}" aria-label="Baixar ${esc(d.file_name)}">Baixar ${typeLabel==="PDF"?"PDF":"imagem"}</button>${role==="admin"?`<button class="btn btn-line btn-small" data-do="publish" data-val="${esc(d.id)}">${d.published_at?"Revogar":"Publicar"}</button>`:""}</div></div>`;
+  return `<div class="gav-doc-row"><span class="gav-doc-file" aria-hidden="true">${kind}</span><div class="gav-doc-main"><strong class="gav-doc-name">${esc(d.file_name)}</strong><span class="gav-doc-detail">${esc(date)}${status}</span></div><div class="gav-doc-actions"><button class="btn btn-line btn-small gav-btn-preview" data-do="pdf" data-val="${esc(d.id)}" aria-label="Visualizar ${esc(d.file_name)}">Visualizar</button><button class="btn btn-dark btn-small gav-btn-download" data-do="download" data-val="${esc(d.id)}" aria-label="Baixar ${esc(d.file_name)}">Baixar</button>${role==="admin"?`<button class="btn btn-line btn-small" data-do="publish" data-val="${esc(d.id)}">${d.published_at?"Revogar":"Publicar"}</button>`:""}</div></div>`;
  }).join("")}</div>`;
 }
 function home(){
@@ -147,7 +147,7 @@ function previewMarkup(){
  const d=docs.find(x=>x.id===previewId);if(!d)return "";
  const stored=pdfCache.get(selected+":"+previewId);
  const ready=stored&&!previewLoading,im=String(d.mime_type||"").startsWith("image/");
- return `<div class="gav-preview-overlay" id="gavPdfOverlay" role="dialog" aria-modal="true" aria-label="Visualização do documento"><div class="gav-preview-box"><div class="gav-preview-header"><div class="gav-preview-header-title">${esc(d.file_name)}</div><div class="gav-preview-header-actions"><button class="btn btn-dark btn-small" data-do="preview-download" data-val="${esc(d.id)}">Baixar ${im?"imagem":"PDF"}</button>${ready?`<a class="btn btn-line btn-small" href="${esc(stored.url)}" target="_blank" rel="noopener">Abrir em outra aba</a>`:""}<button class="btn btn-line btn-small" data-do="close-preview">Fechar</button></div></div><div class="gav-preview-content">${ready?`${im?`<img src="${esc(stored.url)}" alt="${esc(d.file_name)}" style="max-width:100%;max-height:100%;object-fit:contain">`:`<iframe src="${esc(stored.url)}" title="Documento PDF original" loading="eager"></iframe>`}`:`<div class="gav-preview-pending"><strong>Carregando documento…</strong>Buscando o arquivo original no Google Drive.<div class="subtle" style="margin-top:9px">Arquivos maiores podem levar alguns instantes.</div></div>`}</div><div class="gav-preview-note">Para anexar este documento em outro sistema, use o botão <strong>Baixar</strong>.</div></div></div>`;
+ return `<div class="gav-preview-overlay" id="gavPdfOverlay" role="dialog" aria-modal="true" aria-label="Visualização do documento"><div class="gav-preview-box"><div class="gav-preview-header"><div class="gav-preview-header-title">${esc(d.file_name)}</div><div class="gav-preview-header-actions"><button class="btn btn-dark btn-small" data-do="preview-download" data-val="${esc(d.id)}">Baixar</button>${ready?`<a class="btn btn-line btn-small" href="${esc(stored.url)}" target="_blank" rel="noopener">Abrir em outra aba</a>`:""}<button class="btn btn-line btn-small" data-do="close-preview">Fechar</button></div></div><div class="gav-preview-content">${ready?`${im?`<img src="${esc(stored.url)}" alt="${esc(d.file_name)}" style="max-width:100%;max-height:100%;object-fit:contain">`:`<iframe src="${esc(stored.url)}" title="Documento PDF original" loading="eager"></iframe>`}`:`<div class="gav-preview-pending"><strong>Carregando documento…</strong>Buscando o arquivo original no Google Drive.<div class="subtle" style="margin-top:9px">Arquivos maiores podem levar alguns instantes.</div></div>`}</div><div class="gav-preview-note">Para anexar este documento em outro sistema, use o botão <strong>Baixar</strong>.</div></div></div>`;
 }
 function paintPreview(){
  document.getElementById("gavPdfOverlay")?.remove();
@@ -220,7 +220,7 @@ async function downloadPdf(id){
  }catch(e){toastMessage("Não foi possível baixar: "+e.message)}
  finally{
   downloadBusy="";
-  controls.forEach(b=>{if(b.isConnected){b.disabled=false;b.textContent=String(d.mime_type||"").startsWith("image/")?"Baixar imagem":"Baixar PDF";b.removeAttribute("aria-busy")}});
+  controls.forEach(b=>{if(b.isConnected){b.disabled=false;b.textContent="Baixar";b.removeAttribute("aria-busy")}});
  }
 }
 function render(){
