@@ -9,6 +9,8 @@ const C=[["ADMISSOES","Admissões"],["RESCISOES","Rescisões"],["FERIAS","Féria
 let role="",companies=[],docs=[],links=[],candidates=[],selected="",view="home",cat="",year=2026,month="ALL",session=null,googleToken="",hasDriveSecret=false,notice="",busy=false;
 let previewId="",previewLoading=false,downloadBusy="";
 const pdfCache=new Map();
+const pdfInFlight=new Map();
+let pdfGeneration=0;
 const esc=v=>String(v??"").replace(/[&<>"']/g,s=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[s]));
 const cn=v=>String(v||"").replace(/\D/g,"");
 const showError=e=>{notice=e?.message||String(e);busy=false;render()};
@@ -104,6 +106,8 @@ function toastMessage(message){
  setTimeout(()=>{if(node.isConnected)node.remove()},4600);
 }
 function clearPdfCache(){
+ pdfGeneration++;
+ pdfInFlight.clear();
  for(const item of pdfCache.values())URL.revokeObjectURL(item.url);
  pdfCache.clear();
  previewId="";previewLoading=false;
@@ -138,17 +142,27 @@ async function fetchPdf(id,mode){
   pdfCache.delete(key);pdfCache.set(key,saved);
   return saved;
  }
- const blob=await invoke("gav-drive-pdf","download",{companyId:selected,documentId:id,mode,...(role==="admin"&&googleToken?{googleToken}:{})});
- if(!blob||blob.type!=="application/pdf")throw Error("O servidor não retornou um arquivo PDF válido.");
- const item={url:URL.createObjectURL(blob),blob};
- pdfCache.set(key,item);
- while(pdfCache.size>3){
-  const oldest=pdfCache.keys().next().value;
-  if(oldest===key)break;
-  const dropped=pdfCache.get(oldest);URL.revokeObjectURL(dropped.url);
-  pdfCache.delete(oldest);
- }
- return item;
+ if(pdfInFlight.has(key))return pdfInFlight.get(key);
+ const requestedCompany=selected,generation=pdfGeneration;
+ const promise=(async()=>{
+  const blob=await invoke("gav-drive-pdf","download",{companyId:requestedCompany,documentId:id,mode,...(role==="admin"&&googleToken?{googleToken}:{})});
+  // Não permitir reutilização após troca de CNPJ, saída da conta ou expiração de sessão.
+  if(generation!==pdfGeneration||requestedCompany!==selected||!role)throw Error("A sessão mudou. Reabra o documento.");
+  if(!blob||blob.type!=="application/pdf")throw Error("O servidor não retornou um arquivo PDF válido.");
+  const item={url:URL.createObjectURL(blob),blob};
+  pdfCache.set(key,item);
+  while(pdfCache.size>3){
+   const oldest=pdfCache.keys().next().value;
+   if(oldest===key)break;
+   const dropped=pdfCache.get(oldest);
+   URL.revokeObjectURL(dropped.url);
+   pdfCache.delete(oldest);
+  }
+  return item;
+ })();
+ pdfInFlight.set(key,promise);
+ try{return await promise}
+ finally{if(pdfInFlight.get(key)===promise)pdfInFlight.delete(key)}
 }
 async function openPdf(id){
  if(!docs.some(x=>x.id===id))return;
@@ -166,7 +180,7 @@ async function openPdf(id){
 async function downloadPdf(id){
  const d=docs.find(x=>x.id===id);if(!d||downloadBusy)return;
  downloadBusy=id;
- const controls=[...document.querySelectorAll('[data-do="download"]')].filter(b=>b.dataset.val===id);
+ const controls=[...document.querySelectorAll('[data-do="download"],[data-do="preview-download"]')].filter(b=>b.dataset.val===id);
  controls.forEach(b=>{b.disabled=true;b.textContent="Baixando…";b.setAttribute("aria-busy","true")});
  try{
   const file=await fetchPdf(id,"download");
