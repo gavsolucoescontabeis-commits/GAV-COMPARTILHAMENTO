@@ -69,11 +69,14 @@ Deno.serve(async req=>{
   const admin=val(await s.from("gav_admin_users").select("user_id").eq("user_id",user.id).eq("active",true).maybeSingle());
   if(!owner||!admin)fail("Acesso exclusivo do administrador.",403);
   const b=await req.json(),company=String(b.companyId||"");
-  const link=val(await s.from("gav_drive_folders").select("id,drive_folder_id").eq("company_id",company).eq("is_active",true).limit(1).maybeSingle());
+  const link=val(await s.from("gav_drive_folders").select("id,drive_folder_id,auto_publish_new").eq("company_id",company).eq("is_active",true).limit(1).maybeSingle());
   if(!link)fail("Vincule a pasta piloto antes da indexação.",409);
   const t=await access(b),runs=val(await s.from("gav_sync_runs").insert({company_id:company,state:"INICIADO"}).select().single());
   try{
-   let count=0,added=0;const queue=[{id:link.drive_folder_id,path:""}],seen=new Set<string>();
+   let count=0,added=0,autoPublished=0;
+   const previous=val(await s.from("gav_documents").select("id,drive_file_id,drive_modified_at,file_name,relative_path,category,month,year,review_status").eq("company_id",company).limit(1500));
+   const known=new Map(previous.map((d:any)=>[d.drive_file_id,d]));
+   const queue=[{id:link.drive_folder_id,path:""}],seen=new Set<string>(),presentFiles=new Set<string>();
    while(queue.length){
     if(seen.size>=180)fail("Mais de 180 pastas no piloto.",409);
     const node=queue.shift()!;if(seen.has(node.id))continue;seen.add(node.id);
@@ -81,14 +84,36 @@ Deno.serve(async req=>{
      if(f.mimeType==="application/vnd.google-apps.folder"){queue.push({id:f.id,path:node.path?node.path+"/"+f.name:f.name});continue}
      if(!["application/pdf","image/jpeg","image/png","image/webp"].includes(f.mimeType))continue;
      if(++count>1500)fail("Mais de 1500 documentos, necessário dividir o piloto.",409);
-     const old=val(await s.from("gav_documents").select("id").eq("company_id",company).eq("drive_file_id",f.id).maybeSingle());
+     presentFiles.add(f.id);
+     const old=known.get(f.id);
      const c=comp(node.path),row={file_name:f.name,mime_type:f.mimeType,relative_path:node.path,category:cat(node.path+"/"+f.name),month:c.month,year:c.year,drive_modified_at:f.modifiedTime||null,indexed_at:new Date().toISOString()};
-     if(old)val(await s.from("gav_documents").update(row).eq("id",old.id));
-     else{val(await s.from("gav_documents").insert({...row,company_id:company,drive_file_id:f.id,drive_folder_link_id:link.id}));added++}
+     if(old){
+      // Não sobrescrever publicação nem bloqueio manual durante a sincronização.
+      const changed=old.file_name!==row.file_name||old.relative_path!==row.relative_path||old.category!==row.category||
+       old.month!==row.month||old.year!==row.year||
+       (old.drive_modified_at?new Date(old.drive_modified_at).getTime():0)!==(row.drive_modified_at?new Date(row.drive_modified_at).getTime():0);
+      if(old.review_status==="REMOVIDO"){
+       val(await s.from("gav_documents").update({...row,
+        review_status:link.auto_publish_new?"APROVADO":"PENDENTE",
+        published_at:link.auto_publish_new?new Date().toISOString():null}).eq("id",old.id).eq("company_id",company));
+       if(link.auto_publish_new)autoPublished++;
+      }else if(changed)val(await s.from("gav_documents").update(row).eq("id",old.id).eq("company_id",company));
+     }else{
+      const visible=link.auto_publish_new===true;
+      val(await s.from("gav_documents").insert({...row,company_id:company,drive_file_id:f.id,drive_folder_link_id:link.id,
+       review_status:visible?"APROVADO":"PENDENTE",published_at:visible?new Date().toISOString():null}));
+      added++;if(visible)autoPublished++;
+     }
     }
    }
+   // Arquivos apagados ou movidos para fora da pasta deixam de estar acessíveis.
+   const removed=previous.filter((d:any)=>!presentFiles.has(d.drive_file_id)&&d.review_status!=="REMOVIDO"&&d.review_status!=="BLOQUEADO");
+   if(removed.length){
+    val(await s.from("gav_documents").update({review_status:"REMOVIDO",published_at:null})
+     .eq("company_id",company).in("id",removed.map((d:any)=>d.id)));
+   }
    val(await s.from("gav_sync_runs").update({state:"CONCLUIDO",indexed_count:count,finished_at:new Date().toISOString()}).eq("id",runs.id));
-   return new Response(JSON.stringify({indexed:count,newFiles:added,folders:seen.size,autoPublished:0}),{headers:{...cors,"content-type":"application/json"}});
+   return new Response(JSON.stringify({indexed:count,newFiles:added,removedFiles:removed.length,folders:seen.size,autoPublished}),{headers:{...cors,"content-type":"application/json"}});
   }catch(e:any){await s.from("gav_sync_runs").update({state:"FALHOU",error_safe:String(e.message).slice(0,150),finished_at:new Date().toISOString()}).eq("id",runs.id);throw e}
  }catch(e:any){return new Response(JSON.stringify({error:String(e.message||"Falha")}),{status:e.status||500,headers:{...cors,"content-type":"application/json"}})}
 });
