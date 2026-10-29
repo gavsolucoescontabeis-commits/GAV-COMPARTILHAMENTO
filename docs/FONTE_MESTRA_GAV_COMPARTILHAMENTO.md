@@ -1,5 +1,5 @@
 # GAV Compartilhar Docs — Fonte Mestra do Projeto
-**Referência de continuidade | 29/10/2026 | versão documental 1.0**
+**Referência de continuidade | 29/10/2026 | versão documental 1.1**
 
 > Este é o documento-base para anexar à aba **Fontes** do projeto GAV Compartilhamento e usar como referência para continuar o desenvolvimento. Preserva decisões aprovadas. Não contém credenciais, senhas, tokens, CNPJs ou dados pessoais de clientes.
 
@@ -16,11 +16,11 @@
 
 - GitHub: `gavsolucoescontabeis-commits/GAV-COMPARTILHAMENTO`; branch `main`; repositório **público** para hospedar no GitHub Pages.
 - Site: https://gavsolucoescontabeis-commits.github.io/GAV-COMPARTILHAMENTO/
-- Arquivo atual: `index.html`, **protótipo v0.7.3** no momento desta fonte.
+- Arquivo atual: `index.html`, **interface v0.8.1**. Os dois símbolos oficiais enviados pelo usuário foram transformados em imagens com transparência de fundo, sem redesenhar a arte; arquivos `assets/logo-gav-sem-fundo.svg` e `assets/leao-gav-sem-fundo.svg`.
 - Existe pré-cadastro protegido de **18 empresas TTM** em arquivo cifrado no repositório. **Não equivale a autenticação real**. Não copiar nem registrar a chave administrativa neste documento.
-- O site atual é **demonstração estática**, com dados e status de teste, leitura local de nomes de arquivos e armazenamento temporário por navegador. **Não está conectado ao Google Drive, não disponibiliza PDFs reais e não deve ser entregue a clientes como portal de produção.**
+- O site atual ainda é **demonstração estática**, com dados e status de teste, leitura local de nomes de arquivos e armazenamento temporário por navegador. **Não está conectado ao Google Drive, não disponibiliza PDFs reais e não deve ser entregue a clientes como portal de produção.**
 - A leitura do navegador de grandes raízes, como a pasta TTM com cerca de **97 mil arquivos**, apresentou travamento. A v0.7.3 introduziu leitura seletiva (dependente do navegador), progresso e cancelamento. Essa leitura ainda não é sincronização.
-- **Supabase:** a conta vinculada atualmente mostra projeto do **Ministério Infantil**, não há um projeto próprio de GAV Compartilhamento identificado. **Não misturar dados contábeis/de clientes com o projeto Ministério Infantil.** Um projeto isolado precisará ser criado e configurado antes de produzir login e banco reais.
+- **Supabase:** em 29/10/2026 foi criado o projeto isolado **GAV Compartilhamento** (ID `kiunegfjbfhvvlkxqvos`, região `sa-east-1`), com custo mensal cotado de zero. Foram aplicadas as migrações de 10 tabelas com RLS e importados 18 cadastros TTM para o banco privado. **Ainda não há usuário administrador de produção, nem login real integrado ao frontend e nem sincronização OAuth do Drive.** Não misturar com Ministério Infantil.
 
 ## 3. Pastas reais e estrutura do BAT
 
@@ -77,7 +77,7 @@
 
 **Empresa piloto:** uma empresa específica da TTM previamente aprovada, a definir no cadastro seguro, sem liberar acessos a clientes externos.
 
-- [ ] Projeto de backend separado e autenticação administrativa segura configurados.
+- [ ] Projeto de backend separado criado; falta autenticação administrativa segura e conexão da interface
 - [ ] Usuário autoriza acesso técnico à conta Google Drive por OAuth; servidor recebe acesso somente aos dados necessários.
 - [ ] CNPJ da empresa piloto vinculado ao **ID real da pasta** no Drive.
 - [ ] Indexação dos metadados de **uma única empresa**, incluindo histórico arquivado, sem varrer a TTM inteira.
@@ -91,7 +91,7 @@
 
 ## 9. Pendências e regras de continuidade
 
-- **Visual**: corrigir marca oficial e leão — pendentes; **não redesenhar layout geral**, que foi aprovado provisoriamente.
+- **Visual**: os originais GAV foram aplicados com fundo transparente na v0.8.1; confirmar aparência no navegador do usuário. **Não redesenhar layout geral**, aprovado provisoriamente.
 - **Dados**: TTM tem 18 empresas pré-cadastradas; relações DS CONTÁBIL e REL GAV recebidas em imagens precisam ser revisadas e incorporadas ao banco seguro, sem adivinhar CNPJs e sem publicar carteira em claro no repositório.
 - **Cadastro**: tela **Cadastrar nova empresa** já existe na demonstração; na produção precisará gravar no banco.
 - **Drive**: conexão OAuth e sincronização verdadeira ainda não foram implementadas; a seleção de pasta atual é somente conferência local.
