@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#111315"><meta name="description" content="Protótipo demonstrativo do portal de documentos GAV Soluções Contábeis">
-<title>GAV Compartilhar Docs • Demonstração v0.7.2</title>
+<title>GAV Compartilhar Docs • Demonstração v0.7.3</title>
 <style>
 :root{--black:#141618;--black2:#202328;--gold:#b9924a;--gold2:#f4db9e;--ink:#252b32;--muted:#727984;--border:#e6e8eb;--bg:#f6f7f8;--white:#fff;--green:#157c55;--radius:15px}*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;color:var(--ink)}button,input,select{font:inherit}button{cursor:pointer}button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #d5a74d;outline-offset:2px}a{color:inherit}svg{vertical-align:middle} .hide{display:none!important}
 .login-wrap{min-height:100dvh;display:grid;grid-template-columns:minmax(0,1fr) minmax(360px,520px);background:#fff}.login-brand{background:radial-gradient(ellipse at 18% 20%,#38332b,#141618 62%);color:#fff;padding:clamp(28px,6vw,90px);display:flex;flex-direction:column;justify-content:space-between;overflow:hidden;position:relative}.login-brand:after{content:'';position:absolute;width:620px;height:620px;border:1px solid #b9924a33;border-radius:50%;right:-270px;bottom:-275px;box-shadow:0 0 0 110px #b9924a0d,0 0 0 220px #b9924a08;pointer-events:none}.brand-mark{letter-spacing:.19em;font-weight:850;font-size:39px;color:var(--gold2)}.brand-sub{letter-spacing:.14em;font-size:10px;color:#ccc;display:block;margin-top:1px}.login-brand h1{font-size:clamp(35px,5vw,66px);letter-spacing:-.055em;line-height:1.05;margin:40px 0 17px;max-width:630px}.login-brand p{max-width:480px;line-height:1.65;color:#adb2b7;font-size:17px}.gold-line{width:68px;height:3px;background:var(--gold);border-radius:3px}.login-panel{display:flex;flex-direction:column;justify-content:center;padding:clamp(27px,6vw,72px)}.eyebrow{color:var(--gold);font-size:11px;letter-spacing:.18em;font-weight:800;text-transform:uppercase}.login-panel h2{font-size:31px;letter-spacing:-.04em;margin:11px 0 8px}.subtle{color:var(--muted);font-size:13px;line-height:1.5}.form-field{margin-top:21px}.form-field label{display:block;font-size:13px;font-weight:700;margin-bottom:8px}.input{background:#fff;border:1px solid #dfe2e6;border-radius:11px;padding:13px 14px;width:100%;color:var(--ink);min-height:47px}.input:focus{border-color:var(--gold)}.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid transparent;border-radius:11px;font-size:13px;font-weight:750;min-height:42px;padding:10px 16px;white-space:nowrap;transition:.15s}.btn:hover{transform:translateY(-1px)}.btn-dark{background:var(--black);color:#ffe7af}.btn-dark:hover{background:#292b2d}.btn-gold{background:var(--gold);color:#171717}.btn-line{background:#fff;border-color:#e0e3e7;color:#333}.btn-soft{background:#f4f0e5;color:#6a4e1e}.btn-small{padding:6px 11px;min-height:32px;font-size:12px}.login-action{width:100%;margin-top:23px;min-height:48px}.demo-credentials{margin-top:27px;border:1px dashed #dccda6;background:#fffcf3;border-radius:12px;padding:14px;line-height:1.8;font-size:12px}.demo-credentials code{font-size:12px;color:#4c4129}.demo-label{font-weight:850;color:#8b6725;font-size:11px;letter-spacing:.07em}.remember{display:flex;align-items:center;gap:9px;font-size:12px;color:#58606a;margin-top:17px}.remember input{width:16px;height:16px;accent-color:#b9924a}.error{color:#b82727;background:#fff1f1;border:1px solid #ffd4d4;border-radius:9px;font-size:12px;padding:10px;margin-top:12px}.demo-ribbon{font-size:11px;font-weight:800;letter-spacing:.08em;color:#6b4b15;background:#fbebc3;padding:9px 14px;border-bottom:1px solid #edd7a7;text-align:center}
@@ -184,6 +184,8 @@ for(const x of extraCompanies){
 }
 let scanRows=[],scanView={filter:'all',query:'',group:'TTM',preSearch:'',reviewCompany:null};
 const scanStats={};
+const scanBusy={active:false,cancel:false,detail:'',checked:0,accepted:0,source:''};
+const scanNotice={kind:'',message:''};
 const scanSelected=new Set();
 const scanRoots=['TTM','REL GAV','DS CONTÁBIL','AVULSOS'];
 const normGroup=v=>{const n=String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-Z0-9]/g,'');return n==='HELGAVE'?'RELGAV':n};
@@ -222,7 +224,9 @@ function scanFolders(){
  }
  return [...map.values()].sort((a,b)=>a.group.localeCompare(b.group,'pt-BR')||a.folder.localeCompare(b.folder,'pt-BR',{numeric:true}));
 }
-const SCANNER_MAX=10000;
+const SCANNER_MAX=6000;
+const SCAN_LEGACY_LIMIT=3500;
+const scanSmartSupported=()=>typeof window.showDirectoryPicker==='function';
 function normalizeFolder(value){return String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/^\d+\s+/,'').replace(/[^A-Z0-9]/g,'');}
 function folderMonthName(v){const p=String(v).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().trim();const n=['JANEIRO','FEVEREIRO','MARCO','ABRIL','MAIO','JUNHO','JULHO','AGOSTO','SETEMBRO','OUTUBRO','NOVEMBRO','DEZEMBRO'];const mm=p.match(/^(0?[1-9]|1[0-3])(?:\s*(?:[-_./]|DE)\s*|\s+)?(20\d{2}|\d{2})$/);if(mm)return {month:months[Number(mm[1])-1],year:mm[2].length===2?2000+Number(mm[2]):Number(mm[2])};const yearFirst=p.match(/^(20\d{2})\s*[-_/ ]\s*(0?[1-9]|1[0-3])$/);if(yearFirst)return {month:months[Number(yearFirst[2])-1],year:Number(yearFirst[1])};const literal=p.match(/^(JANEIRO|FEVEREIRO|MARCO|ABRIL|MAIO|JUNHO|JULHO|AGOSTO|SETEMBRO|OUTUBRO|NOVEMBRO|DEZEMBRO|13(?:O|º)?(?:\s+SALARIO)?)(?:\s*[-_/ ]\s*(20\d{2}|\d{2}))?$/);if(literal)return {month:literal[1].startsWith('13')?'DÉCIMO TERCEIRO':months[n.indexOf(literal[1])],year:literal[2]?(literal[2].length===2?2000+Number(literal[2]):Number(literal[2])):null};return null;}
 function structurePathInfo(path){
@@ -275,28 +279,172 @@ function addLocalCompany(){
  notify('Empresa cadastrada para teste. Nenhum acesso foi liberado.');
  return true;
 }
+function scanUpdate(detail){
+ scanBusy.detail=detail;
+ const el=document.getElementById('scanLiveState');
+ if(el)el.textContent=detail;
+}
+function scanEnd(){
+ scanBusy.active=false;scanBusy.cancel=false;scanBusy.detail='';scanBusy.checked=0;scanBusy.accepted=0;scanBusy.source='';
+ if(state.view==='scanner')renderContent();
+}
+function scanApply(found,preferred,replaceIds,stats){
+ const targets=new Set(replaceIds);
+ const existing=scanRows.filter(r=>r.group!==preferred||!targets.has(r.companyId));
+ scanRows=existing.concat(found).map((r,i)=>({...r,id:i}));
+ const available=new Set(scanRows.map(r=>r.folderKey));
+ for(const key of scanSelected)if(!available.has(key))scanSelected.delete(key);
+ scanStats[preferred]=stats;
+ scanView.reviewCompany=null;scanView.query='';scanView.filter='all';
+}
+async function scanSmart(){
+ if(!isAdmin()||scanBusy.active)return;
+ const office=scanView.group;
+ scanNotice.message='';
+ if(!scanSmartSupported()){
+   scanNotice.kind='warn';
+   scanNotice.message='Este navegador não oferece a leitura seletiva. Abra o endereço pelo Chrome ou Edge atualizado; até lá, use somente a leitura de UMA empresa por vez abaixo. Não selecione a TTM inteira pelo seletor antigo.';
+   renderContent();return;
+ }
+ let selected;
+ try{
+  // A chamada precisa acontecer diretamente no clique. A permissão é somente leitura.
+  selected=await window.showDirectoryPicker({mode:'read',id:'gav-docs-'+office.toLowerCase().replace(/[^a-z]/g,'')});
+ }catch(err){
+  if(err?.name!=='AbortError'){
+   scanNotice.kind='warn';scanNotice.message='Não foi possível abrir a pasta em modo seletivo: '+(err?.message||'permissão negada')+'. Você pode usar Chrome ou Edge atualizado.';
+   renderContent();
+  }
+  return;
+ }
+ const rootIsOffice=normGroup(selected.name)===normGroup(office);
+ const fakePath=office+'/'+selected.name+'/2026/JANEIRO/teste.pdf';
+ const oneCompany=!rootIsOffice?scanLocation(fakePath,office):null;
+ if(!rootIsOffice&&(!oneCompany?.companyId||oneCompany.ignored)){
+   scanNotice.kind='warn';
+   scanNotice.message='Pasta incorreta. Selecione '+office+' ou uma pasta de empresa cadastrada desse escritório. Nenhum arquivo foi lido.';
+   renderContent();return;
+ }
+ const found=[],seenIds=new Set(),visitedCompanyIds=new Set();
+ let rootSkipped=0,checked=0,unsupported=0,skippedDepth=0,truncated=false,rootFolders=0;
+ scanBusy.active=true;scanBusy.cancel=false;scanBusy.checked=0;scanBusy.accepted=0;scanBusy.source=office;
+ renderContent();
+ const checkpoint=async detail=>{
+   if(scanBusy.cancel)throw Error('scan-cancelled');
+   if(checked%60===0){scanBusy.checked=checked;scanBusy.accepted=found.length;scanUpdate(detail);await new Promise(resolve=>setTimeout(resolve,0))}
+ };
+ const crawl=async(handle,base,depth)=>{
+   if(depth>12){skippedDepth++;return}
+   for await(const child of handle.values()){
+     checked++;
+     await checkpoint('Conferindo '+office+': '+checked+' entradas, '+found.length+' arquivos identificados. Somente nomes; nenhum arquivo baixado.');
+     if(child.name.startsWith('.')){unsupported++;continue}
+     if(child.kind==='directory'){
+       await crawl(child,base.concat(child.name),depth+1);
+       continue;
+     }
+     if(child.kind!=='file'||!/\.(pdf|docx?|xlsx?|csv|txt|png|jpe?g|xml)$/i.test(child.name)){unsupported++;continue}
+     const path=base.concat(child.name).join('/');
+     const hit=scanLocation(path,office);
+     if(hit.ignored||!hit.companyId){unsupported++;continue}
+     // Não chamamos child.getFile() nem lemos bytes, evitando downloads do Drive.
+     found.push({...hit,path,size:null,modified:0});
+     seenIds.add(hit.companyId);
+     if(found.length>=SCAN_MAX_SAFE){truncated=true;throw Error('scan-limit')}
+   }
+ };
+ const SCAN_MAX_SAFE=SCANNER_MAX;
+ try{
+   if(rootIsOffice){
+     for await(const sub of selected.values()){
+       if(scanBusy.cancel)throw Error('scan-cancelled');
+       rootFolders++;
+       if(sub.kind!=='directory'){rootSkipped++;continue}
+       const hit=scanLocation(office+'/'+sub.name+'/2026/JANEIRO/teste.pdf',office);
+       if(hit.ignored||!hit.companyId){rootSkipped++;continue}
+       visitedCompanyIds.add(hit.companyId);
+       scanUpdate('Empresa '+sub.name+': buscando somente os arquivos desta pasta cadastrada.');
+       await crawl(sub,[office,sub.name],0);
+       await new Promise(resolve=>setTimeout(resolve,0));
+     }
+   }else{
+     visitedCompanyIds.add(oneCompany.companyId);
+     await crawl(selected,[office,selected.name],0);
+   }
+ }catch(err){
+   if(err?.message==='scan-cancelled'){
+     scanNotice.kind='warn';scanNotice.message='Leitura cancelada. Nenhum arquivo novo foi aplicado. Os resultados anteriores foram preservados.';
+     scanEnd();return;
+   }
+   if(err?.message!=='scan-limit'){
+     scanNotice.kind='warn';
+     scanNotice.message='Leitura interrompida pelo sistema de arquivos: '+(err?.message||'acesso indisponível')+'. Os resultados anteriores foram preservados.';
+     scanEnd();return;
+   }
+ }
+ // Não misturar registros antigos das mesmas empresas com uma leitura parcial.
+ if(truncated){
+   scanNotice.kind='warn';
+   scanNotice.message='Limite seguro de '+SCANNER_MAX+' arquivos atingido. Resultado PARCIAL — não indica todos os documentos; faça leituras por empresa para complementar, ou aguarde a futura integração com a API do Google Drive.';
+ }else if(!visitedCompanyIds.size){
+   scanNotice.kind='warn';
+   scanNotice.message='Nenhuma pasta corresponde a uma empresa cadastrada em '+office+'. Confira se selecionou o diretório correto.';
+ }else{
+   scanNotice.kind='ok';
+   scanNotice.message='Leitura seletiva concluída: '+found.length+' arquivo(s) de '+visitedCompanyIds.size+' empresa(s). '+rootSkipped+' entradas da raiz foram ignoradas sem examinar seus arquivos. Nenhum PDF foi aberto ou enviado.';
+ }
+ if(found.length){
+   // Só substituímos as empresas efetivamente lidas; as demais leituras ficam intactas.
+   scanApply(found,office,visitedCompanyIds,{examined:checked,found:found.length,ignored:unsupported,skippedDirectories:rootSkipped,mode:'smart',partial:truncated});
+ }else if(visitedCompanyIds.size&&!truncated){
+   scanApply([],office,visitedCompanyIds,{examined:checked,found:0,ignored:unsupported,skippedDirectories:rootSkipped,mode:'smart',partial:false});
+ }
+ scanEnd();
+}
 async function scanFolder(files){
- if(!isAdmin())return;
+ if(!isAdmin()||scanBusy.active)return;
  const preferred=scanView.group;
- let examined=0,ignored=0,unsupported=0;
- const found=[];
- for(const f of files||[]){
-   if(!f||!f.name||f.name.startsWith('.'))continue;
+ const total=files?.length||0;
+ if(!total)return;
+ if(total>SCAN_LEGACY_LIMIT){
+   scanNotice.kind='warn';
+   scanNotice.message='Leitura bloqueada com segurança: o seletor antigo recebeu '+total.toLocaleString('pt-BR')+' arquivos. NÃO escolha a pasta '+preferred+' inteira neste modo. Use o botão "Ler pasta principal (seletivo)" acima ou escolha uma só empresa. Nenhum arquivo foi enviado.';
+   renderContent();return;
+ }
+ scanBusy.active=true;scanBusy.cancel=false;scanBusy.source=preferred;
+ scanNotice.kind='';scanNotice.message='';
+ renderContent();
+ let examined=0,ignored=0,found=[];
+ for(const f of files){
+   if(scanBusy.cancel){scanNotice.kind='warn';scanNotice.message='Leitura interrompida; resultados anteriores preservados.';scanEnd();return}
+   if(!f?.name||f.name.startsWith('.'))continue;
    examined++;
-   if(!/\.(pdf|docx?|xlsx?|csv|txt|png|jpe?g|xml)$/i.test(f.name)){unsupported++;continue}
+   if(!/\.(pdf|docx?|xlsx?|csv|txt|png|jpe?g|xml)$/i.test(f.name)){ignored++;continue}
    const path=f.webkitRelativePath||f.name;
    const result=scanLocation(path,preferred);
    if(result.ignored||!result.companyId){ignored++;continue}
    found.push({...result,path,size:f.size,modified:f.lastModified});
-   if(found.length>SCANNER_MAX){notify('Há mais de '+SCANNER_MAX+' arquivos das empresas cadastradas. Leia uma pasta de empresa por vez para este teste.');return}
+   if(examined%60===0){
+     scanBusy.checked=examined;scanBusy.accepted=found.length;
+     scanUpdate('Lendo '+examined+' nomes de '+total+' (somente a empresa escolhida).');
+     await new Promise(resolve=>setTimeout(resolve,0));
+   }
  }
- scanRows=scanRows.filter(r=>r.group!==preferred&&r.companyId&&companies.some(c=>c.id===r.companyId)).concat(found).map((r,i)=>({...r,id:i}));
- const available=new Set(scanRows.map(r=>r.folderKey));
- for(const k of scanSelected)if(!available.has(k))scanSelected.delete(k);
- scanStats[preferred]={examined,found:found.length,ignored:ignored+unsupported};
- scanView.reviewCompany=null;scanView.filter='all';scanView.query='';
- renderContent();
- notify(found.length+' arquivos das empresas cadastradas identificados; '+(ignored+unsupported)+' outros ignorados. Nada foi enviado.');
+ const firstPath=files[0]?.webkitRelativePath||'';
+ const selectedIsOffice=normGroup(firstPath.split('/')[0])===normGroup(preferred);
+ const targets=new Set(found.map(f=>f.companyId));
+ if(!found.length){
+   scanNotice.kind='warn';scanNotice.message='Nenhum arquivo correspondeu a uma empresa cadastrada de '+preferred+'. Os resultados anteriores foram preservados.';
+ }else{
+   if(selectedIsOffice){
+     // Leitura de uma raiz pequena: atualizar só empresas efetivamente encontradas.
+     scanApply(found,preferred,targets,{examined,found:found.length,ignored,mode:'legacy',partial:false});
+   }else{
+     scanApply(found,preferred,targets,{examined,found:found.length,ignored,mode:'legacy',partial:false});
+   }
+   scanNotice.kind='ok';scanNotice.message=found.length+' arquivo(s) identificado(s) nesta empresa; '+ignored+' ignorado(s). Os resultados de outras empresas foram preservados.';
+ }
+ scanEnd();
 }
 function scanSelectionCsv(){
  const rows=[['Escritório / origem','Pasta selecionada','Empresa vinculada','CNPJ','Arquivos localizados','Conferências pendentes','Situação']];
@@ -417,21 +565,26 @@ function scannerHtml(){
  const folders=scanFolders().filter(f=>f.group===scanView.group),rows=scanRows.filter(r=>r.group===scanView.group),summary=scanStats[scanView.group];
  const counts={all:rows.length,mapped:rows.filter(r=>r.companyId&&r.valid&&r.category!=='unknown'&&!r.nameMismatch).length,review:rows.filter(r=>!r.companyId||!r.valid||r.category==='unknown'||r.nameMismatch).length};
  const filtered=rows.filter(r=>(scanView.filter==='all'||(scanView.filter==='mapped'&&r.companyId&&r.valid&&r.category!=='unknown'&&!r.nameMismatch)||(scanView.filter==='review'&&(!r.companyId||!r.valid||r.category==='unknown'||r.nameMismatch))||(scanView.filter==='selected'&&scanSelected.has(r.folderKey)))&&(!scanView.query||[r.group,r.companyFolder,r.file,r.path].join(' ').toLowerCase().includes(scanView.query.toLowerCase())));
- return `${titleHead('Leitor de pastas e seleção','Escolha um escritório e leia a pasta principal uma única vez. Só empresas cadastradas entram na conferência.')}
+ return `${titleHead('Leitor de pastas e seleção','Use a leitura seletiva para o diretório principal, sem enumerar os arquivos de empresas estranhas. Não há sincronização automática.')}
  <div class="scan-origin-picks scan-origin-main" role="group" aria-label="Escolha o escritório de origem">${scanRoots.map(g=>`<button type="button" class="scan-origin ${scanView.group===g?'active':''}" data-action="scan-group" data-val="${esc(g)}" aria-pressed="${scanView.group===g}">${icon('folder',17)} <span>${esc(g)}</span></button>`).join('')}</div>
  <div class="scan-drop"><div><h3>Localizar pastas do Google Drive no computador</h3>
- <p>Selecione <b>TTM</b> e escolha <b>G:\\Meu Drive\\TTM</b> uma única vez. O aplicativo considera só as empresas cadastradas deste escritório e ignora as demais pastas e arquivos soltos.</p></div>
+ <p><b>Para a TTM com 97 mil arquivos:</b> use exclusivamente <b>Ler pasta principal (seletivo)</b>. Ele procura somente pastas de empresas cadastradas. Não use a opção simples para selecionar a raiz TTM. A leitura seletiva depende do suporte do navegador.</p></div>
  <div class="scan-picker"><strong style="font-size:12px">Origem selecionada: ${esc(scanView.group)}</strong>
- <label for="scanFolder" class="btn">${icon('folder',17)} Escolher pasta</label><input type="file" id="scanFolder" webkitdirectory directory multiple aria-label="Escolher pasta" /></div></div>
- <div class="scan-alert"><b>Leitura local de conferência:</b> entram na listagem somente arquivos de empresas cadastradas. Não há envio, abertura de PDFs ou sincronização contínua com o Google Drive.</div>
+ <button class="btn btn-dark" type="button" data-action="scan-smart" ${scanBusy.active?'disabled':''}>${icon('folder',17)} Ler pasta principal (seletivo)</button>
+ <label for="scanFolder" class="btn btn-line" style="cursor:pointer">${icon('folder',16)} Ler somente UMA empresa (alternativa)</label>
+ <input type="file" id="scanFolder" webkitdirectory directory multiple aria-label="Selecionar somente uma pasta de empresa" ${scanBusy.active?'disabled':''} />
+ <small class="subtle">Não envia arquivos; apenas lista nomes. Use Chrome/Edge se o botão seletivo não funcionar no seu navegador.</small></div></div>
+ <div class="scan-alert"><b>Somente metadados:</b> a leitura seletiva não abre arquivos nem baixa os PDFs do Drive. Se o navegador pedir permissão de leitura, autorize apenas a pasta escolhida. Nenhuma informação é enviada ao servidor. O botão de cancelar interrompe a leitura após a operação atual.</div>
+ ${scanBusy.active?`<div class="scan-alert" role="status" style="margin-top:14px"><b>Leitura em andamento.</b> <span id="scanLiveState">${esc(scanBusy.detail||'Localizando empresas cadastradas...')}</span><div class="admin-actions" style="margin-top:8px"><button class="btn btn-line" data-action="scan-cancel">Cancelar leitura</button></div></div>`:''}
+ ${scanNotice.message?`<div class="scan-alert" role="status" style="margin:14px 0;border-color:${scanNotice.kind==='ok'?'#a3c4af':'#d3af6b'}">${esc(scanNotice.message)}</div>`:''}
  ${scanView.group==='TTM'?ttmRegistrationHtml():''}
- ${scanReviewHtml()}<div class="scan-alert" style="margin:14px 0"><b>Filtro ${esc(scanView.group)}:</b> somente empresas cadastradas. ${summary?`Foram identificados ${summary.found} arquivo(s) e ignorados ${summary.ignored} de outras pastas/tipos.`:"Faça a primeira leitura da pasta principal."} <b>Você não precisa marcar uma empresa por vez.</b></div><div class="scan-grid"><div class="scan-num"><small>ARQUIVOS LIDOS</small><b>${counts.all}</b></div><div class="scan-num"><small>PASTAS DE EMPRESA</small><b>${folders.length}</b></div><div class="scan-num"><small>SELECIONADAS</small><b>${scanSelected.size}</b></div><div class="scan-num"><small>EXIGEM CONFERÊNCIA</small><b>${counts.review}</b></div></div>
+ ${scanReviewHtml()}<div class="scan-alert" style="margin:14px 0"><b>Filtro ${esc(scanView.group)}:</b> somente empresas cadastradas. ${summary?`Encontrados ${summary.found} arquivo(s). ${summary.mode==='smart'?`${summary.skippedDirectories||0} entradas da raiz não foram percorridas.`:`${summary.ignored} arquivos ignorados.`}${summary.partial?' Leitura PARCIAL por limite de segurança.':''}`:"Ainda não houve leitura concluída nesta origem."} <b>Você não precisa marcar uma empresa por vez.</b></div><div class="scan-grid"><div class="scan-num"><small>ARQUIVOS LIDOS</small><b>${counts.all}</b></div><div class="scan-num"><small>PASTAS DE EMPRESA</small><b>${folders.length}</b></div><div class="scan-num"><small>SELECIONADAS</small><b>${scanSelected.size}</b></div><div class="scan-num"><small>EXIGEM CONFERÊNCIA</small><b>${counts.review}</b></div></div>
  <div class="scan-box"><h3 class="block-title">Pastas de empresas cadastradas</h3>
  <p class="subtle" style="margin-top:-6px">Os arquivos já são lidos quando você escolhe a pasta principal. A marcação é opcional e serve somente para futura autorização de compartilhamento.</p>
  ${!folders.length?'<div class="empty"><strong>Nenhuma pasta analisada.</strong>Escolha uma origem acima para começar.</div>':`<div class="scan-company-list">${folders.slice(0,250).map(f=>{const c=companies.find(x=>x.id===f.companyId);return `<label class="scan-company"><input type="checkbox" data-scan-pick="${encodeURIComponent(f.key)}" ${scanSelected.has(f.key)?'checked':''}><div><b>${esc(f.folder)}</b><small>${esc(f.group)} · ${f.count} arquivo(s) · ${f.review} para conferir</small><small>${c?esc(c.name+' · '+c.cnpj):'Ainda sem vínculo com CNPJ — cadastrar em Empresas e permissões'}</small></div><span class="scan-tag">${scanSelected.has(f.key)?'Selecionada':'Não selecionada'}</span></label>`}).join('')}</div>${folders.length>250?`<p class="subtle">Exibindo as primeiras 250 pastas de ${folders.length}. Confira as demais pelo CSV.</p>`:''}`}
  <div class="admin-actions" style="margin-top:15px"><button class="btn btn-dark" data-action="scan-selection-export" ${!scanSelected.size?'disabled':''}>${icon('download',15)} Exportar empresas selecionadas</button><button class="btn btn-line" data-action="view" data-val="companies">${icon('building',15)} Vincular CNPJ às pastas</button></div></div>
  <div class="scan-box"><div class="scan-filter"><div class="pay-chips" style="margin:0">${[['all','Todos'],['mapped','Classificados'],['review','Conferir'],['selected','Selecionadas']].map(([v,n])=>`<button class="pay-chip ${scanView.filter===v?'active':''}" data-action="scan-filter" data-val="${v}">${n}</button>`).join('')}</div><input class="input" id="scanSearch" placeholder="Buscar empresa ou arquivo" value="${esc(scanView.query)}"><button class="btn btn-line btn-small" id="scanSearchButton">Pesquisar</button><button class="btn btn-line btn-small" data-action="scan-export" ${!rows.length?'disabled':''}>${icon('download',15)} Exportar conferência</button></div>
- ${!rows.length?'<div class="empty"><strong>Nenhum arquivo analisado.</strong></div>':`<div style="overflow-x:auto"><table class="scan-table"><thead><tr><th>Origem / empresa</th><th>Competência</th><th>Categoria</th><th>Arquivo</th><th>Conferência</th></tr></thead><tbody>${filtered.slice(0,250).map(r=>`<tr><td><b>${esc(r.companyFolder||'Não identificada')}</b><small>${esc(r.group)} · ${esc(companies.find(c=>c.id===r.companyId)?.name||'Sem CNPJ vinculado')}</small></td><td>${r.month?esc(r.month):'—'}<small>${r.year||'Ano não identificado'}</small></td><td>${esc(getCategory(r.category)?.label||'A classificar')}</td><td>${esc(r.file)}<small>${(r.size/1024).toFixed(0)} KB</small></td><td class="${r.companyId&&r.valid&&r.category!=='unknown'&&!r.nameMismatch?'ok':'warn'}">${r.companyId&&r.valid&&r.category!=='unknown'&&!r.nameMismatch?'Identificado':'Conferir'}<button class="btn btn-line btn-small" style="display:block;margin-top:6px" data-action="scan-review" data-val="${esc(r.companyId)}">Ver arquivos</button></td></tr>`).join('')}</tbody></table></div>${filtered.length>250?`<p class="subtle">Exibindo 250 de ${filtered.length} arquivos. Exporte para ver a lista inteira.</p>`:''}`}</div>
+ ${!rows.length?'<div class="empty"><strong>Nenhum arquivo analisado.</strong></div>':`<div style="overflow-x:auto"><table class="scan-table"><thead><tr><th>Origem / empresa</th><th>Competência</th><th>Categoria</th><th>Arquivo</th><th>Conferência</th></tr></thead><tbody>${filtered.slice(0,250).map(r=>`<tr><td><b>${esc(r.companyFolder||'Não identificada')}</b><small>${esc(r.group)} · ${esc(companies.find(c=>c.id===r.companyId)?.name||'Sem CNPJ vinculado')}</small></td><td>${r.month?esc(r.month):'—'}<small>${r.year||'Ano não identificado'}</small></td><td>${esc(getCategory(r.category)?.label||'A classificar')}</td><td>${esc(r.file)}<small>${r.size==null?'Tamanho não consultado':(r.size/1024).toFixed(0)+' KB'}</small></td><td class="${r.companyId&&r.valid&&r.category!=='unknown'&&!r.nameMismatch?'ok':'warn'}">${r.companyId&&r.valid&&r.category!=='unknown'&&!r.nameMismatch?'Identificado':'Conferir'}<button class="btn btn-line btn-small" style="display:block;margin-top:6px" data-action="scan-review" data-val="${esc(r.companyId)}">Ver arquivos</button></td></tr>`).join('')}</tbody></table></div>${filtered.length>250?`<p class="subtle">Exibindo 250 de ${filtered.length} arquivos. Exporte para ver a lista inteira.</p>`:''}`}</div>
  <div class="notice" style="margin-top:15px">Reconhece <b>ADM, RES, FER</b>, meses e pastas arquivadas em <b>X2026</b>. Nome divergente ou categoria desconhecida exige conferência. <b>Nenhum PDF real é aberto ou disponibilizado aos clientes.</b></div>${footer()}`;
 }
 function exportScan(){const rows=[['Pasta da empresa','CNPJ vinculado','Ano','Mês','Categoria','Nome do arquivo','Status','Caminho relativo']];for(const r of scanRows){rows.push([r.companyFolder,companies.find(c=>c.id===r.companyId)?.cnpj||'',r.year,r.month,getCategory(r.category)?.label||'Não classificado',r.file,r.companyId&&r.valid&&r.category!=='unknown'&&!r.nameMismatch?'Identificado':'Conferir',r.path])}csvDownload('GAV-Leitura-de-Pastas.csv',rows);notify('Conferência exportada.');}
@@ -457,7 +610,7 @@ const classify=d=>{const raw=(d.path||'').replace(/\\/g,'/'),parts=raw.toUpperCa
 const allowed=d=>isAdmin()||(d.c===sess.c&&cfg[d.c]?.enabled&&cfg[d.c]?.categories?.includes(classify(d)));
 const selectedDocs=()=>docs.filter(d=>d.c===me()?.id&&allowed(d));const catDocs=id=>selectedDocs().filter(d=>classify(d)===id);
 const persist=()=>{safeSet(localStorage,DOCS_KEY,JSON.stringify(docs));safeSet(localStorage,CFG_KEY,JSON.stringify(cfg))};
-const el=()=>document.getElementById('app');const dispatch=(a,...args)=>{switch(a){case'login':login();break;case'logout':sess=null;safeRemove(localStorage,LOGIN_KEY);safeRemove(sessionStorage,LOGIN_KEY);render();break;case'view':state.view=args[0];state.search='';state.month='ALL';render();break;case'category':state.category=args[0];state.view='category';state.month='ALL';state.search='';render();break;case'year':state.year=Number(args[0]);state.showArchive=state.year!==activeYear();state.month='ALL';render();break;case'archive':state.showArchive=!state.showArchive;renderContent();break;case'month':state.month=args[0];render();break;case'search':state.search=args[0];renderContent();break;case'preview':state.preview=Number(args[0]);render();break;case'close':state.preview=null;render();break;case'company':state.selected=args[0];state.view='home';state.category=null;state.year=activeYear();state.showArchive=false;render();break;case'allow-company':cfg[args[0]].enabled=args[1]==='true';persist();render();break;case'allow-cat':{let a=cfg[args[0]].categories;const idx=a.indexOf(args[1]);if(idx<0)a.push(args[1]);else a.splice(idx,1);persist();render();break;}case'admin-tab':state.adminTab=args[0];render();break;case'sync':simulateSync();break;case'add':addDoc();break;case'reset':if(confirm('Reiniciar todos os dados fictícios de demonstração?')){docs=structuredClone(seed);cfg=structuredClone(defaultConfig);payroll=payrollSample();persist();payStore();state.view='home';notify('Demonstração reiniciada');render()}break;case'scan-jump':if(isAdmin()){scanView.group=args[0];scanView.reviewCompany=null;state.view='scanner';render()}break;case'scan-group':if(isAdmin()){scanView.group=args[0];scanView.reviewCompany=null;renderContent()}break;case'scan-filter':if(isAdmin()){scanView.filter=args[0];renderContent()}break;case'scan-review':if(isAdmin()&&companies.some(c=>c.id===args[0])){scanView.reviewCompany=scanView.reviewCompany===args[0]?null:args[0];state.view='scanner';renderContent();document.getElementById('scanReviewDetails')?.scrollIntoView?.({block:'start',behavior:'smooth'})}break;case'scan-export':if(isAdmin())exportScan();break;case'scan-selection-export':if(isAdmin())scanSelectionCsv();break;case'ttm-import':if(isAdmin())importTTM();break;case'ttm-export':if(isAdmin())exportTtmRegister();break;case'pay-export':if(isAdmin())exportPayroll();break;case'company-add':addLocalCompany();break;case'pay-note-save':savePayrollNote(args[0]);break;case'pay-filter':if(isAdmin()){payUi.filter=args[0];payUi.open=null;renderContent()}break;case'pay-open':if(isAdmin()){payUi.open=payUi.open===args[0]?null:args[0];renderContent()}break;case'pay-step':case'pay-require':case'pay-approve':case'pay-reopen':case'pay-mock':payrollAction(a,args[0],args[1]);break;case'download':downloadPdf(Number(args[0]));break;case'copy':copyDemoLink();break;case'client-view':state.view='home';render();break;}}
+const el=()=>document.getElementById('app');const dispatch=(a,...args)=>{switch(a){case'login':login();break;case'logout':sess=null;safeRemove(localStorage,LOGIN_KEY);safeRemove(sessionStorage,LOGIN_KEY);render();break;case'view':state.view=args[0];state.search='';state.month='ALL';render();break;case'category':state.category=args[0];state.view='category';state.month='ALL';state.search='';render();break;case'year':state.year=Number(args[0]);state.showArchive=state.year!==activeYear();state.month='ALL';render();break;case'archive':state.showArchive=!state.showArchive;renderContent();break;case'month':state.month=args[0];render();break;case'search':state.search=args[0];renderContent();break;case'preview':state.preview=Number(args[0]);render();break;case'close':state.preview=null;render();break;case'company':state.selected=args[0];state.view='home';state.category=null;state.year=activeYear();state.showArchive=false;render();break;case'allow-company':cfg[args[0]].enabled=args[1]==='true';persist();render();break;case'allow-cat':{let a=cfg[args[0]].categories;const idx=a.indexOf(args[1]);if(idx<0)a.push(args[1]);else a.splice(idx,1);persist();render();break;}case'admin-tab':state.adminTab=args[0];render();break;case'sync':simulateSync();break;case'add':addDoc();break;case'reset':if(confirm('Reiniciar todos os dados fictícios de demonstração?')){docs=structuredClone(seed);cfg=structuredClone(defaultConfig);payroll=payrollSample();persist();payStore();state.view='home';notify('Demonstração reiniciada');render()}break;case'scan-jump':if(isAdmin()){scanView.group=args[0];scanView.reviewCompany=null;state.view='scanner';render()}break;case'scan-group':if(isAdmin()){scanView.group=args[0];scanView.reviewCompany=null;renderContent()}break;case'scan-filter':if(isAdmin()){scanView.filter=args[0];renderContent()}break;case'scan-review':if(isAdmin()&&companies.some(c=>c.id===args[0])){scanView.reviewCompany=scanView.reviewCompany===args[0]?null:args[0];state.view='scanner';renderContent();document.getElementById('scanReviewDetails')?.scrollIntoView?.({block:'start',behavior:'smooth'})}break;case'scan-smart':if(isAdmin())scanSmart();break;case'scan-cancel':if(isAdmin()&&scanBusy.active){scanBusy.cancel=true;scanUpdate('Cancelando a leitura...')}break;case'scan-export':if(isAdmin())exportScan();break;case'scan-selection-export':if(isAdmin())scanSelectionCsv();break;case'ttm-import':if(isAdmin())importTTM();break;case'ttm-export':if(isAdmin())exportTtmRegister();break;case'pay-export':if(isAdmin())exportPayroll();break;case'company-add':addLocalCompany();break;case'pay-note-save':savePayrollNote(args[0]);break;case'pay-filter':if(isAdmin()){payUi.filter=args[0];payUi.open=null;renderContent()}break;case'pay-open':if(isAdmin()){payUi.open=payUi.open===args[0]?null:args[0];renderContent()}break;case'pay-step':case'pay-require':case'pay-approve':case'pay-reopen':case'pay-mock':payrollAction(a,args[0],args[1]);break;case'download':downloadPdf(Number(args[0]));break;case'copy':copyDemoLink();break;case'client-view':state.view='home';render();break;}}
 function notify(msg){state.toast=msg;let old=document.querySelector('.toast');old?.remove();const n=document.createElement('div');n.className='toast';n.textContent=msg;document.body.append(n);setTimeout(()=>n.remove(),3500)}
 async function login(){
  const raw=document.getElementById('loginId').value.trim(),pwd=document.getElementById('loginPwd').value.trim(),id=raw.replace(/\D/g,'');
@@ -488,9 +641,9 @@ async function login(){
  }
  render();
 }
-function loginHtml(){return `<div class="login-wrap"><section class="login-brand"><div><div class="logo-official"><img src="https://raw.githubusercontent.com/gavsolucoescontabeis-commits/GAV-Site/main/NOME%20E%20LOGO.jpeg" alt="Logotipo original GAV Soluções Contábeis" onerror="this.style.display='none';this.parentElement.classList.add('logo-fallback')"><span class="logo-text">GAV <small>SOLUÇÕES CONTÁBEIS</small></span></div></div><div><div class="gold-line"></div><h1>Seus documentos.<br>Em um só lugar.</h1><p>Acesso simples, organizado e seguro na versão definitiva. Os documentos são fictícios. A relação administrativa da TTM já vem pré-cadastrada, protegida por uma chave exclusiva para testes.</p></div><span class="login-foot" style="font-size:12px;color:#a7abad">Compromisso, organização e responsabilidade.</span></section><section class="login-panel"><div class="eyebrow">GAV COMPARTILHAR DOCS • V0.7.2</div><h2>Bem-vindo!</h2><p class="subtle">Entre com os dados de demonstração para experimentar o portal.</p><form id="loginForm"><div class="form-field"><label for="loginId">CNPJ ou acesso administrativo</label><input id="loginId" class="input" autocomplete="username" placeholder="admin@gav.local" value="admin@gav.local"></div><div class="form-field"><label for="loginPwd">Senha</label><input id="loginPwd" class="input" type="password" autocomplete="current-password" placeholder="Digite sua senha"></div><label class="remember"><input type="checkbox" id="remember" checked> Continuar conectado neste aparelho</label><div class="error hide" id="loginError">CNPJ/usuário ou senha incorretos para esta demonstração.</div><button class="btn btn-dark login-action" type="submit">Acessar meus documentos ${icon('chevron')}</button></form><div class="demo-credentials"><div class="demo-label">DADOS PARA TESTAR</div><div>Cliente 1: <code>00.000.000/0001-91</code></div><div>Cliente 2: <code>11.111.111/0001-91</code></div><div>Administrador: <code>admin@gav.local</code></div><div>Senha dos clientes fictícios: <code>teste123</code></div><div class="subtle" style="margin-top:6px;font-size:11px">Para entrar como administrador, use a chave individual recebida na conversa. A senha de cliente fictício não funciona no acesso administrativo.</div><div class="subtle" style="margin-top:6px;font-size:11px">Credenciais apenas ilustrativas. Não utilizar senhas reais aqui.</div></div></section></div>`}
+function loginHtml(){return `<div class="login-wrap"><section class="login-brand"><div><div class="logo-official"><img src="https://raw.githubusercontent.com/gavsolucoescontabeis-commits/GAV-Site/main/NOME%20E%20LOGO.jpeg" alt="Logotipo original GAV Soluções Contábeis" onerror="this.style.display='none';this.parentElement.classList.add('logo-fallback')"><span class="logo-text">GAV <small>SOLUÇÕES CONTÁBEIS</small></span></div></div><div><div class="gold-line"></div><h1>Seus documentos.<br>Em um só lugar.</h1><p>Acesso simples, organizado e seguro na versão definitiva. Os documentos são fictícios. A relação administrativa da TTM já vem pré-cadastrada, protegida por uma chave exclusiva para testes.</p></div><span class="login-foot" style="font-size:12px;color:#a7abad">Compromisso, organização e responsabilidade.</span></section><section class="login-panel"><div class="eyebrow">GAV COMPARTILHAR DOCS • V0.7.3</div><h2>Bem-vindo!</h2><p class="subtle">Entre com os dados de demonstração para experimentar o portal.</p><form id="loginForm"><div class="form-field"><label for="loginId">CNPJ ou acesso administrativo</label><input id="loginId" class="input" autocomplete="username" placeholder="admin@gav.local" value="admin@gav.local"></div><div class="form-field"><label for="loginPwd">Senha</label><input id="loginPwd" class="input" type="password" autocomplete="current-password" placeholder="Digite sua senha"></div><label class="remember"><input type="checkbox" id="remember" checked> Continuar conectado neste aparelho</label><div class="error hide" id="loginError">CNPJ/usuário ou senha incorretos para esta demonstração.</div><button class="btn btn-dark login-action" type="submit">Acessar meus documentos ${icon('chevron')}</button></form><div class="demo-credentials"><div class="demo-label">DADOS PARA TESTAR</div><div>Cliente 1: <code>00.000.000/0001-91</code></div><div>Cliente 2: <code>11.111.111/0001-91</code></div><div>Administrador: <code>admin@gav.local</code></div><div>Senha dos clientes fictícios: <code>teste123</code></div><div class="subtle" style="margin-top:6px;font-size:11px">Para entrar como administrador, use a chave individual recebida na conversa. A senha de cliente fictício não funciona no acesso administrativo.</div><div class="subtle" style="margin-top:6px;font-size:11px">Credenciais apenas ilustrativas. Não utilizar senhas reais aqui.</div></div></section></div>`}
 function menu(){return [{id:'home',label:'Início',ico:'grid'},{id:'recent',label:'Documentos recentes',ico:'clock'},...(isAdmin()?[{id:'payroll',label:'Controle de processamento',ico:'calendar'},{id:'companies',label:'Empresas e permissões',ico:'building'},{id:'new-company',label:'Cadastrar nova empresa',ico:'plus'},{id:'rules',label:'Regras de organização',ico:'setting'},{id:'scanner',label:'Pastas e seleção',ico:'folder'}]:[])];}
-function shellHtml(){const m=me();return `<div class="shell"><aside class="side"><div class="side-top"><div class="side-logo logo-official"><img src="https://raw.githubusercontent.com/gavsolucoescontabeis-commits/GAV-Site/main/NOME%20E%20LOGO.jpeg" alt="GAV Soluções Contábeis" onerror="this.style.display='none';this.parentElement.classList.add('logo-fallback')"><span class="logo-text">GAV <small>SOLUÇÕES CONTÁBEIS</small></span></div></div><div class="side-caption">NAVEGAÇÃO</div>${menu().map(x=>`<button class="nav ${state.view===x.id?'active':''}" data-action="view" data-val="${x.id}">${icon(x.ico)} ${x.label}</button>`).join('')}<div class="side-bottom"><div style="font-size:12px;font-weight:800;margin-bottom:8px">${isAdmin()?'Administrador GAV':'Portal do cliente'}</div><div class="subtle" style="margin-bottom:14px">Versão demonstrativa · v0.7.2</div><button class="nav" data-action="logout">${icon('logout')} Sair da conta</button></div></aside><main class="app-main"><div class="demo-ribbon">AMBIENTE DE TESTE — SEM LOGIN REAL OU PUBLICAÇÃO DE DOCUMENTOS</div><header class="topbar"><div style="display:flex;align-items:center;gap:10px"><span class="mobile-brand">GAV</span><div><div class="header-title">${isAdmin()?'Painel administrativo':'Portal de documentos'}</div><div class="header-desc">${esc(m?.name||'GAV Soluções Contábeis')}</div></div></div><div class="top-actions">${isAdmin()?`<button class="btn btn-line btn-small" data-action="view" data-val="scanner">${icon('folder',15)} Pastas</button><button class="btn btn-line btn-small" data-action="sync">${icon('sync',15)} Simular sincronização</button>`:''}<div class="avatar">${isAdmin()?'AD':'CL'}</div><button class="btn btn-line btn-small" data-action="logout" title="Sair">${icon('logout',16)}</button></div></header><div id="mainContent" class="content"></div></main><nav class="bottom-bar" aria-label="Navegação">${(isAdmin()?['home','payroll','scanner','new-company'].map(id=>menu().find(x=>x.id===id)):menu().slice(0,4)).map(x=>`<button class="bottom-nav ${state.view===x.id?'active':''}" data-action="view" data-val="${x.id}">${icon(x.ico)}<span>${x.id==='recent'?'Recentes':x.id==='companies'?'Empresas':x.id==='payroll'?'Processamento':x.id==='rules'?'Regras':x.label}</span></button>`).join('')}</nav></div>`}
+function shellHtml(){const m=me();return `<div class="shell"><aside class="side"><div class="side-top"><div class="side-logo logo-official"><img src="https://raw.githubusercontent.com/gavsolucoescontabeis-commits/GAV-Site/main/NOME%20E%20LOGO.jpeg" alt="GAV Soluções Contábeis" onerror="this.style.display='none';this.parentElement.classList.add('logo-fallback')"><span class="logo-text">GAV <small>SOLUÇÕES CONTÁBEIS</small></span></div></div><div class="side-caption">NAVEGAÇÃO</div>${menu().map(x=>`<button class="nav ${state.view===x.id?'active':''}" data-action="view" data-val="${x.id}">${icon(x.ico)} ${x.label}</button>`).join('')}<div class="side-bottom"><div style="font-size:12px;font-weight:800;margin-bottom:8px">${isAdmin()?'Administrador GAV':'Portal do cliente'}</div><div class="subtle" style="margin-bottom:14px">Versão demonstrativa · v0.7.3</div><button class="nav" data-action="logout">${icon('logout')} Sair da conta</button></div></aside><main class="app-main"><div class="demo-ribbon">AMBIENTE DE TESTE — SEM LOGIN REAL OU PUBLICAÇÃO DE DOCUMENTOS</div><header class="topbar"><div style="display:flex;align-items:center;gap:10px"><span class="mobile-brand">GAV</span><div><div class="header-title">${isAdmin()?'Painel administrativo':'Portal de documentos'}</div><div class="header-desc">${esc(m?.name||'GAV Soluções Contábeis')}</div></div></div><div class="top-actions">${isAdmin()?`<button class="btn btn-line btn-small" data-action="view" data-val="scanner">${icon('folder',15)} Pastas</button><button class="btn btn-line btn-small" data-action="sync">${icon('sync',15)} Simular sincronização</button>`:''}<div class="avatar">${isAdmin()?'AD':'CL'}</div><button class="btn btn-line btn-small" data-action="logout" title="Sair">${icon('logout',16)}</button></div></header><div id="mainContent" class="content"></div></main><nav class="bottom-bar" aria-label="Navegação">${(isAdmin()?['home','payroll','scanner','new-company'].map(id=>menu().find(x=>x.id===id)):menu().slice(0,4)).map(x=>`<button class="bottom-nav ${state.view===x.id?'active':''}" data-action="view" data-val="${x.id}">${icon(x.ico)}<span>${x.id==='recent'?'Recentes':x.id==='companies'?'Empresas':x.id==='payroll'?'Processamento':x.id==='rules'?'Regras':x.label}</span></button>`).join('')}</nav></div>`}
 function titleHead(title,desc,act=''){return `<div class="page-head"><div><div class="eyebrow">CENTRAL DE DOCUMENTOS</div><h1>${esc(title)}</h1><p>${esc(desc)}</p></div>${act}</div>`}
 function getCategory(id){return categories.find(c=>c.id===id)}
 function yearPicker(all){const years=[...new Set(all.map(docYear))].sort((a,b)=>b-a),current=activeYear(),history=years.filter(y=>y<current),future=years.filter(y=>y>current),archivedChosen=state.year<current;
@@ -509,7 +662,7 @@ function render(){if(!sess){el().innerHTML=loginHtml();document.getElementById('
 function renderContent(){if(!sess)return;const v=state.view,html=v==='home'?homeHtml():v==='category'?catHtml():v==='recent'?recentHtml():v==='payroll'&&isAdmin()?payrollHtml():v==='companies'&&isAdmin()?companiesHtml():v==='new-company'&&isAdmin()?newCompanyHtml():v==='rules'&&isAdmin()?rulesHtml():v==='scanner'&&isAdmin()?scannerHtml():homeHtml();document.getElementById('mainContent').innerHTML=html;document.querySelectorAll('#mainContent [data-action]').forEach(b=>b.addEventListener('click',onClick));bindContent()}
 function onClick(e){const b=e.currentTarget;dispatch(b.dataset.action,b.dataset.val,b.dataset.extra)}
 function bindDynamic(){const p=document.getElementById('previewOverlay');p?.addEventListener('click',e=>{if(e.target===p)dispatch('close')});window.onkeydown=e=>{if(e.key==='Escape'&&state.preview!==null)dispatch('close')}}
-function bindContent(){document.getElementById('payCompetence')?.addEventListener('change',e=>{payUi.competence=e.target.value;payUi.open=null;renderContent()});document.getElementById('payGroup')?.addEventListener('change',e=>{payUi.group=e.target.value;payUi.open=null;renderContent()});const paySearch=document.getElementById('paySearch');const runPaySearch=()=>{payUi.search=paySearch?.value.trim()||'';payUi.open=null;renderContent()};document.getElementById('paySearchBtn')?.addEventListener('click',runPaySearch);paySearch?.addEventListener('keydown',e=>{if(e.key==='Enter')runPaySearch()});document.getElementById('companyPick')?.addEventListener('change',e=>dispatch('company',e.target.value));document.getElementById('permissionCompany')?.addEventListener('change',e=>{state.selected=e.target.value;renderContent()});document.querySelectorAll('[data-company-toggle]').forEach(x=>x.addEventListener('change',e=>dispatch('allow-company',x.dataset.companyToggle,String(e.target.checked))));document.querySelectorAll('[data-category-toggle]').forEach(x=>x.addEventListener('change',()=>dispatch('allow-cat',state.selected,x.dataset.categoryToggle)));const search=document.getElementById('docSearch')||document.getElementById('recentSearch');const searchBtn=document.getElementById('searchBtn');const runSearch=()=>{state.search=search?.value||'';renderContent()};searchBtn?.addEventListener('click',runSearch);search?.addEventListener('keydown',e=>{if(e.key==='Enter')runSearch()});const form=document.getElementById('addForm');form?.addEventListener('submit',e=>{e.preventDefault();dispatch('add')});const folder=document.getElementById('scanFolder');folder?.addEventListener('change',e=>scanFolder(e.target.files));document.querySelectorAll('[data-scan-pick]').forEach(x=>x.addEventListener('change',e=>{const k=decodeURIComponent(x.dataset.scanPick);if(e.target.checked)scanSelected.add(k);else scanSelected.delete(k);renderContent()}));document.getElementById('companyAddForm')?.addEventListener('submit',e=>{e.preventDefault();addLocalCompany()});const groupField=document.getElementById('newCoGroup'),codeField=document.getElementById('newCoCode'),nameField=document.getElementById('newCoName'),folderField=document.getElementById('newCoFolder'),cnpjField=document.getElementById('newCoCnpj');
+function bindContent(){document.getElementById('payCompetence')?.addEventListener('change',e=>{payUi.competence=e.target.value;payUi.open=null;renderContent()});document.getElementById('payGroup')?.addEventListener('change',e=>{payUi.group=e.target.value;payUi.open=null;renderContent()});const paySearch=document.getElementById('paySearch');const runPaySearch=()=>{payUi.search=paySearch?.value.trim()||'';payUi.open=null;renderContent()};document.getElementById('paySearchBtn')?.addEventListener('click',runPaySearch);paySearch?.addEventListener('keydown',e=>{if(e.key==='Enter')runPaySearch()});document.getElementById('companyPick')?.addEventListener('change',e=>dispatch('company',e.target.value));document.getElementById('permissionCompany')?.addEventListener('change',e=>{state.selected=e.target.value;renderContent()});document.querySelectorAll('[data-company-toggle]').forEach(x=>x.addEventListener('change',e=>dispatch('allow-company',x.dataset.companyToggle,String(e.target.checked))));document.querySelectorAll('[data-category-toggle]').forEach(x=>x.addEventListener('change',()=>dispatch('allow-cat',state.selected,x.dataset.categoryToggle)));const search=document.getElementById('docSearch')||document.getElementById('recentSearch');const searchBtn=document.getElementById('searchBtn');const runSearch=()=>{state.search=search?.value||'';renderContent()};searchBtn?.addEventListener('click',runSearch);search?.addEventListener('keydown',e=>{if(e.key==='Enter')runSearch()});const form=document.getElementById('addForm');form?.addEventListener('submit',e=>{e.preventDefault();dispatch('add')});const folder=document.getElementById('scanFolder');folder?.addEventListener('change',e=>{const files=e.target.files;scanFolder(files);e.target.value=''});document.querySelectorAll('[data-scan-pick]').forEach(x=>x.addEventListener('change',e=>{const k=decodeURIComponent(x.dataset.scanPick);if(e.target.checked)scanSelected.add(k);else scanSelected.delete(k);renderContent()}));document.getElementById('companyAddForm')?.addEventListener('submit',e=>{e.preventDefault();addLocalCompany()});const groupField=document.getElementById('newCoGroup'),codeField=document.getElementById('newCoCode'),nameField=document.getElementById('newCoName'),folderField=document.getElementById('newCoFolder'),cnpjField=document.getElementById('newCoCnpj');
  const suggestFolder=()=>{if(folderField&&folderField.dataset.userEdited!=='yes')folderField.value=companyFolderName(groupField?.value,codeField?.value.trim().padStart(3,'0')||'',nameField?.value.trim()||'')};
  groupField?.addEventListener('change',suggestFolder);codeField?.addEventListener('input',suggestFolder);nameField?.addEventListener('input',suggestFolder);
  folderField?.addEventListener('input',()=>{folderField.dataset.userEdited='yes'});
