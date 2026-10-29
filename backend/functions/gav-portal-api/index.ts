@@ -46,13 +46,13 @@ Deno.serve(async req=>{
   const companyOnly=()=>{if(!isAdmin&&!companyIds.includes(companyId))error("Empresa não autorizada.",403)};
   if(action==="me"){
    const companies=isAdmin?check(await supa.from("gav_companies").select("id,code,cnpj,legal_name,folder_label,office_id,is_active").order("code")):companyIds.length?check(await supa.from("gav_companies").select("id,code,cnpj,legal_name,folder_label,office_id,is_active").in("id",companyIds)):[];
-   const linked=isAdmin?check(await supa.from("gav_drive_folders").select("company_id,is_active").eq("is_active",true)):[];
+   const linked=isAdmin?check(await supa.from("gav_drive_folders").select("company_id,is_active,auto_publish_new").eq("is_active",true)):[];
    const candidate=isAdmin?check(await supa.from("gav_drive_candidates").select("company_id,label,verified_at")):[];
    return reply({role:isAdmin?"admin":"client",companies,linked,candidate,driveSecretsConfigured:!!(Deno.env.get("GOOGLE_OAUTH_CLIENT_ID")&&Deno.env.get("GOOGLE_OAUTH_CLIENT_SECRET"))});
   }
   if(action==="documents"){
    companyOnly();
-   let q=supa.from("gav_documents").select("id,company_id,file_name,mime_type,relative_path,category,year,month,review_status,published_at").eq("company_id",companyId).order("file_name");
+   let q=supa.from("gav_documents").select("id,company_id,file_name,mime_type,relative_path,category,year,month,review_status,published_at").eq("company_id",companyId).neq("review_status","REMOVIDO").order("file_name");
    if(!isAdmin)q=q.eq("review_status","APROVADO").not("published_at","is",null);
    return reply({documents:check(await q.limit(1000))});
   }
@@ -83,7 +83,7 @@ Deno.serve(async req=>{
    const rows=check(await supa.from("gav_documents").select("id").eq("company_id",companyId).eq("category",c).eq("year",y).eq("month",m).in("drive_folder_link_id",folders).limit(500));
    if(!rows.length)error("Não há arquivos nessa competência.",404);
    const ids=rows.map((v:any)=>v.id);
-   const changes=action==="publishMonth"?{review_status:"APROVADO",published_at:new Date().toISOString()}:{review_status:"PENDENTE",published_at:null};
+   const changes=action==="publishMonth"?{review_status:"APROVADO",published_at:new Date().toISOString()}:{review_status:"BLOQUEADO",published_at:null};
    const result=check(await supa.from("gav_documents").update(changes).eq("company_id",companyId).in("id",ids).select("id"));
    return reply({ok:true,updated:result.length});
   }
@@ -93,7 +93,7 @@ Deno.serve(async req=>{
    if(!d)error("Documento não encontrado.",404);
    const link=check(await supa.from("gav_drive_folders").select("id").eq("id",d.drive_folder_link_id).eq("is_active",true).maybeSingle());
    if(!link)error("Pasta desativada.",403);
-   check(await supa.from("gav_documents").update(action==="publish"?{review_status:"APROVADO",published_at:new Date().toISOString()}:{review_status:"PENDENTE",published_at:null}).eq("id",d.id));
+   check(await supa.from("gav_documents").update(action==="publish"?{review_status:"APROVADO",published_at:new Date().toISOString()}:{review_status:"BLOQUEADO",published_at:null}).eq("id",d.id));
    return reply({ok:true});
   }
   error("Ação não encontrada.",404);
