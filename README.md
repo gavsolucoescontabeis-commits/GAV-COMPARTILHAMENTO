@@ -1,6 +1,6 @@
 # GAV Compartilhar Docs — Portal seguro
 
-**Versão atual: v0.9.1 · Organização mensal da folha e download facilitado**
+**Versão atual: v0.9.4 · Navegação simples e novos documentos liberados na sincronização**
 
 **Acesso permanente:** https://gavsolucoescontabeis-commits.github.io/GAV-COMPARTILHAMENTO/
 
@@ -50,3 +50,16 @@ O frontend reutiliza por curto prazo os PDFs abertos na sessão (cache limitado 
 
 **Segurança:** não incluir arquivo JSON do Google, client secret, refresh token, service role, dados de clientes ou documentos reais neste repositório público. Não cobrar serviços externos sem aprovação.
 
+
+## Mudanças de 29/10/2026 — v0.9.4
+
+- Menu redundante **Documentos** retirado. O acesso é por **Início → categoria → competência**. O botão **Voltar** retorna ao Início.
+- Leão institucional da GAV movido da área com o nome da empresa cliente para a **barra lateral**, abaixo da navegação.
+- Na tela de categoria, a ação **Publicar pasta inteira** está agora **no lado direito do cabeçalho do mês**. Se todos os arquivos estiverem liberados, o mesmo botão vira **Revogar pasta inteira**, sem botão duplicado em outra linha.
+- **Publicação automática de novos arquivos:** o registro `gav_drive_folders.auto_publish_new` está ativado apenas para a pasta-piloto aprovada. Arquivos novos indexados entram como `APROVADO` + `published_at` preenchido. Um arquivo revogado pela GAV recebe `BLOQUEADO`, e a sincronização **não** o republica.
+- **Sem publicação retroativa:** o acervo indexado antes da mudança continua com as autorizações anteriores. A GAV poderá liberar um mês de cada vez, se necessário, após conferência.
+- **Exclusões:** ao verificar que um arquivo existente foi removido/movido para fora da pasta vinculada, a sincronização o marca como `REMOVIDO` e revoga acesso; a API deixa de exibi-lo.
+- **Sincronização quando o administrador estiver usando o portal:** verificação automática ao abrir a sessão GAV e, enquanto a aba estiver aberta, a cada 15 minutos; existe botão de verificação imediata. **Ainda não há agendamento servidor 24 horas**, pois a execução programada com identidade de serviço exige autorização segura adicional. Não anunciar sincronização autônoma com o navegador fechado.
+- **Não confundir autorização do documento com habilitação do login do cliente:** o piloto continua sem credenciais de clientes externos.
+
+**Nota de implantação:** Supabase Auth, RLS e Edge Functions continuam com verificação de permissão. A instalação das extensões `pg_cron` e `pg_net` e de uma credencial de agendamento no Vault foi preparada no servidor, mas nenhum agendamento foi ativado sem o fluxo seguro para execução autenticada. Nunca colocar tokens do Vault ou chaves de serviço neste repositório público.
