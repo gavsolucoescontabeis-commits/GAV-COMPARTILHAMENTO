@@ -12,6 +12,7 @@ const navigationHistory=[];
 const pdfCache=new Map();
 const pdfInFlight=new Map();
 let pdfGeneration=0;
+let autoSyncRunning=false,autoSyncLastAttempt=0,autoSyncLastResult="";
 const esc=v=>String(v??"").replace(/[&<>"']/g,s=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[s]));
 const cn=v=>String(v||"").replace(/\D/g,"");
 const showError=e=>{notice=e?.message||String(e);busy=false;render()};
@@ -28,6 +29,25 @@ async function invoke(fn,action,body={}){
 const api=(action,body={})=>invoke("gav-portal-api",action,body);
 const run=async task=>{busy=true;notice="";render();try{await task()}catch(e){notice=e.message||"Não foi possível concluir."}busy=false;render()};
 async function loadDocs(){docs=selected?(await api("documents",{companyId:selected})).documents:[]}
+async function syncPilot({interactive=false}={}){
+ if(role!=="admin"||autoSyncRunning)return;
+ const pilot=companies.find(c=>c.cnpj==="60955798000157");
+ if(!pilot||!links.some(l=>l.company_id===pilot.id&&l.auto_publish_new))return;
+ const now=Date.now();
+ if(!interactive&&now-autoSyncLastAttempt<15*60*1000)return;
+ autoSyncLastAttempt=now;
+ autoSyncRunning=true;
+ try{
+  const result=await invoke("gav-drive-index","index",{companyId:pilot.id,...(googleToken?{googleToken}:{})});
+  autoSyncLastResult="Última verificação: "+new Date().toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})+" · "+result.newFiles+" novos";
+  if(selected===pilot.id){await loadDocs();render()}
+  if(result.newFiles&&interactive)toastMessage(result.newFiles+" novo(s) arquivo(s); "+result.autoPublished+" liberado(s) automaticamente.");
+ }catch(e){
+  autoSyncLastResult="Sincronização pendente: "+(e.message||"verifique a autorização do Drive");
+  if(interactive)toastMessage(autoSyncLastResult);
+ }finally{autoSyncRunning=false}
+}
+
 async function bootstrap(){
  const s=await sb.auth.getSession();session=s.data.session;
  if(!session){role="";render();return}
@@ -39,6 +59,7 @@ async function bootstrap(){
    try{await api("connectDrive",{refreshToken:session.provider_refresh_token})}catch(e){notice="Autenticação concluída, mas não foi possível guardar o acesso offline do Drive: "+e.message}
   }
   await loadDocs();render();
+  if(role==="admin")void syncPilot();
  }catch(e){role="";notice=e.message||"Erro de autenticação.";render()}
 }
 const brand=()=>`<div class="logo-official"><img src="${logo}" alt="GAV Soluções Contábeis" onerror="this.style.display='none'"><span class="logo-text">GAV <small>SOLUÇÕES CONTÁBEIS</small></span></div>`;
@@ -48,7 +69,7 @@ function login(){
 const nav=()=>role==="admin"?[["home","Início"],["companies","Empresas"],["drive","Google Drive"]]:[["home","Início"]];
 function shell(){
  const firm=current(),navLinks=nav();
- return `<div class="shell"><aside class="side"><div class="side-top"><div class="side-logo">${brand()}</div></div><div class="side-caption">NAVEGAÇÃO</div>${navLinks.map(([id,name])=>`<button class="nav ${view===id?"active":""}" data-do="view" data-val="${id}">${esc(name)}</button>`).join("")}<div class="gav-lion-sidebar" aria-label="Símbolo da GAV Soluções Contábeis"><img src="${lion}" alt="Leão GAV"></div><div class="side-bottom"><div style="font-weight:800;margin-bottom:9px">${role==="admin"?"Administrador GAV":"Portal do cliente"}</div><div class="subtle" style="margin-bottom:14px">Conexão segura · v0.9.3</div><button class="nav" data-do="logout">Sair da conta</button></div></aside><main class="app-main"><header class="topbar"><div><span class="mobile-brand">GAV <small>SOLUÇÕES CONTÁBEIS</small></span><div class="header-title">${role==="admin"?"Painel administrativo":"Portal de documentos"}</div><div class="header-desc">${esc(firm?.legal_name||"GAV Soluções Contábeis")}</div></div><div class="top-actions"><div class="avatar">${role==="admin"?"AD":"CL"}</div><button class="btn btn-line btn-small" data-do="logout">Sair</button></div></header><div class="content">${notice?`<div class="error" style="display:block;margin-bottom:18px">${esc(notice)}</div>`:""}${busy?`<div class="card card-pad" style="margin-bottom:18px">Processando sua solicitação…</div>`:""}${content()}</div></main><nav class="bottom-bar" aria-label="Navegação">${navLinks.map(([id,name])=>`<button class="bottom-nav ${view===id?"active":""}" data-do="view" data-val="${id}">${esc(name)}</button>`).join("")}</nav></div>`;
+ return `<div class="shell"><aside class="side"><div class="side-top"><div class="side-logo">${brand()}</div></div><div class="side-caption">NAVEGAÇÃO</div>${navLinks.map(([id,name])=>`<button class="nav ${view===id?"active":""}" data-do="view" data-val="${id}">${esc(name)}</button>`).join("")}<div class="gav-lion-sidebar" aria-label="Símbolo da GAV Soluções Contábeis"><img src="${lion}" alt="Leão GAV"></div><div class="side-bottom"><div style="font-weight:800;margin-bottom:9px">${role==="admin"?"Administrador GAV":"Portal do cliente"}</div><div class="subtle" style="margin-bottom:14px">Conexão segura · v0.9.4</div><button class="nav" data-do="logout">Sair da conta</button></div></aside><main class="app-main"><header class="topbar"><div><span class="mobile-brand">GAV <small>SOLUÇÕES CONTÁBEIS</small></span><div class="header-title">${role==="admin"?"Painel administrativo":"Portal de documentos"}</div><div class="header-desc">${esc(firm?.legal_name||"GAV Soluções Contábeis")}</div></div><div class="top-actions"><div class="avatar">${role==="admin"?"AD":"CL"}</div><button class="btn btn-line btn-small" data-do="logout">Sair</button></div></header><div class="content">${notice?`<div class="error" style="display:block;margin-bottom:18px">${esc(notice)}</div>`:""}${busy?`<div class="card card-pad" style="margin-bottom:18px">Processando sua solicitação…</div>`:""}${content()}</div></main><nav class="bottom-bar" aria-label="Navegação">${navLinks.map(([id,name])=>`<button class="bottom-nav ${view===id?"active":""}" data-do="view" data-val="${id}">${esc(name)}</button>`).join("")}</nav></div>`;
 }
 const title=(name,sub)=>`<div class="page-head"><div><div class="eyebrow">CENTRAL DE DOCUMENTOS</div><h1>${esc(name)}</h1><p>${esc(sub)}</p></div></div>`;
 const picker=()=>role==="admin"?`<div class="form-field" style="max-width:460px"><label>Empresa selecionada</label><select id="companySelect" class="input">${companies.map(c=>`<option value="${c.id}" ${c.id===selected?"selected":""}>${esc((c.code||"")+" · "+c.legal_name)}</option>`).join("")}</select></div>`:"";
@@ -103,7 +124,7 @@ function companiesPage(){
 function drivePage(){
  const pilot=companies.find(c=>c.cnpj==="60955798000157");
  const candidate=pilot&&candidates.find(c=>c.company_id===pilot.id),linked=pilot&&links.some(l=>l.company_id===pilot.id);
- return `${title("Google Drive","Sincronização controlada com a pasta real da empresa-piloto, sem publicar documentos automaticamente.")}<div class="card card-pad"><div class="section-title">1. Conta Google da administração</div><p>Use a conta GAV para autorizar somente a leitura dos documentos. O token é protegido no servidor.</p><button class="btn btn-dark" data-do="google">Autorizar / renovar Google Drive</button><div class="subtle" style="margin-top:10px">Credenciais do servidor: ${hasDriveSecret?"configuradas":"pendentes para acesso permanente dos clientes"}.</div></div><div class="card card-pad" style="margin-top:16px"><div class="section-title">2. Empresa piloto</div><p><b>${esc(pilot?.legal_name||"JM ROCHA")}</b> · Pasta identificada: ${esc(candidate?.label||"Não localizada")}.</p><p class="subtle">Vínculo: ${linked?"verificado e ativo":"aguardando verificação no Google Drive"}.</p><button class="btn btn-line" data-do="link" ${!pilot||linked?"disabled":""}>Verificar e vincular pasta</button> <button class="btn btn-dark" data-do="index" ${!linked?"disabled":""}>Sincronizar documentos da pasta</button></div><div class="card card-pad" style="margin-top:16px"><div class="section-title">3. Conferência antes de liberar</div><p>Após a indexação, abra a empresa em <b>Documentos</b> e publique somente os documentos conferidos. Nenhuma publicação é automática.</p><button class="btn btn-line" data-do="pick" data-val="${pilot?.id||""}">Conferir documentos da JM Rocha</button></div>`;
+ return `${title("Google Drive","Sincronização controlada com a pasta real da empresa-piloto, sem publicar documentos automaticamente.")}<div class="card card-pad"><div class="section-title">1. Conta Google da administração</div><p>Use a conta GAV para autorizar somente a leitura dos documentos. O token é protegido no servidor.</p><button class="btn btn-dark" data-do="google">Autorizar / renovar Google Drive</button><div class="subtle" style="margin-top:10px">Credenciais do servidor: ${hasDriveSecret?"configuradas":"pendentes para acesso permanente dos clientes"}. ${esc(autoSyncLastResult)}</div></div><div class="card card-pad" style="margin-top:16px"><div class="section-title">2. Empresa piloto</div><p><b>${esc(pilot?.legal_name||"JM ROCHA")}</b> · Pasta identificada: ${esc(candidate?.label||"Não localizada")}.</p><p class="subtle">Vínculo: ${linked?"verificado e ativo":"aguardando verificação no Google Drive"}.</p><button class="btn btn-line" data-do="link" ${!pilot||linked?"disabled":""}>Verificar e vincular pasta</button> <button class="btn btn-dark" data-do="index" ${!linked?"disabled":""}>Verificar atualizações agora</button></div><div class="card card-pad" style="margin-top:16px"><div class="section-title">3. Conferência antes de liberar</div><p>Após a indexação, abra a empresa em <b>Documentos</b> e publique somente os documentos conferidos. Novos arquivos entram automaticamente; documentos antigos continuam sujeitos à liberação da GAV.</p><button class="btn btn-line" data-do="pick" data-val="${pilot?.id||""}">Conferir documentos da JM Rocha</button></div>`;
 }
 function content(){if(!companies.length)return title("Sem empresas autorizadas","O acesso está ativo, mas não há vínculo de empresa. Solicite liberação à GAV.");if(view==="companies"&&role==="admin")return companiesPage();if(view==="drive"&&role==="admin")return drivePage();if(view==="recent"||view==="category")return recent();return home()}
 function toastMessage(message){
@@ -239,7 +260,9 @@ async function handle(e){
  }
  if(a==="publish"){await run(async()=>{const d=docs.find(x=>x.id===v);await api(d.published_at?"unpublish":"publish",{companyId:selected,documentId:v});await loadDocs()});return}
  if(a==="link"){await run(async()=>{await api("linkPilot",{companyId:(companies.find(c=>c.cnpj==="60955798000157")||{}).id,googleToken});await bootstrap();view="drive"});return}
- if(a==="index"){await run(async()=>{const firm=companies.find(c=>c.cnpj==="60955798000157");const r=await invoke("gav-drive-index","index",{companyId:firm.id,googleToken});await bootstrap();notice=r.indexed+" documento(s) indexados; "+r.newFiles+" novos. Nenhum foi publicado."});return}
+ if(a==="index"){await syncPilot({interactive:true});render();return}
 }
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)void syncPilot()});
+setInterval(()=>{if(!document.hidden)void syncPilot()},15*60*1000);
 sb.auth.onAuthStateChange((event,s)=>{if(event==="SIGNED_OUT"){clearPdfCache();role="";session=null;render()}});
 await bootstrap();
