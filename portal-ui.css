@@ -1,0 +1,47 @@
+
+/* Portal GAV v0.9.1: leitura direta e download visível; não altera a demonstração. */
+.gav-document-list{display:flex;flex-direction:column;gap:0}
+.gav-doc-row{display:flex;align-items:center;gap:13px;padding:14px 2px;border-bottom:1px solid var(--border);min-width:0}
+.gav-doc-row:last-child{border-bottom:0}
+.gav-doc-file{width:42px;height:42px;background:#f8f2e7;border:1px solid #e8dcc4;border-radius:10px;color:#8c6c35;font-size:11px;font-weight:850;display:grid;place-items:center;flex-shrink:0}
+.gav-doc-main{min-width:0;flex:1}
+.gav-doc-name{display:block;color:var(--ink);font-weight:750;font-size:13px;line-height:1.35;overflow-wrap:anywhere}
+.gav-doc-detail{display:block;margin-top:5px;color:var(--muted);font-size:11px;overflow-wrap:anywhere}
+.gav-doc-actions{display:flex;gap:8px;flex-shrink:0;align-items:center}
+.gav-doc-actions .btn{min-height:38px;white-space:nowrap}
+.gav-doc-actions .gav-btn-download{background:#1b1c1e;color:#fff;border-color:#1b1c1e;font-weight:800}
+.gav-doc-actions .gav-btn-preview{background:white;color:#343434}
+.gav-month-head{display:flex;align-items:center;justify-content:space-between;gap:15px;background:#f2ede3;border:1px solid #e6dccb;border-radius:9px;padding:11px 14px;margin:20px 0 8px}
+.gav-month-head strong{font-size:12px;letter-spacing:.045em;color:#60451e}
+.gav-month-head span{color:#6e6558;font-size:12px}
+.gav-month-head:first-child{margin-top:0}
+.gav-month-group .gav-document-list{padding:0 8px}
+.gav-month-filter{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:16px 0}
+.gav-month-filter select{width:auto;max-width:100%;min-height:42px}
+.gav-preview-overlay{position:fixed;inset:0;background:rgba(14,17,21,.78);z-index:9000;display:flex;align-items:center;justify-content:center;padding:14px}
+.gav-preview-box{width:min(1040px,100%);height:min(94vh,980px);background:white;border-radius:12px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 25px 70px #0006}
+.gav-preview-header{display:flex;align-items:center;gap:12px;justify-content:space-between;padding:13px 17px;border-bottom:1px solid #e7e7e7}
+.gav-preview-header-title{min-width:0;font-size:14px;font-weight:800;overflow-wrap:anywhere}
+.gav-preview-header-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:flex-end}
+.gav-preview-header-actions .btn{min-height:39px}
+.gav-preview-content{min-height:0;flex:1;background:#f0f1f2;display:flex;align-items:center;justify-content:center}
+.gav-preview-content iframe{width:100%;height:100%;border:0;background:#fff}
+.gav-preview-pending{font-size:15px;text-align:center;padding:32px;color:#39434b}
+.gav-preview-pending strong{display:block;margin:12px 0}
+.gav-preview-note{font-size:11px;color:#777;padding:8px 16px}
+.gav-toast{position:fixed;right:20px;bottom:25px;max-width:min(430px,calc(100% - 32px));padding:14px 18px;border-radius:12px;background:#252525;color:white;box-shadow:0 12px 32px #0003;z-index:9500;font-weight:650;font-size:13px}
+@media(max-width:720px){
+ .gav-doc-row{flex-wrap:wrap;align-items:flex-start;padding:14px 0}
+ .gav-doc-file{width:35px;height:38px}
+ .gav-doc-main{flex-basis:calc(100% - 53px)}
+ .gav-doc-actions{width:100%;padding-left:47px;justify-content:flex-start;flex-wrap:wrap}
+ .gav-doc-actions .btn{min-height:43px;flex:1 1 auto}
+ .gav-preview-overlay{padding:0}
+ .gav-preview-box{width:100%;height:100%;border-radius:0}
+ .gav-preview-header{flex-wrap:wrap;gap:9px;padding:12px}
+ .gav-preview-header-title{width:100%;font-size:12px}
+ .gav-preview-header-actions{justify-content:stretch;width:100%}
+ .gav-preview-header-actions .btn{flex:1}
+ .gav-month-head{margin-top:16px}
+ .gav-month-filter select{width:calc(50% - 5px)}
+}
