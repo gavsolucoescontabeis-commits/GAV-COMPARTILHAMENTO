@@ -2,7 +2,7 @@
 
 Portal de documentos para clientes e gestão administrativa da GAV Soluções Contábeis.
 
-## Versão atual: v0.6.1 (demonstração)
+## Versão atual: v0.7 (demonstração)
 
 Arquivo principal: `index.html`, já publicado na branch `main`. Github Pages: [abrir protótipo](https://gavsolucoescontabeis-commits.github.io/GAV-COMPARTILHAMENTO/).
 
@@ -13,12 +13,13 @@ Arquivo principal: `index.html`, já publicado na branch `main`. Github Pages: [
 - Área do cliente com documentos fictícios, organizados por categorias, competência e ano.
 - Painel administrativo com empresas, categorias e controle de processamento de folhas.
 - Leitor de pastas com seleção individual das empresas a considerar para compartilhamento. Os quatro escritórios/origens aparecem em botões destacados no painel administrativo e na leitura de pastas, inclusive em celular.
+- **Cadastro individual de novas empresas (v0.7):** menu administrativo **Cadastrar nova empresa**, com seleção de escritório (TTM, REL GAV, DS CONTÁBIL ou AVULSOS), código, nome, CNPJ validado e pasta; preenchimento sugerido para o nome da pasta; bloqueio de CNPJ/código/pasta duplicados; inclusão automática no painel administrativo e no controle de processamento. Os novos dados são guardados apenas no navegador atual, sem permitir login de clientes reais.
 - **Pré-cadastro TTM já realizado (18 empresas):** os nomes, códigos e CNPJs ficam no arquivo `ttm-registry.enc.json`, criptografado por AES-256-GCM com chave derivada por PBKDF2. A chave não está no repositório. A relação abre automaticamente na área administrativa após o usuário informar sua chave; nenhuma importação manual é necessária. O vínculo com pastas físicas prioriza o código e exige conferência quando o nome diverge.
 - Origens: `TTM`, `REL GAV`, `DS CONTÁBIL` e `AVULSOS` (pastas sem numeração).
 - Padrão BAT: `ADM`, `RES`, `FER`, `X2026`, meses `0126`, `012026`, `1325` etc.
 - Exportação CSV da seleção e da conferência; nenhuma pasta selecionada por padrão.
 
-A leitura de pastas é **manual e local no navegador**: usa nomes, caminhos, datas e tamanhos de arquivos. O conteúdo não é enviado. A seleção é temporária e não constitui autorização real para clientes nem sincronização contínua com Google Drive. O cadastro TTM cifrado está no repositório e pode ser aberto com a chave administrativa de teste em outro navegador, mas o aplicativo **não** oferece autenticação de produção, controle centralizado de permissões ou banco de dados compartilhado. Não usar para documentos reais.
+A relação da DS CONTÁBIL ainda não foi inserida em lote; não registrar CNPJs nem nomes de uma imagem sem leitura confiável. A leitura de pastas é **manual e local no navegador**: usa nomes, caminhos, datas e tamanhos de arquivos. O conteúdo não é enviado. A seleção é temporária e não constitui autorização real para clientes nem sincronização contínua com Google Drive. O cadastro TTM cifrado está no repositório e pode ser aberto com a chave administrativa de teste em outro navegador, mas o aplicativo **não** oferece autenticação de produção, controle centralizado de permissões ou banco de dados compartilhado. Não usar para documentos reais.
 
 ## Próxima etapa de produção
 
