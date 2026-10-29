@@ -7,6 +7,8 @@ const app=document.getElementById("app");
 const M=["JANEIRO","FEVEREIRO","MARÇO","ABRIL","MAIO","JUNHO","JULHO","AGOSTO","SETEMBRO","OUTUBRO","NOVEMBRO","DEZEMBRO","DÉCIMO TERCEIRO"];
 const C=[["ADMISSOES","Admissões"],["RESCISOES","Rescisões"],["FERIAS","Férias"],["FOLHA","Folha de Pagamento"],["GUIAS_IMPOSTOS","Guias e Impostos"],["OUTROS","Outros Documentos"]];
 let role="",companies=[],docs=[],links=[],candidates=[],selected="",view="home",cat="",year=2026,month="ALL",session=null,googleToken="",hasDriveSecret=false,notice="",busy=false;
+let previewId="",previewLoading=false,downloadBusy="";
+const pdfCache=new Map();
 const esc=v=>String(v??"").replace(/[&<>"']/g,s=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[s]));
 const cn=v=>String(v||"").replace(/\D/g,"");
 const showError=e=>{notice=e?.message||String(e);busy=false;render()};
@@ -43,22 +45,47 @@ function login(){
 const nav=()=>role==="admin"?[["home","Início"],["recent","Documentos"],["companies","Empresas"],["drive","Google Drive"]]:[["home","Início"],["recent","Documentos"]];
 function shell(){
  const firm=current(),navLinks=nav();
- return `<div class="shell"><aside class="side"><div class="side-top"><div class="side-logo">${brand()}</div></div><div class="side-caption">NAVEGAÇÃO</div>${navLinks.map(([id,name])=>`<button class="nav ${view===id?"active":""}" data-do="view" data-val="${id}">${esc(name)}</button>`).join("")}<div class="side-bottom"><div style="font-weight:800;margin-bottom:9px">${role==="admin"?"Administrador GAV":"Portal do cliente"}</div><div class="subtle" style="margin-bottom:14px">Conexão segura · v0.9.0</div><button class="nav" data-do="logout">Sair da conta</button></div></aside><main class="app-main"><header class="topbar"><div><span class="mobile-brand">GAV <small>SOLUÇÕES CONTÁBEIS</small></span><div class="header-title">${role==="admin"?"Painel administrativo":"Portal de documentos"}</div><div class="header-desc">${esc(firm?.legal_name||"GAV Soluções Contábeis")}</div></div><div class="top-actions"><div class="avatar">${role==="admin"?"AD":"CL"}</div><button class="btn btn-line btn-small" data-do="logout">Sair</button></div></header><div class="content">${notice?`<div class="error" style="display:block;margin-bottom:18px">${esc(notice)}</div>`:""}${busy?`<div class="card card-pad" style="margin-bottom:18px">Processando sua solicitação…</div>`:""}${content()}</div></main><nav class="bottom-bar" aria-label="Navegação">${navLinks.map(([id,name])=>`<button class="bottom-nav ${view===id?"active":""}" data-do="view" data-val="${id}">${esc(name)}</button>`).join("")}</nav></div>`;
+ return `<div class="shell"><aside class="side"><div class="side-top"><div class="side-logo">${brand()}</div></div><div class="side-caption">NAVEGAÇÃO</div>${navLinks.map(([id,name])=>`<button class="nav ${view===id?"active":""}" data-do="view" data-val="${id}">${esc(name)}</button>`).join("")}<div class="side-bottom"><div style="font-weight:800;margin-bottom:9px">${role==="admin"?"Administrador GAV":"Portal do cliente"}</div><div class="subtle" style="margin-bottom:14px">Conexão segura · v0.9.1</div><button class="nav" data-do="logout">Sair da conta</button></div></aside><main class="app-main"><header class="topbar"><div><span class="mobile-brand">GAV <small>SOLUÇÕES CONTÁBEIS</small></span><div class="header-title">${role==="admin"?"Painel administrativo":"Portal de documentos"}</div><div class="header-desc">${esc(firm?.legal_name||"GAV Soluções Contábeis")}</div></div><div class="top-actions"><div class="avatar">${role==="admin"?"AD":"CL"}</div><button class="btn btn-line btn-small" data-do="logout">Sair</button></div></header><div class="content">${notice?`<div class="error" style="display:block;margin-bottom:18px">${esc(notice)}</div>`:""}${busy?`<div class="card card-pad" style="margin-bottom:18px">Processando sua solicitação…</div>`:""}${content()}</div></main><nav class="bottom-bar" aria-label="Navegação">${navLinks.map(([id,name])=>`<button class="bottom-nav ${view===id?"active":""}" data-do="view" data-val="${id}">${esc(name)}</button>`).join("")}</nav></div>`;
 }
 const title=(name,sub)=>`<div class="page-head"><div><div class="eyebrow">CENTRAL DE DOCUMENTOS</div><h1>${esc(name)}</h1><p>${esc(sub)}</p></div></div>`;
 const picker=()=>role==="admin"?`<div class="form-field" style="max-width:460px"><label>Empresa selecionada</label><select id="companySelect" class="input">${companies.map(c=>`<option value="${c.id}" ${c.id===selected?"selected":""}>${esc((c.code||"")+" · "+c.legal_name)}</option>`).join("")}</select></div>`:"";
 const filtered=()=>docs.filter(d=>(year==="ALL"||d.year===Number(year))&&(month==="ALL"||d.month===Number(month))&&(view!=="category"||d.category===cat));
+function periodLabel(d){
+ if(d.year&&d.month&&M[d.month-1])return M[d.month-1]+"/"+d.year;
+ if(d.year)return "DOCUMENTOS DE "+d.year+" · SEM MÊS DEFINIDO";
+ return "SEM COMPETÊNCIA DEFINIDA";
+}
+function documentSort(a,b){
+ return (Number(b.year)||0)-(Number(a.year)||0)
+  ||(Number(b.month)||0)-(Number(a.month)||0)
+  ||String(a.file_name||"").localeCompare(String(b.file_name||""),"pt-BR");
+}
+function fileGroups(items){
+ if(!items.length)return '<div class="empty">Nenhum documento disponível nesta seleção.</div>';
+ const groups=new Map();
+ items.slice().sort(documentSort).forEach(d=>{
+  const label=periodLabel(d);
+  if(!groups.has(label))groups.set(label,[]);
+  groups.get(label).push(d);
+ });
+ return [...groups.entries()].map(([label,list])=>`<section class="gav-month-group"><div class="gav-month-head"><strong>${esc(label)}</strong><span>${list.length} ${list.length===1?"arquivo":"arquivos"}</span></div>${files(list)}</section>`).join("");
+}
 function files(items){
  if(!items.length)return '<div class="empty">Nenhum documento disponível nesta seleção.</div>';
- return `<div class="file-list">${items.map(d=>`<div class="file-row" style="gap:12px"><span class="file-ico">PDF</span><span class="file-expand"><b class="file-title">${esc(d.file_name)}</b><small class="file-meta">${esc(d.relative_path||"Raiz")} · ${d.month?M[d.month-1]+"/":""}${d.year||"SEM COMPETÊNCIA"} · ${esc(C.find(c=>c[0]===d.category)?.[1]||"Outros")}</small></span>${role==="admin"?`<button class="btn btn-line btn-small" data-do="publish" data-val="${d.id}">${d.published_at?"Revogar":"Publicar"}</button>`:""}<button class="btn btn-dark btn-small" data-do="pdf" data-val="${d.id}">Abrir PDF</button></div>`).join("")}</div>`;
+ return `<div class="gav-document-list">${items.map(d=>{
+  const date=d.month&&d.year?M[d.month-1]+"/"+d.year:d.year?String(d.year):"SEM COMPETÊNCIA";
+  const status=role==="admin"?(d.published_at?" · PUBLICADO":" · A CONFERIR"):"";
+  return `<div class="gav-doc-row"><span class="gav-doc-file" aria-hidden="true">PDF</span><div class="gav-doc-main"><strong class="gav-doc-name">${esc(d.file_name)}</strong><span class="gav-doc-detail">${esc(date)}${status}</span></div><div class="gav-doc-actions"><button class="btn btn-line btn-small gav-btn-preview" data-do="pdf" data-val="${esc(d.id)}" aria-label="Visualizar ${esc(d.file_name)}">Visualizar</button><button class="btn btn-dark btn-small gav-btn-download" data-do="download" data-val="${esc(d.id)}" aria-label="Baixar ${esc(d.file_name)}">Baixar PDF</button>${role==="admin"?`<button class="btn btn-line btn-small" data-do="publish" data-val="${esc(d.id)}">${d.published_at?"Revogar":"Publicar"}</button>`:""}</div></div>`;
+ }).join("")}</div>`;
 }
 function home(){
  const firm=current();
- return `${title("Meus documentos",role==="admin"?"Conferência dos arquivos da empresa selecionada":"Documentos liberados pela GAV para sua empresa.")}${picker()}${firm?`<div class="hero"><div><small>ÁREA EXCLUSIVA DA EMPRESA</small><h2>${esc(firm.legal_name)}</h2><p>CNPJ ${esc(fmt(firm.cnpj))} · Documentos por competência e categoria.</p></div><div class="hero-official"><img src="${lion}" alt="Símbolo GAV"></div></div>`:""}<div class="stats"><div class="card stat"><span class="caption">Documentos cadastrados</span><strong>${docs.length}</strong></div><div class="card stat"><span class="caption">Documentos liberados</span><strong>${docs.filter(x=>x.published_at).length}</strong></div><div class="card stat"><span class="caption">Categorias com arquivos</span><strong>${new Set(docs.map(x=>x.category)).size}</strong></div></div><div class="section-title">Categorias</div><div class="cat-grid">${C.map(([id,n])=>`<button class="category" data-do="cat" data-val="${id}"><span class="cat-name">${esc(n)}</span><span class="cat-count">${docs.filter(d=>d.category===id).length} documento(s)</span></button>`).join("")}</div><div class="section-title">Documentos recentes</div><div class="card card-pad">${files(docs.slice(0,5))}</div>`;
+ return `${title("Meus documentos",role==="admin"?"Conferência dos arquivos da empresa selecionada":"Documentos liberados pela GAV para sua empresa.")}${picker()}${firm?`<div class="hero"><div><small>ÁREA EXCLUSIVA DA EMPRESA</small><h2>${esc(firm.legal_name)}</h2><p>CNPJ ${esc(fmt(firm.cnpj))} · Documentos por competência e categoria.</p></div><div class="hero-official"><img src="${lion}" alt="Símbolo GAV"></div></div>`:""}<div class="stats"><div class="card stat"><span class="caption">Documentos cadastrados</span><strong>${docs.length}</strong></div><div class="card stat"><span class="caption">Documentos liberados</span><strong>${docs.filter(x=>x.published_at).length}</strong></div><div class="card stat"><span class="caption">Categorias com arquivos</span><strong>${new Set(docs.map(x=>x.category)).size}</strong></div></div><div class="section-title">Categorias</div><div class="cat-grid">${C.map(([id,n])=>`<button class="category" data-do="cat" data-val="${id}"><span class="cat-name">${esc(n)}</span><span class="cat-count">${docs.filter(d=>d.category===id).length} documento(s)</span></button>`).join("")}</div><div class="section-title">Documentos recentes</div><div class="card card-pad">${files(docs.slice().sort(documentSort).slice(0,5))}</div>`;
 }
 function recent(){
  const arr=filtered(),years=[...new Set(docs.map(d=>d.year).filter(Boolean))].sort((a,b)=>b-a);
- return `${title(view==="category"?(C.find(c=>c[0]===cat)?.[1]||"Documentos"):"Documentos","Filtre por ano e mês. Os nomes dos arquivos são os nomes reais do Drive.")}${picker()}<div class="row" style="display:flex;gap:12px;flex-wrap:wrap;margin:16px 0"><select id="yearSelect" class="input" style="width:auto"><option value="ALL">TODOS OS ANOS</option>${years.map(y=>`<option value="${y}" ${String(year)===String(y)?"selected":""}>${y}</option>`).join("")}</select><select id="monthSelect" class="input" style="width:auto"><option value="ALL">TODOS OS MESES</option>${M.map((m,i)=>`<option value="${i+1}" ${String(month)===String(i+1)?"selected":""}>${m}</option>`).join("")}</select></div><div class="card card-pad">${files(arr)}</div>`;
+ const heading=view==="category"?(C.find(c=>c[0]===cat)?.[1]||"Documentos"):"Documentos";
+ return `${title(heading,"Arquivos por mês, com visualização e download em um clique.")}${picker()}<div class="gav-month-filter"><select id="yearSelect" class="input" aria-label="Selecionar ano"><option value="ALL">TODOS OS ANOS</option>${years.map(y=>`<option value="${y}" ${String(year)===String(y)?"selected":""}>${y}</option>`).join("")}</select><select id="monthSelect" class="input" aria-label="Selecionar mês"><option value="ALL">TODOS OS MESES</option>${M.map((m,i)=>`<option value="${i+1}" ${String(month)===String(i+1)?"selected":""}>${m}</option>`).join("")}</select></div><div class="card card-pad">${fileGroups(arr)}</div>`;
 }
 function companiesPage(){
  return `${title("Empresas e permissões","Relação real de empresas cadastradas. O acesso de cada cliente será individual.")}<div class="card card-pad"><div class="file-list">${companies.map(c=>`<div class="file-row"><div class="file-expand"><b>${esc((c.code||"")+" · "+c.legal_name)}</b><small class="file-meta">CNPJ ${esc(fmt(c.cnpj))} · ${links.some(l=>l.company_id===c.id)?"Pasta vinculada":"Pasta ainda não vinculada"}</small></div><button class="btn btn-line btn-small" data-do="pick" data-val="${c.id}">Documentos</button></div>`).join("")}</div></div><p class="footnote">Os clientes não visualizam a lista de empresas. O acesso depende de autorização individual registrada no servidor.</p>`;
@@ -69,25 +96,116 @@ function drivePage(){
  return `${title("Google Drive","Sincronização controlada com a pasta real da empresa-piloto, sem publicar documentos automaticamente.")}<div class="card card-pad"><div class="section-title">1. Conta Google da administração</div><p>Use a conta GAV para autorizar somente a leitura dos documentos. O token é protegido no servidor.</p><button class="btn btn-dark" data-do="google">Autorizar / renovar Google Drive</button><div class="subtle" style="margin-top:10px">Credenciais do servidor: ${hasDriveSecret?"configuradas":"pendentes para acesso permanente dos clientes"}.</div></div><div class="card card-pad" style="margin-top:16px"><div class="section-title">2. Empresa piloto</div><p><b>${esc(pilot?.legal_name||"JM ROCHA")}</b> · Pasta identificada: ${esc(candidate?.label||"Não localizada")}.</p><p class="subtle">Vínculo: ${linked?"verificado e ativo":"aguardando verificação no Google Drive"}.</p><button class="btn btn-line" data-do="link" ${!pilot||linked?"disabled":""}>Verificar e vincular pasta</button> <button class="btn btn-dark" data-do="index" ${!linked?"disabled":""}>Sincronizar PDFs da pasta</button></div><div class="card card-pad" style="margin-top:16px"><div class="section-title">3. Conferência antes de liberar</div><p>Após a indexação, abra a empresa em <b>Documentos</b> e publique somente os PDFs conferidos. Nenhuma publicação é automática.</p><button class="btn btn-line" data-do="pick" data-val="${pilot?.id||""}">Conferir documentos da JM Rocha</button></div>`;
 }
 function content(){if(!companies.length)return title("Sem empresas autorizadas","O acesso está ativo, mas não há vínculo de empresa. Solicite liberação à GAV.");if(view==="companies"&&role==="admin")return companiesPage();if(view==="drive"&&role==="admin")return drivePage();if(view==="recent"||view==="category")return recent();return home()}
-function render(){app.innerHTML=role?shell():login();app.querySelectorAll("[data-do]").forEach(b=>b.addEventListener("click",handle));app.querySelector("#clientLogin")?.addEventListener("submit",loginClient);app.querySelector("#companySelect")?.addEventListener("change",e=>changeCompany(e.target.value));app.querySelector("#yearSelect")?.addEventListener("change",e=>{year=e.target.value;render()});app.querySelector("#monthSelect")?.addEventListener("change",e=>{month=e.target.value;render()})}
-async function changeCompany(id){selected=id;view="home";await run(async()=>{await loadDocs()})}
+function toastMessage(message){
+ document.querySelectorAll(".gav-toast").forEach(e=>e.remove());
+ const node=document.createElement("div");
+ node.className="gav-toast";node.setAttribute("role","status");node.textContent=message;
+ document.body.appendChild(node);
+ setTimeout(()=>{if(node.isConnected)node.remove()},4600);
+}
+function clearPdfCache(){
+ for(const item of pdfCache.values())URL.revokeObjectURL(item.url);
+ pdfCache.clear();
+ previewId="";previewLoading=false;
+ document.body.style.overflow="";
+}
+function previewMarkup(){
+ if(!previewId)return "";
+ const d=docs.find(x=>x.id===previewId);if(!d)return "";
+ const stored=pdfCache.get(selected+":"+previewId);
+ const ready=stored&&!previewLoading;
+ return `<div class="gav-preview-overlay" id="gavPdfOverlay" role="dialog" aria-modal="true" aria-label="Visualização do documento"><div class="gav-preview-box"><div class="gav-preview-header"><div class="gav-preview-header-title">${esc(d.file_name)}</div><div class="gav-preview-header-actions"><button class="btn btn-dark btn-small" data-do="preview-download" data-val="${esc(d.id)}">Baixar PDF</button>${ready?`<a class="btn btn-line btn-small" href="${esc(stored.url)}" target="_blank" rel="noopener">Abrir em outra aba</a>`:""}<button class="btn btn-line btn-small" data-do="close-preview">Fechar</button></div></div><div class="gav-preview-content">${ready?`<iframe src="${esc(stored.url)}" title="Documento PDF original" loading="eager"></iframe>`:`<div class="gav-preview-pending"><strong>Carregando documento…</strong>Buscando o PDF original no Google Drive.<div class="subtle" style="margin-top:9px">Arquivos maiores podem levar alguns instantes.</div></div>`}</div><div class="gav-preview-note">Para anexar este documento em outro sistema, use o botão <strong>Baixar PDF</strong>.</div></div></div>`;
+}
+function paintPreview(){
+ document.getElementById("gavPdfOverlay")?.remove();
+ if(!previewId)return;
+ app.insertAdjacentHTML("beforeend",previewMarkup());
+ document.body.style.overflow="hidden";
+ const layer=document.getElementById("gavPdfOverlay");
+ if(!layer)return;
+ layer.querySelectorAll("[data-do]").forEach(b=>b.addEventListener("click",handle));
+ layer.addEventListener("click",e=>{if(e.target===layer)closePdf()});
+}
+function closePdf(){
+ previewId="";previewLoading=false;
+ document.getElementById("gavPdfOverlay")?.remove();
+ document.body.style.overflow="";
+}
+async function fetchPdf(id,mode){
+ const key=selected+":"+id;
+ if(pdfCache.has(key)){
+  const saved=pdfCache.get(key);
+  pdfCache.delete(key);pdfCache.set(key,saved);
+  return saved;
+ }
+ const blob=await invoke("gav-drive-pdf","download",{companyId:selected,documentId:id,mode,...(role==="admin"&&googleToken?{googleToken}:{})});
+ if(!blob||blob.type!=="application/pdf")throw Error("O servidor não retornou um arquivo PDF válido.");
+ const item={url:URL.createObjectURL(blob),blob};
+ pdfCache.set(key,item);
+ while(pdfCache.size>3){
+  const oldest=pdfCache.keys().next().value;
+  if(oldest===key)break;
+  const dropped=pdfCache.get(oldest);URL.revokeObjectURL(dropped.url);
+  pdfCache.delete(oldest);
+ }
+ return item;
+}
+async function openPdf(id){
+ if(!docs.some(x=>x.id===id))return;
+ previewId=id;
+ previewLoading=!pdfCache.has(selected+":"+id);
+ paintPreview();
+ if(!previewLoading)return;
+ try{
+  await fetchPdf(id,"preview");
+  if(previewId===id){previewLoading=false;paintPreview();}
+ }catch(e){
+  if(previewId===id){closePdf();toastMessage("Não foi possível visualizar: "+e.message);}
+ }
+}
+async function downloadPdf(id){
+ const d=docs.find(x=>x.id===id);if(!d||downloadBusy)return;
+ downloadBusy=id;
+ const controls=[...document.querySelectorAll('[data-do="download"]')].filter(b=>b.dataset.val===id);
+ controls.forEach(b=>{b.disabled=true;b.textContent="Baixando…";b.setAttribute("aria-busy","true")});
+ try{
+  const file=await fetchPdf(id,"download");
+  const anchor=document.createElement("a");
+  anchor.href=file.url;anchor.download=(d.file_name||"documento.pdf").replace(/[\\/:*?"<>|]/g,"_");
+  document.body.appendChild(anchor);anchor.click();anchor.remove();
+  toastMessage("Download solicitado: "+d.file_name);
+ }catch(e){toastMessage("Não foi possível baixar: "+e.message)}
+ finally{
+  downloadBusy="";
+  controls.forEach(b=>{if(b.isConnected){b.disabled=false;b.textContent="Baixar PDF";b.removeAttribute("aria-busy")}});
+ }
+}
+function render(){
+ app.innerHTML=role?shell():login();
+ app.querySelectorAll("[data-do]").forEach(b=>b.addEventListener("click",handle));
+ app.querySelector("#clientLogin")?.addEventListener("submit",loginClient);
+ app.querySelector("#companySelect")?.addEventListener("change",e=>changeCompany(e.target.value));
+ app.querySelector("#yearSelect")?.addEventListener("change",e=>{year=e.target.value;render()});
+ app.querySelector("#monthSelect")?.addEventListener("change",e=>{month=e.target.value;render()});
+ if(previewId)paintPreview();
+}
+async function changeCompany(id){clearPdfCache();selected=id;view="home";await run(async()=>{await loadDocs()})}
 async function loginClient(e){e.preventDefault();const id=cn(app.querySelector("#cnpj")?.value),password=app.querySelector("#pwd")?.value;if(id.length!==14){notice="Informe um CNPJ com 14 números.";render();return}await run(async()=>{const {error}=await sb.auth.signInWithPassword({email:"cliente-"+id+"@acesso.gavsolucoescontabeis.com.br",password});if(error)throw Error("CNPJ ou senha inválidos.");await bootstrap()})}
 async function google(){const {error}=await sb.auth.signInWithOAuth({provider:"google",options:{redirectTo:location.origin+location.pathname,scopes:"https://www.googleapis.com/auth/drive.readonly",queryParams:{access_type:"offline",prompt:"consent"}}});if(error)showError(error)}
-async function openPdf(id){
- const tab=window.open("about:blank","_blank");if(!tab){notice="Permita a abertura de PDF no navegador.";render();return}
- try{const blob=await invoke("gav-drive-pdf","download",{companyId:selected,documentId:id,...(role==="admin"&&googleToken?{googleToken}:{})});const url=URL.createObjectURL(blob);tab.location=url;setTimeout(()=>URL.revokeObjectURL(url),120000)}catch(e){tab.close();showError(e)}
-}
+
 async function handle(e){
  const a=e.currentTarget.dataset.do,v=e.currentTarget.dataset.val;
  if(a==="view"){view=v;render();return}
  if(a==="cat"){cat=v;view="category";year="ALL";month="ALL";render();return}
  if(a==="google"){await google();return}
- if(a==="logout"){await sb.auth.signOut();session=null;role="";googleToken="";notice="";render();return}
+ if(a==="logout"){clearPdfCache();await sb.auth.signOut();session=null;role="";googleToken="";notice="";render();return}
  if(a==="pick"){await changeCompany(v);view="recent";render();return}
  if(a==="pdf"){await openPdf(v);return}
+ if(a==="download"||a==="preview-download"){await downloadPdf(v);return}
+ if(a==="close-preview"){closePdf();return}
  if(a==="publish"){await run(async()=>{const d=docs.find(x=>x.id===v);await api(d.published_at?"unpublish":"publish",{companyId:selected,documentId:v});await loadDocs()});return}
  if(a==="link"){await run(async()=>{await api("linkPilot",{companyId:(companies.find(c=>c.cnpj==="60955798000157")||{}).id,googleToken});await bootstrap();view="drive"});return}
  if(a==="index"){await run(async()=>{const firm=companies.find(c=>c.cnpj==="60955798000157");const r=await invoke("gav-drive-index","index",{companyId:firm.id,googleToken});await bootstrap();notice=r.indexed+" PDF(s) indexados; "+r.newFiles+" novos. Nenhum foi publicado."});return}
 }
-sb.auth.onAuthStateChange((event,s)=>{if(event==="SIGNED_OUT"){role="";session=null;render()}});
+sb.auth.onAuthStateChange((event,s)=>{if(event==="SIGNED_OUT"){clearPdfCache();role="";session=null;render()}});
 await bootstrap();
