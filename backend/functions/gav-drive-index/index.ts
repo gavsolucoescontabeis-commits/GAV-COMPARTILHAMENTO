@@ -79,8 +79,8 @@ Deno.serve(async req=>{
     const node=queue.shift()!;if(seen.has(node.id))continue;seen.add(node.id);
     for(const f of await children(node.id,t)){
      if(f.mimeType==="application/vnd.google-apps.folder"){queue.push({id:f.id,path:node.path?node.path+"/"+f.name:f.name});continue}
-     if(f.mimeType!=="application/pdf")continue;
-     if(++count>1000)fail("Mais de 1000 PDFs, necessário dividir o piloto.",409);
+     if(!["application/pdf","image/jpeg","image/png","image/webp"].includes(f.mimeType))continue;
+     if(++count>1500)fail("Mais de 1500 documentos, necessário dividir o piloto.",409);
      const old=val(await s.from("gav_documents").select("id").eq("company_id",company).eq("drive_file_id",f.id).maybeSingle());
      const c=comp(node.path),row={file_name:f.name,mime_type:f.mimeType,relative_path:node.path,category:cat(node.path+"/"+f.name),month:c.month,year:c.year,drive_modified_at:f.modifiedTime||null,indexed_at:new Date().toISOString()};
      if(old)val(await s.from("gav_documents").update(row).eq("id",old.id));
