@@ -129,3 +129,23 @@ As subpastas **ADM**, **RES** e **FER** continuam em categorias separadas. Reser
 **Segurança:** todos os PDFs permanecem privados e sua prévia/download exige autorização do usuário e da empresa no servidor. Indexar não é publicar. A publicação ainda depende da GAV e da conferência por arquivo. A demonstração anterior permanece preservada em `?demo=1`.
 
 **Status técnico (v0.9.1):** fonte frontend `portal.js`, CSS `portal-ui.css`, backend `gav-drive-index` e `gav-drive-pdf` atualizados no repositório e funções ativas no Supabase. O uso externo por clientes e o desempenho da versão atual **não foram validados**; não anunciar disponibilidade definitiva.
+
+---
+
+## Aditivo 29/10/2026 — Navegação, marca GAV e publicação automática (v0.9.4)
+
+Decisão do usuário: o portal deve ser **o mais simples possível** para empresários e prestadores da construção civil. O menu **Documentos** foi considerado redundante porque **Início** já apresenta as categorias; removê-lo da navegação. Para cada tarefa o cliente entra em **Início → categoria (Folha, Admissões, Rescisões etc.) → ano/mês** e retorna pelo botão **Voltar** ou por **Início**, sem menus circulares.
+
+**Identidade da GAV:** o leão institucional não pode estar ao lado do nome da empresa selecionada, pois gera a impressão de ser a marca da cliente. Manter o leão exclusivamente na barra lateral de navegação, abaixo das rotinas, com a GAV no cabeçalho.
+
+**Botão da pasta mensal:** posicionar na mesma linha do cabeçalho do mês, **à direita**, como os comandos individuais. Usar **um único botão inteligente**: **Publicar pasta inteira** se houver documentos não publicados; após todos estarem publicados, ele passa a **Revogar pasta inteira**. Não colocar duplicados em segunda linha nem exigir múltiplos cliques de publicação individual.
+
+**Fluxo real desejado:** a GAV salva seus documentos na pasta local já sincronizada com o Google Drive e comunica a empresa cliente para acessar o portal. Não pretende revisar e clicar Publicar para cada arquivo. A autorização não deve ser uma etapa repetitiva: **novos arquivos** na pasta de empresa aprovada são publicados na indexação. Para arquivos que a administração deseja ocultar, **Revogar** mantém o status `BLOQUEADO` mesmo depois de novas sincronizações. A liberação continua restrita ao CNPJ autorizado e não cria links públicos de Drive.
+
+**Segurança na transição:** a nova regra não publica retroativamente os 355 documentos do piloto que já estavam na base, pois existem arquivos cujos nomes sugerem outras empresas. A administração pode publicar competências antigas em lote depois de conferir. O login de clientes ainda exige implantação e teste, independentemente de o documento ter o campo `published_at` preenchido.
+
+**Automação disponível neste momento:** a interface faz nova verificação ao abrir o painel do administrador e a cada 15 minutos **enquanto o portal administrativo estiver aberto**. A consulta manual continua disponível. Não foi implantado monitoramento garantido 24 horas com navegador fechado; a integração de execução agendada sem token exposto requer configuração segura de serviço. Não prometer que o sistema inteiro é automático sem esse último passo.
+
+**Arquivos removidos:** ao sincronizar, arquivos que sumiram da pasta autorizada passam para status `REMOVIDO` e deixam de aparecer. Arquivos que voltam à pasta podem ser reconsiderados sem desrespeitar bloqueios manuais `BLOQUEADO`.
+
+**Não regressão:** preservar layout preto/dourado e logos oficiais, separação Folha × Admissões × Rescisões × Férias × Guias e Impostos, download direto/visualização das imagens e PDFs e controle de permissões backend. Todas as alterações novas são aditivas aos componentes aprovados e não devem transformar a interface em nova demonstração.
