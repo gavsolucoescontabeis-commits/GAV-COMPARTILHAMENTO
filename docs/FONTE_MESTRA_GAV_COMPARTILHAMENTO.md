@@ -40,25 +40,16 @@
 - Para a TTM, as **18 empresas fornecidas pelo usuário** formam a lista inicialmente permitida. Não incluir pastas, arquivos soltos, backups ou outras empresas desconhecidas só por estarem sob `TTM`.
 - Uma empresa poderá ser cadastrada com **origem, código (quando existir), nome, CNPJ validado e pasta exata**; impedir duplicidades e exigir conferência de divergências entre código/nome da pasta.
 - O usuário **não deve cadastrar de novo** informações que já forneceu. Sempre incorporar dados já recebidos e revisados ao cadastro persistente.
-- A importação pelo Drive deve começar por **uma empresa piloto** da lista autorizada (por exemplo, a JM Rocha), sem expor outros documentos da TTM.
+- A importação pelo Drive deve começar por **uma empresa piloto** da lista autorizada (por exemplo, uma empresa da TTM especificamente autorizada), sem expor outros documentos da TTM.
 - Distinguir três situações: **empresa cadastrada**, **pasta identificada**, **arquivo publicado**. Uma pasta identificada NÃO significa sincronização ou permissão para o cliente.
 - Requisitos de privacidade para arquivos de outro escritório: não habilitar compartilhamento sem as autorizações pertinentes. Por padrão, tudo fica **não publicado**.
 
-## 5. Escopos de serviços por empresa
+## 5. Modelo de serviços por empresa (sem nomes ou dados de clientes)
 
-**TTM e DS CONTÁBIL:** controle principal de processamento de **folhas de pagamento** para empresas desses escritórios, com exceções individualizadas quando informadas.
-
-**REL GAV — escopos já informados:**
-
-| Empresa | Serviços da GAV | Não presumir |
-|---|---|---|
-| AS | **REINF**; enquadramento Simples Nacional, cuja guia é feita por outra pessoa | Não tem folha; não marcar folha ou PGDAS como responsabilidade GAV |
-| Ouro Negro | **Folha de pagamento** de condomínio | Não presumir apuração de PGDAS |
-| Skuner | **Folha**, apuração **PIS, COFINS, IRPJ e CSLL** (Lucro Presumido) | Não presumir outras obrigações |
-| Irapuera | **PIS, COFINS, IRPJ, CSLL** e **parcelamentos** | Não tem folha |
-| Vértice | **Folha**, **contabilidade**; empresa do Simples Nacional, **PGDAS ainda a confirmar** | Não marcar PGDAS como obrigação confirmada |
-
-- Os módulos de acompanhamento devem variar segundo o **contrato/escopo de cada empresa**, e não impor a todas as empresas a mesma lista fixa de obrigações.
+- TTM e DS CONTÁBIL: carteira principalmente de processamento de folhas de pagamento, com exceções configuráveis.
+- REL GAV: **cada empresa tem um conjunto de serviços próprio**, como REINF isolada; folha de condomínio; folha com apuração do Lucro Presumido (PIS, COFINS, IRPJ, CSLL); apuração tributária e parcelamentos sem folha; ou folha e contabilidade com PGDAS a confirmar.
+- A relação detalhada entre **nomes de clientes e serviços contratados é informação administrativa interna**. Não deve constar em arquivos de repositório público; ficar somente na fonte privada do projeto / banco com acesso restrito.
+- Os módulos de acompanhamento devem variar segundo o serviço confirmado por empresa. Não impor folha, DARF, FGTS, PGDAS ou REINF a todos.
 - Pendências desconhecidas devem permanecer **a confirmar**, jamais concluídas ou exigíveis por suposição.
 
 ## 6. Painel interno de processamento / fechamento
@@ -84,7 +75,7 @@
 
 ## 8. Primeiro teste real — critérios de aceitação
 
-**Empresa piloto:** uma empresa específica da TTM previamente aprovada, inicialmente JM Rocha, sem liberar acessos a clientes externos.
+**Empresa piloto:** uma empresa específica da TTM previamente aprovada, a definir no cadastro seguro, sem liberar acessos a clientes externos.
 
 - [ ] Projeto de backend separado e autenticação administrativa segura configurados.
 - [ ] Usuário autoriza acesso técnico à conta Google Drive por OAuth; servidor recebe acesso somente aos dados necessários.
