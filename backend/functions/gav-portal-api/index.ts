@@ -1,7 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.76.1";
 const URL=Deno.env.get("SUPABASE_URL")!;
-const KEY=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const KEY=(JSON.parse(Deno.env.get("SUPABASE_SECRET_KEYS")||"{}").default||Deno.env.get("SUPABASE_SERVICE_ROLE_KEY"))!;
 const owner="gavsolucoescontabeis@gmail.com";
 const supa=createClient(URL,KEY,{auth:{persistSession:false,autoRefreshToken:false}});
 const headers={"Access-Control-Allow-Origin":"https://gavsolucoescontabeis-commits.github.io","Access-Control-Allow-Headers":"authorization,apikey,content-type,x-client-info","Access-Control-Allow-Methods":"POST,OPTIONS","Cache-Control":"no-store"};
@@ -45,7 +45,7 @@ Deno.serve(async req=>{
   const adminOnly=()=>{if(!isAdmin)error("Somente administrador GAV.",403)};
   const companyOnly=()=>{if(!isAdmin&&!companyIds.includes(companyId))error("Empresa não autorizada.",403)};
   if(action==="me"){
-   const companies=check(await supa.from("gav_companies").select("id,code,cnpj,legal_name,folder_label,office_id,is_active").in("id",isAdmin?(check(await supa.from("gav_companies").select("id"))).map((c:any)=>c.id):companyIds));
+   const companies=isAdmin?check(await supa.from("gav_companies").select("id,code,cnpj,legal_name,folder_label,office_id,is_active").order("code")):companyIds.length?check(await supa.from("gav_companies").select("id,code,cnpj,legal_name,folder_label,office_id,is_active").in("id",companyIds)):[];
    const linked=isAdmin?check(await supa.from("gav_drive_folders").select("company_id,is_active").eq("is_active",true)):[];
    const candidate=isAdmin?check(await supa.from("gav_drive_candidates").select("company_id,label,verified_at")):[];
    return reply({role:isAdmin?"admin":"client",companies,linked,candidate,driveSecretsConfigured:!!(Deno.env.get("GOOGLE_OAUTH_CLIENT_ID")&&Deno.env.get("GOOGLE_OAUTH_CLIENT_SECRET"))});
