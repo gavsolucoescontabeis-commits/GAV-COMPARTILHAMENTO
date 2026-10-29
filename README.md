@@ -1,35 +1,52 @@
-# GAV Compartilhamento · Portal de documentos
+# GAV Compartilhar Docs — Portal seguro
 
-**Versão atual: v0.9.0 (piloto de autenticação e Google Drive)**
+**Versão atual: v0.9.1 · Organização mensal da folha e download facilitado**
 
-Portal: https://gavsolucoescontabeis-commits.github.io/GAV-COMPARTILHAMENTO/
+**Acesso permanente:** https://gavsolucoescontabeis-commits.github.io/GAV-COMPARTILHAMENTO/
 
-A demonstração visual anterior (v0.8.1, sem autenticação real) foi **preservada**, acessível acrescentando `?demo=1` à URL do portal. As configurações novas foram implementadas de forma aditiva, sem reutilizar o banco do Ministério Infantil.
+O projeto continua na branch `main`. Não é necessário instalar ZIP. A demonstração visual anterior (`v0.8.1`) está preservada em `?demo=1`. O ambiente real usa Supabase isolado, não o sistema Ministério Infantil.
 
-## Estado real em 29/10/2026
+## O que já está implementado e comprovado
 
-- Banco Supabase isolado `kiunegfjbfhvvlkxqvos`, com 18 empresas TTM e RLS habilitada.
-- Login Google de administrador e login CNPJ/senha de clientes programados no `portal.js`. O login só deve ser considerado validado após o primeiro teste de autorização, pois não existiam usuários em `auth.users` quando o código foi enviado.
-- Administrador GAV validado por conta Google verificada e vinculada no servidor, não por senha/chave fictícia.
-- Funções Supabase implantadas e ativas, com verificação JWT: `gav-portal-api`, `gav-drive-index`, `gav-drive-pdf`.
-- Pasta piloto de JM Rocha previamente identificada no banco privado. A vinculação exige confirmar o nome e parentesco com a pasta TTM usando a API real do Google Drive.
-- Indexação lê os metadados reais dos PDFs e não publica nenhum automaticamente. A administração pode publicar ou revogar cada documento.
-- A função que entrega o PDF confere vínculo da empresa, aprovação, pasta ativa e pertença atual do arquivo à hierarquia autorizada antes de transferir o arquivo original.
-- **Nenhum documento real foi sincronizado ou publicado** até o momento; o acesso de clientes ainda não foi liberado.
-- Segredos OAuth de leitura permanente precisam ser cadastrados no painel Supabase em *Edge Functions > Secrets*: `GOOGLE_OAUTH_CLIENT_ID` e `GOOGLE_OAUTH_CLIENT_SECRET`, retirados do JSON **privado** gerado no Google Cloud. Nunca enviar o JSON ou os segredos ao GitHub.
-- O status *Testando* no Google Cloud geralmente limita refresh tokens com escopo do Drive a 7 dias. Não usar como integração permanente de clientes sem uma estratégia de publicação/verificação e tratamento de expiração.
+- Login administrativo pelo Google **realmente utilizado e registrado** no Supabase. Um administrador foi autenticado com sucesso.
+- Google Drive API/OAuth autorizados; a pasta-piloto JM Rocha foi verificada, vinculada e indexada; PDFs reais foram localizados e um arquivo original chegou a ser aberto no navegador.
+- Login por CNPJ e senha desenhado para clientes; **ainda não há cliente externo habilitado**. Não é sistema de acesso público.
+- RLS/isolamento por empresa e por usuário, funções protegidas `gav-portal-api`, `gav-drive-index` e `gav-drive-pdf`; leitura de PDF exige autorização no servidor e permanência dentro da pasta vinculada.
+- Indexação **não publica automaticamente** arquivos descobertos. A administração pode conferir, publicar e revogar documentos individualmente.
+- O banco possui as empresas TTM e os metadados da empresa piloto; os documentos continuam com status de publicação pendente.
 
-## Arquivos e serviços
+## Nova regra definitiva — Folha de Pagamento (29/10/2026)
 
-- `index.html` — identidade visual anterior mantida; entrada para módulo autenticado.
-- `portal.js` — interface em produção, autenticação e painel de revisão.
-- `backend/SCHEMA_PILOTO_PREPARACAO.sql` — esquema original aplicado no Supabase.
-- `backend/functions/gav-portal-api/index.ts` e `backend/functions/gav-drive-pdf/index.ts` — cópias versionadas das funções implantadas.
-- `gav-drive-index` — rotina implantada no Supabase, versão ainda não espelhada no repositório.
-- `docs/FONTE_MESTRA_GAV_COMPARTILHAMENTO.md` — continuidade do projeto sem detalhes privados.
+A aba **Folha de Pagamento** reúne todos os arquivos da pasta mensal, sem fragmentar os mesmos documentos entre Guias e Impostos e Outros: folha, recibos, eSocial, DCTFWeb, relatórios, INSS/DARF previdenciário, FGTS/guia e relatórios. A pasta mensal continua organizada por **mês/ano**, com o nome do mês em MAIÚSCULAS.
 
-## Segurança e limitações
+As subpastas explícitas **ADM/RES/FER** ficam separadas como Admissões, Rescisões e Férias. A categoria **Guias e Impostos** recebe tributos que não são da folha, por exemplo PIS/COFINS, IRPJ/CSLL e parcelamentos. Documentos efetivamente não classificados e materiais de outras naturezas continuam em Outros Documentos para conferência. Atenção a arquivos que possam mencionar outras empresas: conferir antes de publicar.
 
-Não publicar CNPJs, arquivos de clientes, tokens OAuth, chaves Google, `service_role` ou URLs privadas no repositório público. Não tratar arquivos do Drive como públicos por possuir link. Os clientes devem ter vínculos de empresa explícitos e os PDFs precisam de aprovação individual.
+Essa classificação foi aplicada aos metadados já indexados e implementada na função de próximas sincronizações. Não altera ou move os PDFs no Google Drive.
 
-O portal está em **piloto técnico**. Falta testar o primeiro login real, confirmar autorização Drive e credenciais secretas, indexar os PDFs da empresa piloto, testar a abertura do PDF e habilitar uma conta de cliente real antes de ampliar o uso.
+## Visualização e download (v0.9.1)
+
+Cada PDF tem dois botões visíveis: **Visualizar** e **Baixar PDF**. A prévia mostra uma mensagem de carregamento, abre o PDF original no portal e contém botões para download e abertura em outra guia. A ação de download salva o PDF com seu nome original, sem exigir visualização anterior; é adequada a anexação posterior em sistemas das construtoras.
+
+O frontend reutiliza por curto prazo os PDFs abertos na sessão (cache limitado e esvaziado na troca de empresa/logout). A função de PDF evita renovações desnecessárias de token Google quando ainda válido e registra auditoria sem bloquear a resposta. **A velocidade real ainda precisa ser retestada pelo usuário.** O backend não usa links públicos do Google Drive.
+
+## Arquivos
+
+- `index.html` — entrada e identidade visual oficial, sem substituir a versão demonstrativa anterior.
+- `portal.js` — autenticação e interface segura, filtros mensais, prévia e download.
+- `portal-ui.css` — estilos de botões fáceis e prévia responsiva (desktop/celular).
+- `backend/functions/gav-portal-api/index.ts` — identificação de usuário, permissões, pastas e aprovação de documentos.
+- `backend/functions/gav-drive-index/index.ts` — classificação/sincronização real e segura.
+- `backend/functions/gav-drive-pdf/index.ts` — entrega de PDF original com validação de permissão.
+- `backend/SCHEMA_PILOTO_PREPARACAO.sql` — esquema inicial; alterações posteriores foram aplicadas no Supabase isolado.
+- `docs/FONTE_MESTRA_GAV_COMPARTILHAMENTO.md` — referência de continuidade; instruções aditivas posteriores prevalecem sobre descrições antigas.
+
+## Pendências de validação
+
+1. Testar a interface v0.9.1 no navegador, especialmente download/visualização em computador e celular.
+2. Conferir antes de qualquer publicação se o documento da pasta realmente pertence à empresa correspondente.
+3. Concluir emissão segura de contas/senhas de clientes e testar o isolamento entre CNPJs.
+4. Resolver o ciclo de renovação OAuth quando o Google Cloud estiver em estado **Testando** (credenciais offline podem expirar em sete dias) antes de abrir o uso contínuo.
+5. Incorporar os demais escritórios sem liberar pastas por aproximação de nomes ou CNPJ.
+
+**Segurança:** não incluir arquivo JSON do Google, client secret, refresh token, service role, dados de clientes ou documentos reais neste repositório público. Não cobrar serviços externos sem aprovação.
+
