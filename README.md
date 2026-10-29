@@ -2,11 +2,16 @@
 
 Portal de documentos para clientes e gestão administrativa da GAV Soluções Contábeis.
 
-## Versão atual: v0.7.2 (demonstração)
+## Versão atual: v0.7.3 (demonstração)
 
 Arquivo principal: `index.html`, já publicado na branch `main`. Github Pages: [abrir protótipo](https://gavsolucoescontabeis-commits.github.io/GAV-COMPARTILHAMENTO/).
 
 **Atenção:** login e dados de demonstração não oferecem autenticação ou autorização de produção. Não disponibilizar documentos reais a clientes nesta versão.
+
+## Fonte de continuidade
+
+- [Fonte mestra pública (sem dados nominais de clientes)](docs/FONTE_MESTRA_GAV_COMPARTILHAMENTO.md).
+- A **fonte privada com nomes de empresas e regras específicas** deve permanecer apenas na aba Fontes do projeto ChatGPT, **não** neste repositório público.
 
 ## Funcionalidades de teste
 
