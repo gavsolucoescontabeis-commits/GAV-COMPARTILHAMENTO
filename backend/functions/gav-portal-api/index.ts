@@ -1,9 +1,9 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.76.1";
-const URL=Deno.env.get("SUPABASE_URL")!;
+const SUPABASE_API_URL=Deno.env.get("SUPABASE_URL")!;
 const KEY=(JSON.parse(Deno.env.get("SUPABASE_SECRET_KEYS")||"{}").default||Deno.env.get("SUPABASE_SERVICE_ROLE_KEY"))!;
 const owner="gavsolucoescontabeis@gmail.com";
-const supa=createClient(URL,KEY,{auth:{persistSession:false,autoRefreshToken:false}});
+const supa=createClient(SUPABASE_API_URL,KEY,{auth:{persistSession:false,autoRefreshToken:false}});
 const headers={"Access-Control-Allow-Origin":"https://gavsolucoescontabeis-commits.github.io","Access-Control-Allow-Headers":"authorization,apikey,content-type,x-client-info","Access-Control-Allow-Methods":"POST,OPTIONS","Cache-Control":"no-store"};
 const reply=(v:any,status=200)=>new Response(JSON.stringify(v),{status,headers:{"Content-Type":"application/json",...headers}});
 const error=(text:string,status=400)=>{throw {message:text,status}};
