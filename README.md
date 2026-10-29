@@ -1,6 +1,6 @@
 # GAV Compartilhar Docs — Portal seguro
 
-**Versão atual: v0.9.4 · Navegação simples e novos documentos liberados na sincronização**
+**Versão atual: v0.9.5 · Download simplificado e sincronização automática no servidor**
 
 **Acesso permanente:** https://gavsolucoescontabeis-commits.github.io/GAV-COMPARTILHAMENTO/
 
@@ -59,7 +59,18 @@ O frontend reutiliza por curto prazo os PDFs abertos na sessão (cache limitado 
 - **Publicação automática de novos arquivos:** o registro `gav_drive_folders.auto_publish_new` está ativado apenas para a pasta-piloto aprovada. Arquivos novos indexados entram como `APROVADO` + `published_at` preenchido. Um arquivo revogado pela GAV recebe `BLOQUEADO`, e a sincronização **não** o republica.
 - **Sem publicação retroativa:** o acervo indexado antes da mudança continua com as autorizações anteriores. A GAV poderá liberar um mês de cada vez, se necessário, após conferência.
 - **Exclusões:** ao verificar que um arquivo existente foi removido/movido para fora da pasta vinculada, a sincronização o marca como `REMOVIDO` e revoga acesso; a API deixa de exibi-lo.
-- **Sincronização quando o administrador estiver usando o portal:** verificação automática ao abrir a sessão GAV e, enquanto a aba estiver aberta, a cada 15 minutos; existe botão de verificação imediata. **Ainda não há agendamento servidor 24 horas**, pois a execução programada com identidade de serviço exige autorização segura adicional. Não anunciar sincronização autônoma com o navegador fechado.
+- **Sincronização quando o administrador estiver usando o portal:** verificação automática ao abrir a sessão GAV e, enquanto a aba estiver aberta, a cada 15 minutos; existe botão de verificação imediata. **Agora existe agendamento servidor a cada 15 minutos**, com credenciais armazenadas no Supabase Vault e chamada autenticada protegida, mesmo que o painel GAV esteja fechado. A primeira chamada teste foi recebida com HTTP 200. Não é sincronização instantânea; depende da cópia dos arquivos no Google Drive e do próximo ciclo de leitura.
 - **Não confundir autorização do documento com habilitação do login do cliente:** o piloto continua sem credenciais de clientes externos.
 
-**Nota de implantação:** Supabase Auth, RLS e Edge Functions continuam com verificação de permissão. A instalação das extensões `pg_cron` e `pg_net` e de uma credencial de agendamento no Vault foi preparada no servidor, mas nenhum agendamento foi ativado sem o fluxo seguro para execução autenticada. Nunca colocar tokens do Vault ou chaves de serviço neste repositório público.
+**Nota de implantação:** Supabase Auth, RLS e Edge Functions continuam com verificação de permissão. O `pg_cron` e o `pg_net` chamam `gav-drive-index` com autenticação por JWT anon legado e segredo interno separado armazenados no Supabase Vault; `verify_jwt=true` permanece habilitado, e o token interno é validado em função RPC concedida somente ao `service_role`. O job `gav-drive-pilot-sync-15m` se aplica apenas às empresas com pasta ativa e `auto_publish_new=true`. Nunca colocar tokens do Vault ou chaves de serviço neste repositório público.
+
+## Ajustes da v0.9.5
+
+- Todos os botões de transferência mostram somente **Baixar** (PDF ou imagem), mantendo o texto alinhado.
+- Verificação automática do Drive no servidor a cada 15 minutos usando `pg_cron` e `pg_net`; o cron consulta somente empresas habilitadas com `auto_publish_new=true`.
+- Teste técnico da chamada programada simulada: **HTTP 200**, 400 arquivos encontrados em 45 subpastas no piloto, nenhum arquivo novo nessa rodada, nenhuma remoção. Há 355 PDFs e 45 JPGs no índice, e os JPGs novos foram publicados automaticamente.
+- A cada novo arquivo, a indexação já grava o documento como aprovado e publicado para a empresa autorizada; **Revogar** marca bloqueio persistente. Documento já removido da pasta é ocultado na próxima indexação.
+- Para proteger históricos que já existiam antes dessa política, a publicação em massa do acervo antigo ainda não foi realizada; a administração pode liberar uma competência de cada vez.
+- A atualização depende da sincronização local do Google Drive com a nuvem e da validade da autorização offline. Uma configuração OAuth em modo `Testando` pode exigir renovação do consentimento.
+
+**Estado importante:** o download pelo navegador e a navegação dos clientes finais ainda necessitam de teste prático. Nenhuma conta cliente foi criada neste piloto.
