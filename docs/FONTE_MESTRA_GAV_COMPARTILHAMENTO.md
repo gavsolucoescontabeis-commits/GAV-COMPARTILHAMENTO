@@ -109,3 +109,23 @@
 
 ---
 **Regra final:** priorizar solução funcional real para uma empresa com segurança, persistência e Drive; preservar a interface aprovada e não pedir novamente os dados já fornecidos.
+
+---
+
+## Aditivo 29/10/2026 — Folha unificada e acesso intuitivo (instrução posterior, prevalece sobre descrições antigas)
+
+**Confirmação técnica:** a conta GAV entrou de verdade pelo OAuth Google; a pasta piloto foi vinculada ao Drive e seus PDFs foram indexados com persistência no Supabase. A organização de arquivo e o acesso continuam em **piloto**, sem liberação indiscriminada.
+
+**Regra aprovada de organização:** os PDFs soltos dentro da pasta mensal de folha pertencem à única categoria **Folha de Pagamento**, incluindo relatório de folha, recibos, guias previdenciárias/DARF INSS, FGTS/guia/relatórios, eventos e relatórios do eSocial, DCTFWeb, seus recibos e resumos. Não criar novas subcategorias nem fazer o cliente buscar o INSS e o FGTS entre Guias e Impostos.
+
+As subpastas **ADM**, **RES** e **FER** continuam em categorias separadas. Reservar **Guias e Impostos** para obrigações não relacionadas à folha, como PIS/COFINS, IRPJ/CSLL e parcelamentos. Respeitar a pasta existente do Google Drive, sem mover documentos fisicamente. Arquivos de natureza estranha à empresa exigem conferência administrativa antes de serem publicados.
+
+**Competência:** exibir arquivos agrupados por **mês/ano** (meses sempre em MAIÚSCULAS), inclusive histórico com pasta anual `X2025` e nomes de mês abreviados como `1025` e `1325`. Reclassificar metadados já indexados e aplicar a mesma regra em cada sincronização futura. Não afetar permissões, aprovação, autorização ou publicações anteriores.
+
+**Usabilidade obrigatória:** trabalhadores e administradores de construtoras precisam localizar e anexar PDFs em outros sistemas, sem conhecimento técnico. Cada arquivo tem botões claramente identificados **Visualizar** e **Baixar PDF**. O download deve ocorrer diretamente, sem exigir visualização prévia, mantendo o nome do PDF original. O visualizador deve indicar carregamento, permitir baixar de dentro da prévia e oferecer abertura em nova guia para navegadores que não exibem PDF incorporado. Minimizar cliques, garantir controles acessíveis no celular e mensagens de erro compreensíveis.
+
+**Performance:** em v0.9.1 foi introduzido cache temporário e limitado no navegador e token Google temporário no backend para acessos repetidos, sem links públicos. Auditoria de visualização/download ocorre sem bloquear a transferência. A velocidade do primeiro acesso requer teste real, pois depende do Google Drive, da rede e da verificação segura da hierarquia das pastas.
+
+**Segurança:** todos os PDFs permanecem privados e sua prévia/download exige autorização do usuário e da empresa no servidor. Indexar não é publicar. A publicação ainda depende da GAV e da conferência por arquivo. A demonstração anterior permanece preservada em `?demo=1`.
+
+**Status técnico (v0.9.1):** fonte frontend `portal.js`, CSS `portal-ui.css`, backend `gav-drive-index` e `gav-drive-pdf` atualizados no repositório e funções ativas no Supabase. O uso externo por clientes e o desempenho da versão atual **não foram validados**; não anunciar disponibilidade definitiva.
