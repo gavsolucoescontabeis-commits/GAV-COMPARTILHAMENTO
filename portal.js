@@ -205,7 +205,7 @@ function companiesPage(){
 }
 function drivePage(){
  const all=companies.filter(c=>c.is_active),linked=all.filter(c=>links.some(l=>l.company_id===c.id&&l.is_active));
- const completed=all.filter(c=>syncRuns.some(r=>r.company_id===c.id&&r.state==="CONCLUIDO"));
+ const completed=all.filter(c=>links.some(l=>l.company_id===c.id&&l.last_synced_at));
  const report=mappingReport;
  const reportHtml=report?'<div class="card card-pad" style="margin:16px 0"><strong>Conferência das pastas TTM</strong><p class="subtle">'
    +report.linked+' novas pastas vinculadas; '+report.already+' já estavam vinculadas.</p>'
@@ -230,7 +230,7 @@ function drivePage(){
  ${all.map(c=>{
   const l=links.find(x=>x.company_id===c.id&&x.is_active);
   const last=syncRuns.find(x=>x.company_id===c.id);
-  const success=syncRuns.find(x=>x.company_id===c.id&&x.state==="CONCLUIDO");
+  const success=l?.last_synced_at?{indexed_count:l.last_indexed_count,finished_at:l.last_synced_at}:syncRuns.find(x=>x.company_id===c.id&&x.state==="CONCLUIDO");
   const state=!l?"Pasta não vinculada":last?.state==="FALHOU"?"Falha: "+(last.error_safe||"verificar Drive"):success?success.indexed_count+" arquivos indexados":last?.state==="INICIADO"?"Importação em andamento":"Aguardando primeira importação";
   return `<div class="gav-drive-row"><div class="gav-drive-firm"><strong>${esc((c.code||"")+" · "+c.legal_name)}</strong><small>${esc(state)}</small>${l?`<small>${l.auto_publish_new?"Novos documentos automáticos":"Novos documentos ainda não automáticos"}</small>`:""}</div><div class="gav-drive-actions">${l?`<button class="btn btn-line btn-small" data-do="index-company" data-val="${esc(c.id)}">Sincronizar agora</button>${success?`<button class="btn btn-line btn-small" data-do="${l.auto_publish_new?"pause-company-auto":"enable-company-auto"}" data-val="${esc(c.id)}">${l.auto_publish_new?"Pausar automático":"Ativar novos automáticos"}</button>`:""}`:""}<button class="btn btn-line btn-small" data-do="pick" data-val="${esc(c.id)}">Abrir</button></div></div>`;
  }).join("")}
