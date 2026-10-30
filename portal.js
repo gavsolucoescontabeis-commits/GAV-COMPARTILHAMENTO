@@ -11,6 +11,7 @@ const M=["JANEIRO","FEVEREIRO","MARÇO","ABRIL","MAIO","JUNHO","JULHO","AGOSTO",
 const C=[["ADMISSOES","Admissões"],["RESCISOES","Rescisões"],["FERIAS","Férias"],["FOLHA","Folha de Pagamento"],["GUIAS_IMPOSTOS","Guias e Impostos"],["OUTROS","Outros Documentos"]];
 let role="",companies=[],docs=[],links=[],candidates=[],selected="",view="home",cat="",year=2026,month="ALL",session=null,googleToken="",hasDriveSecret=false,notice="",busy=false;
 let previewAsClient=false,clientDocs=[],pilotTestCredential=null;
+let syncRuns=[],mappingReport=null;
 const adminView=()=>role==="admin"&&!previewAsClient;
 const displayDocs=()=>previewAsClient?clientDocs:docs;
 let previewId="",previewLoading=false,downloadBusy="";
@@ -59,7 +60,7 @@ async function bootstrap(){
  if(!session){role="";render();return}
  if(session.provider_token)googleToken=session.provider_token;
  try{
-  const me=await api("me");role=me.role;companies=me.companies||[];links=me.linked||[];candidates=me.candidate||[];hasDriveSecret=me.driveSecretsConfigured;
+  const me=await api("me");role=me.role;companies=me.companies||[];links=me.linked||[];candidates=me.candidate||[];syncRuns=me.sync||[];hasDriveSecret=me.driveSecretsConfigured;
   if(!selected||!companies.some(c=>c.id===selected))selected=(companies.find(c=>c.cnpj==="60955798000157")||companies[0])?.id||"";
   if(role==="admin"&&session.provider_refresh_token){
    try{await api("connectDrive",{refreshToken:session.provider_refresh_token})}catch(e){notice="Autenticação concluída, mas não foi possível guardar o acesso offline do Drive: "+e.message}
@@ -203,9 +204,37 @@ function companiesPage(){
  return `${title("Empresas e permissões","Relação real de empresas cadastradas. O acesso de cada cliente será individual.")}<div class="card card-pad"><div class="file-list">${companies.map(c=>`<div class="file-row"><div class="file-expand"><b>${esc((c.code||"")+" · "+c.legal_name)}</b><small class="file-meta">CNPJ ${esc(fmt(c.cnpj))} · ${links.some(l=>l.company_id===c.id)?"Pasta vinculada":"Pasta ainda não vinculada"}</small></div><button class="btn btn-line btn-small" data-do="pick" data-val="${c.id}">Abrir empresa</button></div>`).join("")}</div></div><p class="footnote">Os clientes não visualizam a lista de empresas. O acesso depende de autorização individual registrada no servidor.</p>`;
 }
 function drivePage(){
- const pilot=companies.find(c=>c.cnpj==="60955798000157");
- const candidate=pilot&&candidates.find(c=>c.company_id===pilot.id),linked=pilot&&links.some(l=>l.company_id===pilot.id);
- return `${title("Google Drive","Novos arquivos entram automaticamente quando o painel GAV verifica a pasta autorizada.")}<div class="card card-pad"><div class="section-title">1. Conta Google da administração</div><p>Use a conta GAV para autorizar somente a leitura dos documentos. O token é protegido no servidor.</p><button class="btn btn-dark" data-do="google">Autorizar / renovar Google Drive</button><div class="subtle" style="margin-top:10px">Credenciais do servidor: ${hasDriveSecret?"configuradas":"pendentes para acesso permanente dos clientes"}. ${esc(autoSyncLastResult)}</div></div><div class="card card-pad" style="margin-top:16px"><div class="section-title">2. Empresa piloto</div><p><b>${esc(pilot?.legal_name||"JM ROCHA")}</b> · Pasta identificada: ${esc(candidate?.label||"Não localizada")}.</p><p class="subtle">Vínculo: ${linked?"verificado e ativo":"aguardando verificação no Google Drive"}.</p><button class="btn btn-line" data-do="link" ${!pilot||linked?"disabled":""}>Verificar e vincular pasta</button> <button class="btn btn-dark" data-do="index" ${!linked?"disabled":""}>Verificar atualizações agora</button></div><div class="card card-pad" style="margin-top:16px"><div class="section-title">3. Conferência de documentos antigos</div><p>Após a indexação, abra a empresa em <b>Início</b> e publique somente os documentos conferidos. Novos arquivos entram automaticamente; documentos antigos continuam sujeitos à liberação da GAV.</p><button class="btn btn-line" data-do="pick" data-val="${pilot?.id||""}">Conferir documentos da JM Rocha</button></div>`;
+ const all=companies.filter(c=>c.is_active),linked=all.filter(c=>links.some(l=>l.company_id===c.id&&l.is_active));
+ const completed=all.filter(c=>syncRuns.some(r=>r.company_id===c.id&&r.state==="CONCLUIDO"));
+ const report=mappingReport;
+ const reportHtml=report?'<div class="card card-pad" style="margin:16px 0"><strong>Conferência das pastas TTM</strong><p class="subtle">'
+   +report.linked+' novas pastas vinculadas; '+report.already+' já estavam vinculadas.</p>'
+   +(report.summary||[]).map(r=>'<div class="gav-drive-row"><span>'+esc(r.code+' · '+r.name)+'</span><small>'+esc(r.status.replaceAll("_"," "))+'</small></div>').join("")+'</div>':"";
+ return `${title("Google Drive","Pastas verificadas por empresa, com importação segura e arquivos novos automáticos após revisão.")}
+ <div class="card card-pad">
+ <div class="section-title">Conexão Google Drive</div>
+ <p>Os documentos continuam nas pastas originais. O servidor consulta apenas empresas autorizadas.</p>
+ <button class="btn btn-line" data-do="google">Autorizar / renovar Google Drive</button>
+ <p class="subtle" style="margin-top:10px">Credenciais: ${hasDriveSecret?"configuradas":"pendentes"}. ${esc(autoSyncLastResult)}</p>
+ </div>
+ <div class="card card-pad" style="margin-top:16px">
+ <div class="section-title">Carteira TTM</div>
+ <p><strong>${all.length} empresas cadastradas</strong> · ${linked.length} com pasta vinculada · ${completed.length} com sincronização concluída.</p>
+ <p class="subtle">Somente nomes de pasta correspondentes exatamente aos cadastros serão vinculados. Os documentos antigos ficam sem publicação até a conferência.</p>
+ <button class="btn btn-dark" data-do="ttm-expand" ${busy?"disabled":""}>Conferir e vincular pastas da TTM</button>
+ <p class="subtle" style="margin-top:10px">Após a vinculação, o servidor fará a importação inicial das pastas verificadas, uma empresa por vez. Não é necessário manter o navegador aberto.</p>
+ </div>
+ ${reportHtml}
+ <div class="card card-pad" style="margin-top:16px"><div class="section-title">Empresas e sincronização</div>
+ <div class="gav-drive-table">
+ ${all.map(c=>{
+  const l=links.find(x=>x.company_id===c.id&&x.is_active);
+  const last=syncRuns.find(x=>x.company_id===c.id);
+  const success=syncRuns.find(x=>x.company_id===c.id&&x.state==="CONCLUIDO");
+  const state=!l?"Pasta não vinculada":last?.state==="FALHOU"?"Falha: "+(last.error_safe||"verificar Drive"):success?success.indexed_count+" arquivos indexados":last?.state==="INICIADO"?"Importação em andamento":"Aguardando primeira importação";
+  return `<div class="gav-drive-row"><div class="gav-drive-firm"><strong>${esc((c.code||"")+" · "+c.legal_name)}</strong><small>${esc(state)}</small>${l?`<small>${l.auto_publish_new?"Novos documentos automáticos":"Novos documentos ainda não automáticos"}</small>`:""}</div><div class="gav-drive-actions">${l?`<button class="btn btn-line btn-small" data-do="index-company" data-val="${esc(c.id)}">Sincronizar agora</button>${success?`<button class="btn btn-line btn-small" data-do="${l.auto_publish_new?"pause-company-auto":"enable-company-auto"}" data-val="${esc(c.id)}">${l.auto_publish_new?"Pausar automático":"Ativar novos automáticos"}</button>`:""}`:""}<button class="btn btn-line btn-small" data-do="pick" data-val="${esc(c.id)}">Abrir</button></div></div>`;
+ }).join("")}
+ </div></div>`;
 }
 function content(){if(!companies.length)return title("Sem empresas autorizadas","O acesso está ativo, mas não há vínculo de empresa. Solicite liberação à GAV.");if(view==="companies"&&role==="admin")return companiesPage();if(view==="drive"&&role==="admin")return drivePage();if(view==="recent"||view==="category")return recent();return home()}
 function toastMessage(message){
