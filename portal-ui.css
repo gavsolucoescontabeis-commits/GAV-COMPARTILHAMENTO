@@ -78,3 +78,14 @@
 .gav-doc-main{flex-basis:calc(100% - 107px)}
 .gav-doc-actions{padding-left:46px}
 }
+
+/* v0.10 — carteira TTM em lote */
+.gav-drive-table{display:flex;flex-direction:column;gap:0}
+.gav-drive-row{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 6px;border-bottom:1px solid var(--border)}
+.gav-drive-row:last-child{border-bottom:0}
+.gav-drive-firm{min-width:0;flex:1}
+.gav-drive-firm strong{display:block;font-size:13px;line-height:1.4;overflow-wrap:anywhere}
+.gav-drive-firm small{display:block;font-size:11px;line-height:1.6;color:var(--muted)}
+.gav-drive-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.gav-drive-actions .btn{min-height:38px}
+@media(max-width:720px){.gav-drive-row{flex-wrap:wrap;gap:12px}.gav-drive-actions{width:100%;justify-content:flex-start}.gav-drive-actions .btn{min-height:43px;flex:1 1 auto}}
