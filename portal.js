@@ -95,7 +95,7 @@ function selectionBar(items){
  const all=items.length>0&&count===items.length;
  return '<div class="gav-bulk-toolbar" role="group" aria-label="Download de varios documentos">'
   +'<label class="gav-select-all-label"><input type="checkbox" data-check-all '+(all?'checked ':'')+(!items.length||bulkDownloading?'disabled ':'')+'> Marcar todos ('+items.length+')</label>'
-  +'<span class="gav-select-count" id="gavSelectionCount">'+count+' selecionado(s)</span>'
+  +'<span class="gav-select-count" id="gavSelectionCount">'+count+' selecionado(s) · até 60 por ZIP</span>'
   +'<button class="btn btn-dark btn-small" data-do="bulk-download" id="gavDownloadSelected" '+(!count||bulkDownloading?'disabled':'')+'>'+(bulkDownloading?esc(bulkProgress||"Preparando ZIP..."):"Baixar selecionados")+'</button>'
   +'</div>';
 }
@@ -104,7 +104,7 @@ function refreshSelectionToolbar(){
  const count=eligible.filter(d=>checkedDocs.has(d.id)).length;
  const all=document.querySelector("[data-check-all]");
  if(all){all.checked=eligible.length>0&&count===eligible.length;all.indeterminate=count>0&&count<eligible.length;}
- const label=document.getElementById("gavSelectionCount");if(label)label.textContent=count+" selecionado(s)";
+ const label=document.getElementById("gavSelectionCount");if(label)label.textContent=count+" selecionado(s) · até 60 por ZIP";
  const btn=document.getElementById("gavDownloadSelected");
  if(btn){btn.disabled=!count||bulkDownloading;btn.textContent=bulkDownloading?(bulkProgress||"Preparando ZIP..."):"Baixar selecionados";}
 }
