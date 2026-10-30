@@ -1,0 +1,60 @@
+name: Publicar GAV Compartilhamento
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gav-compartilhamento-pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Preparar site estático
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar código
+        uses: actions/checkout@v4
+      - name: Configurar GitHub Pages
+        uses: actions/configure-pages@v5
+      - name: Preparar somente arquivos públicos
+        run: |
+          mkdir -p _site
+          cp index.html portal.js portal-ui.css _site/
+          cp -R assets _site/assets
+          touch _site/.nojekyll
+          printf '%s\n' "$GITHUB_SHA" > _site/revision.txt
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          html = Path("_site/index.html").read_text(encoding="utf-8")
+          js = Path("_site/portal.js").read_text(encoding="utf-8")
+          m = re.search(r'portal\.js\?v=(\d+\.\d+\.\d+)', html)
+          if not m or "v" + m.group(1) not in js:
+              raise SystemExit("Versões do index.html e portal.js diferentes")
+          print("GAV Compartilhamento v" + m.group(1))
+          PY
+      - name: Enviar arquivos do site
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: _site
+
+  deploy:
+    name: Publicar GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    steps:
+      - name: Publicar site
+        id: deployment
+        uses: actions/deploy-pages@v4
