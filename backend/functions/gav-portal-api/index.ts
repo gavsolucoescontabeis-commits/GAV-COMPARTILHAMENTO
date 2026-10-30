@@ -65,6 +65,39 @@ Deno.serve(async req=>{
      .eq("company_id",companyId).eq("review_status","APROVADO").not("published_at","is",null).order("file_name").limit(1000));
    return reply({documents,preview:true});
   }
+  if(action==="createPilotTestAccess"||action==="removePilotTestAccess"){
+   adminOnly();
+   const pilot=check(await supa.from("gav_companies").select("id,cnpj,is_active").eq("cnpj","60955798000157").eq("is_active",true).single());
+   if(companyId!==pilot.id)error("Acesso de teste permitido apenas para a empresa-piloto.",403);
+   const email="cliente-"+pilot.cnpj+"@acesso.gavsolucoescontabeis.com.br";
+   const users=await supa.auth.admin.listUsers({page:1,perPage:1000});
+   if(users.error)error("Não foi possível conferir o usuário de teste.",502);
+   const existing=users.data.users.find((x:any)=>x.email?.toLowerCase()===email);
+   if(existing&&!existing.app_metadata?.gav_test_account)error("Já existe um acesso real para esse CNPJ. Não será alterado.",409);
+   if(action==="removePilotTestAccess"){
+    if(existing){
+     const removed=await supa.auth.admin.deleteUser(existing.id);
+     if(removed.error)error("Não foi possível remover a conta de teste.",502);
+    }
+    return reply({removed:true});
+   }
+   const alphabet="ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#";
+   const random=new Uint8Array(32);crypto.getRandomValues(random);
+   const password=Array.from(random,(v:number)=>alphabet[v%alphabet.length]).join("");
+   let userId:string;
+   if(existing){
+    const changed=await supa.auth.admin.updateUserById(existing.id,{password});
+    if(changed.error)error("Não foi possível renovar a senha de teste.",502);
+    userId=existing.id;
+   }else{
+    const created=await supa.auth.admin.createUser({email,password,email_confirm:true,app_metadata:{gav_test_account:true}});
+    if(created.error||!created.data.user)error("Não foi possível criar a conta de teste.",502);
+    userId=created.data.user.id;
+   }
+   const membership=await supa.from("gav_memberships").upsert({user_id:userId,company_id:companyId,active:true},{onConflict:"user_id,company_id"});
+   if(membership.error)error("Falha ao conceder acesso apenas à empresa-piloto.",502);
+   return reply({cnpj:pilot.cnpj,password,test:true});
+  }
   if(action==="connectDrive"){
    adminOnly();
    if(typeof b.refreshToken!=="string"||b.refreshToken.length<20)error("Google não forneceu autorização offline. Reconecte com consentimento.",409);
