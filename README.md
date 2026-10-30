@@ -1,6 +1,6 @@
 # GAV Compartilhar Docs — Portal seguro
 
-**Versão atual: v0.10.1 · Carteira TTM e download múltiplo em ZIP**
+**Versão atual: v0.10.2 · ZIP simples e seleção por escritório**
 
 **Acesso permanente:** https://gavsolucoescontabeis-commits.github.io/GAV-COMPARTILHAMENTO/
 
@@ -94,3 +94,13 @@ A barra lateral GAV permanece fixa durante a rolagem no computador. O administra
 **Escopo:** expansão desta fase é a carteira TTM já cadastrada. As carteiras DS CONTÁBIL, REL GAV e AVULSOS não podem ser liberadas por nomes aproximados: exigem cadastro e revisão de CNPJ e pasta, conservando o isolamento por escritório.
 
 **Segurança:** este repositório é público. Não inserir IDs de pastas privadas, CNPJs de clientes, tokens Vault, refresh tokens ou arquivos reais neste README. O backend guarda apenas metadados necessários e valida autorização a cada download.
+
+## Ajustes de 30/10/2026 — v0.10.2
+
+- **ZIP sem subpastas:** a exportação múltipla contém PDFs e imagens diretamente na raiz do ZIP, sem repetir categorias, ano e mês que o usuário já selecionou no portal. Em caso de nomes iguais, adicionar ` (2)`, ` (3)`, etc. antes da extensão para preservar todos os arquivos originais. Limites anteriores de 60 arquivos/180 MB permanecem; download individual, filtro por competência e permissões do servidor preservados.
+- **Separação por escritório (admin):** a API `gav-portal-api` entrega `offices` ao administrador autenticado, da tabela `gav_offices`, sem enviar essa listagem aos clientes. A interface inclui item lateral **Escritórios**, cards para escolher o escritório, seleção de **Escritório** antes de **Empresa**, listagem de empresas restrita ao escritório selecionado e seção Google Drive igualmente filtrada.
+- Os escritórios registrados são TTM (18 empresas), DS CONTÁBIL, REL GAV e AVULSOS (estes três atualmente sem empresas vinculadas). A seleção vazia exibe orientação, sem herdar empresa de outro escritório. O escritório selecionado fica na sessão do navegador e é limpo ao sair.
+- **Atenção:** esta implementação organiza as empresas já cadastradas; não importa pastas dos três escritórios vazios nem cria CNPJs desconhecidos. A carteira TTM conserva seu fluxo de sincronização no servidor e o botão de vincular pastas TTM aparece somente no contexto TTM.
+- **Não regressão:** o cliente continua enxergando somente sua empresa, sem lista de escritórios; barra lateral preta/dourada, leão GAV, publicação automática das pastas aprovadas, prévia e botão de baixar permanecem iguais.
+
+Validação técnica: sintaxe JS verificada, quatro cartões de escritório renderizados em teste isolado, ZIP plano testado logicamente com nomes repetidos. Navegação e download reais ainda requerem teste em navegador.
