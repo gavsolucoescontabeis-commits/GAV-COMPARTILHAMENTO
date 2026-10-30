@@ -167,3 +167,17 @@ O administrador definiu o fluxo cotidiano: gera documento, salva na pasta local 
 
 ## Aditivo 30/10/2026 — Navegação fixa e conferência com visão do cliente
 A barra lateral com nome e leão da GAV deve acompanhar toda a rolagem no desktop, mantendo os botões acessíveis. No celular, manter a navegação inferior. A aba administrativa **Início** ganhou **Ver como o cliente**: mostra somente documentos aprovados e publicados segundo a filtragem do backend, sem criar credenciais externas. O administrador pode, por decisão explícita no painel, gerar uma senha temporária de teste somente para a JM Rocha e experimentar o login verdadeiro com CNPJ numa janela anônima; há opção de desativar/excluir esse acesso. Nunca criar usuário de teste sem o clique e confirmação do administrador. Os documentos novos são liberados automaticamente pela sincronização do Drive em cron de 15 minutos; os documentos antigos pendentes não foram liberados em massa. Status do login real de teste não verificado até que o administrador realize o ensaio.
+
+---
+
+## Aditivo 30/10/2026 — TTM e seleção múltipla (v0.10.1)
+
+A carteira cadastrada da TTM tem 18 empresas. As 18 pastas foram encontradas na raiz TTM pelo nome **exato** do cadastro. O sistema ganhou a função protegida de vinculação em lote `gav-folder-expand` e a tela administrativa **Google Drive → Conferir e vincular pastas da TTM**, sem aproximar nomes nem adivinhar empresas. O clique administrativo é necessário para executar as 17 vinculações que ainda não existiam na data do desenvolvimento; não confundir função implantada com importação já finalizada.
+
+Depois da vinculação, o cron autenticado `gav-drive-initial-import-5m` processa **uma empresa verificada de cada vez** sem publicar o acervo inicial. A função `gav-drive-index` foi otimizada para lotes e guarda o total e data da última sincronização em `gav_drive_folders`. Ainda há limites por execução (até 6.000 documentos, 700 subpastas) que devem ser conferidos nos resultados reais; ampliar incrementalmente se necessário. A GAV pode liberar o histórico após conferência explícita e habilitar a publicação automática de novos arquivos individualmente por pasta vinculada. Nunca liberar em massa pastas de outra empresa sem validação.
+
+Os relatórios terão quadradinhos individuais, **Marcar todos** dos arquivos da página atual e **Baixar selecionados**, reunindo PDF/imagens num único ZIP organizado por categoria e mês. Mostrar até 60 por página para não travar o navegador e permitir navegação Anterior/Próximos e filtros. Limite por ZIP de até 60 documentos/180 MB. A função de download deve continuar autenticando cada arquivo no backend, sem gerar links públicos.
+
+Os testes de login CNPJ/senha são preparados por empresa: somente um administrador pode criar um usuário **temporário** com senha forte, verificar a visão do cliente, e depois desativá-lo. Nenhum cliente recebe acesso externo automaticamente. **Ver como o cliente** continua alternativa de prévia sem criar conta. As carteiras DS CONTÁBIL, REL GAV e AVULSOS continuam isoladas e carecem de cadastro/revisão antes de importar.
+
+Regra contínua: preservar os módulos aprovados, a barra lateral fixa, a marca GAV/leão, publicação automática somente quando a pasta está autorizada, e bloqueios manuais persistentes. Continuar diretamente no GitHub/Supabase sem gerar ZIP de instalação.
