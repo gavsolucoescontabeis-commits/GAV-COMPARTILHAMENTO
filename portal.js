@@ -193,7 +193,7 @@ function files(items){
 }
 function home(){
  const firm=current(),items=displayDocs();
- return `${title("Meus documentos",adminView()?"Conferência dos arquivos da empresa selecionada":"Documentos liberados pela GAV para sua empresa.")}${picker()}${adminView()?`<div style="margin:12px 0 20px"><button class="btn btn-dark" data-do="client-preview">Ver como o cliente</button>${firm?.cnpj==="60955798000157"?` <button class="btn btn-line" data-do="create-pilot-test">Gerar login de teste da JM Rocha</button> <button class="btn btn-line" data-do="remove-pilot-test">Desativar login de teste</button>`:""}${pilotTestCredential&&firm?.cnpj==="60955798000157"?`<div class="card card-pad" style="margin-top:14px"><strong>Acesso de teste criado (não encaminhe ao cliente)</strong><p>CNPJ de acesso: <strong>${esc(pilotTestCredential.cnpj)}</strong></p><p>Senha de teste: <code style="user-select:all;overflow-wrap:anywhere">${esc(pilotTestCredential.password)}</code></p><p class="subtle">Para testar o login real sem sair da GAV, abra o portal em uma janela anônima e entre com o CNPJ e esta senha. Apenas os arquivos publicados ficarão visíveis.</p></div>`:""}<p class="subtle" style="margin-top:9px">Novos arquivos são liberados automaticamente. Publicar serve para o histórico antigo ainda pendente; Revogar oculta um arquivo.</p></div>`:""}${firm?`<div class="hero"><div><small>ÁREA EXCLUSIVA DA EMPRESA</small><h2>${esc(firm.legal_name)}</h2><p>CNPJ ${esc(fmt(firm.cnpj))} · Documentos por competência e categoria.</p></div></div>`:""}<div class="stats"><div class="card stat"><span class="caption">${adminView()?"Documentos cadastrados":"Documentos disponíveis"}</span><strong>${items.length}</strong></div>${adminView()?`<div class="card stat"><span class="caption">Documentos liberados</span><strong>${items.filter(x=>x.published_at).length}</strong></div>`:""}<div class="card stat"><span class="caption">Categorias com arquivos</span><strong>${new Set(items.map(x=>x.category)).size}</strong></div></div><div class="section-title">Categorias</div><div class="cat-grid">${C.map(([id,n])=>`<button class="category" data-do="cat" data-val="${id}"><span class="cat-name">${esc(n)}</span><span class="cat-count">${items.filter(d=>d.category===id).length} documento(s)</span></button>`).join("")}</div><div class="section-title">Documentos recentes</div><div class="card card-pad">${selectionBar(items.slice().sort(documentSort).slice(0,5))}${files(items.slice().sort(documentSort).slice(0,5))}</div>`;
+ return `${title("Meus documentos",adminView()?"Conferência dos arquivos da empresa selecionada":"Documentos liberados pela GAV para sua empresa.")}${picker()}${adminView()?`<div style="margin:12px 0 20px"><button class="btn btn-dark" data-do="client-preview">Ver como o cliente</button>${links.some(l=>l.company_id===firm?.id&&l.is_active)?` <button class="btn btn-line" data-do="create-company-test">Gerar login de teste</button> <button class="btn btn-line" data-do="remove-company-test">Desativar login de teste</button>`:""}${pilotTestCredential&&pilotTestCredential.cnpj===firm?.cnpj?`<div class="card card-pad" style="margin-top:14px"><strong>Acesso de teste criado (não encaminhe ao cliente)</strong><p>CNPJ de acesso: <strong>${esc(pilotTestCredential.cnpj)}</strong></p><p>Senha de teste: <code style="user-select:all;overflow-wrap:anywhere">${esc(pilotTestCredential.password)}</code></p><p class="subtle">Para testar o login real sem sair da GAV, abra o portal em uma janela anônima e entre com o CNPJ e esta senha. Apenas os arquivos publicados ficarão visíveis.</p></div>`:""}<p class="subtle" style="margin-top:9px">Novos arquivos são liberados automaticamente. Publicar serve para o histórico antigo ainda pendente; Revogar oculta um arquivo.</p></div>`:""}${firm?`<div class="hero"><div><small>ÁREA EXCLUSIVA DA EMPRESA</small><h2>${esc(firm.legal_name)}</h2><p>CNPJ ${esc(fmt(firm.cnpj))} · Documentos por competência e categoria.</p></div></div>`:""}<div class="stats"><div class="card stat"><span class="caption">${adminView()?"Documentos cadastrados":"Documentos disponíveis"}</span><strong>${items.length}</strong></div>${adminView()?`<div class="card stat"><span class="caption">Documentos liberados</span><strong>${items.filter(x=>x.published_at).length}</strong></div>`:""}<div class="card stat"><span class="caption">Categorias com arquivos</span><strong>${new Set(items.map(x=>x.category)).size}</strong></div></div><div class="section-title">Categorias</div><div class="cat-grid">${C.map(([id,n])=>`<button class="category" data-do="cat" data-val="${id}"><span class="cat-name">${esc(n)}</span><span class="cat-count">${items.filter(d=>d.category===id).length} documento(s)</span></button>`).join("")}</div><div class="section-title">Documentos recentes</div><div class="card card-pad">${selectionBar(items.slice().sort(documentSort).slice(0,5))}${files(items.slice().sort(documentSort).slice(0,5))}</div>`;
 }
 function recent(){
  const arr=filtered(),years=[...new Set(displayDocs().map(d=>d.year).filter(Boolean))].sort((a,b)=>b-a);
@@ -373,16 +373,16 @@ async function handle(e){
   });
   return;
  }
- if(a==="create-pilot-test"){
-  if(role!=="admin"||previewAsClient||current()?.cnpj!=="60955798000157")return;
-  if(!window.confirm("Criar ou renovar uma conta de TESTE da JM Rocha? Ela poderá acessar somente os documentos já publicados dessa empresa. Não compartilhe esta senha com o cliente."))return;
-  await run(async()=>{pilotTestCredential=await api("createPilotTestAccess",{companyId:selected})});
+ if(a==="create-company-test"){
+  if(role!=="admin"||previewAsClient||!links.some(l=>l.company_id===selected&&l.is_active))return;
+  if(!window.confirm("Criar ou renovar uma conta de TESTE desta empresa? Ela poderá acessar somente os documentos já publicados dessa empresa. Não compartilhe esta senha com o cliente."))return;
+  await run(async()=>{pilotTestCredential=await api("createCompanyTestAccess",{companyId:selected})});
   return;
  }
- if(a==="remove-pilot-test"){
-  if(role!=="admin"||previewAsClient||current()?.cnpj!=="60955798000157")return;
-  if(!window.confirm("Desativar e excluir a conta de teste da JM Rocha?"))return;
-  await run(async()=>{await api("removePilotTestAccess",{companyId:selected});pilotTestCredential=null;notice="Conta de teste desativada."});
+ if(a==="remove-company-test"){
+  if(role!=="admin"||previewAsClient||!links.some(l=>l.company_id===selected&&l.is_active))return;
+  if(!window.confirm("Desativar e excluir a conta de teste desta empresa?"))return;
+  await run(async()=>{await api("removeCompanyTestAccess",{companyId:selected});pilotTestCredential=null;notice="Conta temporária de teste desativada."});
   return;
  }
  if(a==="exit-preview"){resetSelection();
