@@ -84,6 +84,10 @@ Deno.serve(async req=>{
    const verified=val(await s.from("gav_drive_candidates").select("company_id").eq("company_id",company).not("verified_at","is",null).maybeSingle());
    if(!verified)fail("Pasta não verificada para importação protegida.",403);
   }
+  const recently=new Date(Date.now()-4*60*1000).toISOString();
+  const running=val(await s.from("gav_sync_runs").select("id").eq("company_id",company)
+    .eq("state","INICIADO").gte("started_at",recently).limit(1));
+  if(running.length)fail("Já existe uma sincronização desta empresa em andamento.",409);
   const t=await access(b),runs=val(await s.from("gav_sync_runs").insert({company_id:company,state:"INICIADO"}).select().single());
   try{
    let count=0,added=0,autoPublished=0;
