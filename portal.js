@@ -260,16 +260,17 @@ function recent(){
 }
 function folderCatalogHtml(){
  if(!adminView()||!supportsOfficeCatalog())return "";
- const data=folderLookup.officeId===officeId?folderLookup:{loaded:false,items:[],error:""};
+ const full=folderLookup.officeId===officeId?folderLookup:{loaded:false,items:[],error:""};
+ const data={...full,items:(full.items||[]).filter(f=>/^\\s*\\d{1,4}(?:\\s|[_.-]|$)/.test(f.name))};
  const unknown=data.items.filter(f=>!f.hasCnpj);
- let html='<div class="card card-pad" style="margin-top:18px"><h3 class="block-title">Pastas do Google Drive — '+esc(officeLabel())+'</h3><p class="subtle">Pastas localizadas na origem. Somente empresas com CNPJ confirmado poderão ser cadastradas. Nenhum documento é publicado automaticamente.</p><button class="btn btn-line btn-small" data-do="catalog-refresh" '+(busy?"disabled":"")+'>Buscar / atualizar pastas do Drive</button>';
+ let html='<div class="card card-pad" style="margin-top:18px"><h3 class="block-title">Empresas numeradas no Google Drive — '+esc(officeLabel())+'</h3><p class="subtle">Somente pastas com código numérico no início. Pastas sem número ficam fora desta carteira; cadastro avulso apenas quando solicitado.</p><button class="btn btn-line btn-small" data-do="catalog-refresh" '+(busy?"disabled":"")+'>Atualizar relação do Drive</button>';
  if(data.error)html+='<div class="notice" style="margin-top:12px">Consulta indisponível: '+esc(data.error)+'</div>';
- if(data.loaded)html+='<p class="subtle" style="margin:14px 0">'+data.items.length+' pasta(s) localizadas · '+(data.items.length-unknown.length)+' cadastrada(s) · '+unknown.length+' aguardando CNPJ.</p>';
- else html+='<p class="subtle" style="margin-top:14px">A consulta das pastas ainda não foi realizada.</p>';
+ if(data.loaded)html+='<p class="subtle" style="margin:14px 0">'+data.items.length+' pasta(s) numerada(s) · '+(data.items.length-unknown.length)+' empresa(s) cadastrada(s) · '+unknown.length+' registro(s) aguardando conferência.</p>';
+ else html+='<p class="subtle" style="margin-top:14px">Aguardando consulta das pastas numeradas.</p>';
  for(const f of unknown){
-  html+='<div class="gav-drive-row"><div class="gav-drive-firm"><strong>'+esc(f.name)+'</strong><small>Pasta encontrada, CNPJ pendente, arquivos não liberados</small></div><details style="min-width:245px"><summary class="btn btn-line btn-small" style="cursor:pointer">Conferir e cadastrar</summary><form data-office-register="'+esc(f.id)+'" style="display:grid;gap:8px;margin-top:10px"><label class="subtle">Razão social confirmada<input name="legalName" class="input" required minlength="2" maxlength="180" placeholder="Razão social completa"></label><label class="subtle">CNPJ<input name="cnpj" class="input" required maxlength="18" inputmode="numeric" placeholder="00.000.000/0001-00"></label><button class="btn btn-dark btn-small" type="submit">Cadastrar e vincular pasta</button></form></details></div>';
+  html+='<div class="gav-drive-row"><div class="gav-drive-firm"><strong>'+esc(f.name)+'</strong><small>Relação de cadastro em conferência · sem liberação de documentos</small></div></div>';
  }
- html+='<p class="footnote">Pastas não cadastradas não são visíveis aos clientes. A associação só ocorrerá após conferência do CNPJ e confirmação administrativa.</p></div>';
+ html+='<p class="footnote">Não é necessário redigitar razão social ou CNPJ. Os dados disponíveis serão reaproveitados e os registros incompletos permanecerão em conferência, sem inventar informações.</p></div>';
  return html;
 }
 function officesPage(){
