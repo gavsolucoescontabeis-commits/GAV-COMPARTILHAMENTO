@@ -35,7 +35,29 @@ async function invoke(fn,action,body={}){
 }
 const api=(action,body={})=>invoke("gav-portal-api",action,body);
 const run=async task=>{busy=true;notice="";render();try{await task()}catch(e){notice=e.message||"Não foi possível concluir."}busy=false;render()};
-async function loadDocs(){docs=selected?(await api("documents",{companyId:selected})).documents:[]}
+async function loadDocs(){
+ const company=selected;
+ docs=[];
+ if(!company)return;
+ const all=[];
+ for(let page=0;page<=40;page++){
+  const result=await api("documents",{companyId:company,page});
+  if(company!==selected)throw Error("A empresa mudou durante o carregamento.");
+  all.push(...(result.documents||[]));
+  if(!result.hasMore){docs=all;return}
+ }
+ throw Error("A empresa possui mais documentos do que o limite atual de listagem.");
+}
+async function loadClientPreview(){
+ const company=selected,all=[];
+ for(let page=0;page<=40;page++){
+  const result=await api("clientPreview",{companyId:company,page});
+  if(company!==selected)throw Error("A empresa mudou durante a conferência.");
+  all.push(...(result.documents||[]));
+  if(!result.hasMore)return all;
+ }
+ throw Error("A visualização do cliente ultrapassou o limite atual.");
+}
 async function syncPilot({interactive=false}={}){
  if(role!=="admin"||autoSyncRunning)return;
  const pilot=companies.find(c=>c.cnpj==="60955798000157");
@@ -379,8 +401,8 @@ async function handle(e){
  if(a==="client-preview"){resetSelection();
   if(role!=="admin"||previewAsClient)return;
   await run(async()=>{
-   const result=await api("clientPreview",{companyId:selected});
-   clearPdfCache();clientDocs=result.documents||[];previewAsClient=true;
+   const visible=await loadClientPreview();
+   clearPdfCache();clientDocs=visible;previewAsClient=true;
    view="home";cat="";year="ALL";month="ALL";
   });
   return;
