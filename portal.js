@@ -12,6 +12,7 @@ const C=[["ADMISSOES","Admissões"],["RESCISOES","Rescisões"],["FERIAS","Féria
 let role="",companies=[],docs=[],links=[],candidates=[],selected="",view="home",cat="",year=2026,month="ALL",session=null,googleToken="",hasDriveSecret=false,notice="",busy=false;
 let previewAsClient=false,clientDocs=[],pilotTestCredential=null;
 let syncRuns=[],mappingReport=null,offices=[],officeId="";
+try{officeId=sessionStorage.getItem("gav-selected-office")||""}catch(_e){}
 const adminView=()=>role==="admin"&&!previewAsClient;
 const displayDocs=()=>previewAsClient?clientDocs:docs;
 let previewId="",previewLoading=false,downloadBusy="";
@@ -409,6 +410,7 @@ async function changeOffice(id){
  if(role!=="admin"||!offices.some(o=>o.id===id))return;
  resetSelection();listPage=0;pilotTestCredential=null;previewAsClient=false;clientDocs=[];mappingReport=null;
  clearPdfCache();officeId=id;
+ try{sessionStorage.setItem("gav-selected-office",id)}catch(_e){}
  selected=officeCompanies()[0]?.id||"";
  view="companies";cat="";year="ALL";month="ALL";
  await run(async()=>{await loadDocs()});
@@ -431,7 +433,7 @@ async function handle(e){
  if(a==="back"){resetSelection();listPage=0;view="home";cat="";year="ALL";month="ALL";navigationHistory.length=0;render();return}
  if(a==="cat"){resetSelection();listPage=0;navigationHistory.push({view,cat,year,month});cat=v;view="category";year="ALL";month="ALL";render();return}
  if(a==="google"){await google();return}
- if(a==="logout"){resetSelection();pilotTestCredential=null;previewAsClient=false;clientDocs=[];clearPdfCache();await sb.auth.signOut();session=null;role="";googleToken="";notice="";render();return}
+ if(a==="logout"){try{sessionStorage.removeItem("gav-selected-office")}catch(_e){}resetSelection();pilotTestCredential=null;previewAsClient=false;clientDocs=[];clearPdfCache();await sb.auth.signOut();session=null;role="";googleToken="";notice="";render();return}
  if(a==="office-select"){await changeOffice(v);return}
  if(a==="pick"){await changeCompany(v);return}
  if(a==="release-history"){
