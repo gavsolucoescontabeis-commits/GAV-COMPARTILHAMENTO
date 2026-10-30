@@ -46,7 +46,7 @@ Deno.serve(async req=>{
   const companyOnly=()=>{if(!isAdmin&&!companyIds.includes(companyId))error("Empresa não autorizada.",403)};
   if(action==="me"){
    const companies=isAdmin?check(await supa.from("gav_companies").select("id,code,cnpj,legal_name,folder_label,office_id,is_active").order("code")):companyIds.length?check(await supa.from("gav_companies").select("id,code,cnpj,legal_name,folder_label,office_id,is_active").in("id",companyIds)):[];
-   const linked=isAdmin?check(await supa.from("gav_drive_folders").select("company_id,is_active,auto_publish_new").eq("is_active",true)):[];
+   const linked=isAdmin?check(await supa.from("gav_drive_folders").select("company_id,is_active,auto_publish_new,last_synced_at,last_indexed_count").eq("is_active",true)):[];
    const candidate=isAdmin?check(await supa.from("gav_drive_candidates").select("company_id,label,verified_at")):[];
    const sync=isAdmin?check(await supa.from("gav_sync_runs")
     .select("company_id,state,indexed_count,started_at,finished_at,error_safe")
@@ -103,13 +103,11 @@ Deno.serve(async req=>{
   }
   if(action==="activateCompanyAutoSync"||action==="pauseCompanyAutoSync"){
    adminOnly();
-   const folder=check(await supa.from("gav_drive_folders").select("id,auto_publish_new")
+   const folder=check(await supa.from("gav_drive_folders").select("id,auto_publish_new,last_synced_at")
     .eq("company_id",companyId).eq("is_active",true).maybeSingle());
    if(!folder)error("Vincule a pasta da empresa antes de ativar.",409);
    if(action==="activateCompanyAutoSync"){
-    const completed=check(await supa.from("gav_sync_runs").select("id")
-     .eq("company_id",companyId).eq("state","CONCLUIDO").order("started_at",{ascending:false}).limit(1));
-    if(!completed.length)error("A primeira importação precisa ser concluída antes de ativar documentos novos.",409);
+    if(!folder.last_synced_at)error("A primeira importação precisa ser concluída antes de ativar documentos novos.",409);
    }
    check(await supa.from("gav_drive_folders")
     .update({auto_publish_new:action==="activateCompanyAutoSync"})
@@ -176,6 +174,26 @@ Deno.serve(async req=>{
    const link=check(await supa.from("gav_drive_folders").upsert({company_id:companyId,drive_folder_id:c.folder_id,drive_parent_id:c.expected_parent_id,approved_by:user.id,is_active:true},{onConflict:"company_id,drive_folder_id"}).select());
    check(await supa.from("gav_drive_candidates").update({verified_at:new Date().toISOString()}).eq("company_id",companyId));
    return reply({folder:folder.name,linked:link.length});
+  }
+  if(action==="releaseCompanyHistory"){
+   adminOnly();
+   const firm=check(await supa.from("gav_companies").select("id,legal_name,is_active")
+    .eq("id",companyId).eq("is_active",true).maybeSingle());
+   if(!firm)error("Empresa não cadastrada.",404);
+   if(String(b.confirmName||"")!==firm.legal_name)error("Confirme a empresa exata antes de liberar o histórico.",400);
+   const links=check(await supa.from("gav_drive_folders").select("id,last_synced_at")
+    .eq("company_id",companyId).eq("is_active",true));
+   if(!links.length||!links.some((x:any)=>x.last_synced_at))error("Importação inicial não concluída.",409);
+   const folderIds=links.filter((x:any)=>x.last_synced_at).map((x:any)=>x.id);
+   const countResult=await supa.from("gav_documents").select("id",{count:"exact",head:true})
+    .eq("company_id",companyId).in("drive_folder_link_id",folderIds).eq("review_status","PENDENTE");
+   if(countResult.error)error("Não foi possível contar documentos pendentes.",502);
+   const pending=countResult.count||0;
+   if(!pending)return reply({ok:true,released:0});
+   check(await supa.from("gav_documents").update({
+    review_status:"APROVADO",published_at:new Date().toISOString()
+   }).eq("company_id",companyId).in("drive_folder_link_id",folderIds).eq("review_status","PENDENTE"));
+   return reply({ok:true,released:pending});
   }
   if(action==="publishMonth"||action==="revokeMonth"){
    adminOnly();
