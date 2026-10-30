@@ -187,17 +187,17 @@ function files(items){
   const date=d.month&&d.year?M[d.month-1]+"/"+d.year:d.year?String(d.year):"SEM COMPETÊNCIA";
   const status=adminView()?(d.published_at?" · PUBLICADO":" · A CONFERIR"):"";
   const isImage=String(d.mime_type||"").startsWith("image/"),kind=isImage?"IMG":"PDF",typeLabel=isImage?"imagem":"PDF";
-  return `<div class="gav-doc-row"><span class="gav-doc-file" aria-hidden="true">${kind}</span><div class="gav-doc-main"><strong class="gav-doc-name">${esc(d.file_name)}</strong><span class="gav-doc-detail">${esc(date)}${status}</span></div><div class="gav-doc-actions"><button class="btn btn-line btn-small gav-btn-preview" data-do="pdf" data-val="${esc(d.id)}" aria-label="Visualizar ${esc(d.file_name)}">Visualizar</button><button class="btn btn-dark btn-small gav-btn-download" data-do="download" data-val="${esc(d.id)}" aria-label="Baixar ${esc(d.file_name)}">Baixar</button>${adminView()?`<button class="btn btn-line btn-small" data-do="publish" data-val="${esc(d.id)}">${d.published_at?"Revogar":"Publicar"}</button>`:""}</div></div>`;
+  return `<div class="gav-doc-row"><label class="gav-doc-checkbox" title="Selecionar para baixar"><input type="checkbox" data-check-id="${esc(d.id)}" aria-label="Selecionar ${esc(d.file_name)}" ${checkedDocs.has(d.id)?"checked":""} ${bulkDownloading?"disabled":""}></label><span class="gav-doc-file" aria-hidden="true">${kind}</span><div class="gav-doc-main"><strong class="gav-doc-name">${esc(d.file_name)}</strong><span class="gav-doc-detail">${esc(date)}${status}</span></div><div class="gav-doc-actions"><button class="btn btn-line btn-small gav-btn-preview" data-do="pdf" data-val="${esc(d.id)}" aria-label="Visualizar ${esc(d.file_name)}">Visualizar</button><button class="btn btn-dark btn-small gav-btn-download" data-do="download" data-val="${esc(d.id)}" aria-label="Baixar ${esc(d.file_name)}">Baixar</button>${adminView()?`<button class="btn btn-line btn-small" data-do="publish" data-val="${esc(d.id)}">${d.published_at?"Revogar":"Publicar"}</button>`:""}</div></div>`;
  }).join("")}</div>`;
 }
 function home(){
  const firm=current(),items=displayDocs();
- return `${title("Meus documentos",adminView()?"Conferência dos arquivos da empresa selecionada":"Documentos liberados pela GAV para sua empresa.")}${picker()}${adminView()?`<div style="margin:12px 0 20px"><button class="btn btn-dark" data-do="client-preview">Ver como o cliente</button>${firm?.cnpj==="60955798000157"?` <button class="btn btn-line" data-do="create-pilot-test">Gerar login de teste da JM Rocha</button> <button class="btn btn-line" data-do="remove-pilot-test">Desativar login de teste</button>`:""}${pilotTestCredential&&firm?.cnpj==="60955798000157"?`<div class="card card-pad" style="margin-top:14px"><strong>Acesso de teste criado (não encaminhe ao cliente)</strong><p>CNPJ de acesso: <strong>${esc(pilotTestCredential.cnpj)}</strong></p><p>Senha de teste: <code style="user-select:all;overflow-wrap:anywhere">${esc(pilotTestCredential.password)}</code></p><p class="subtle">Para testar o login real sem sair da GAV, abra o portal em uma janela anônima e entre com o CNPJ e esta senha. Apenas os arquivos publicados ficarão visíveis.</p></div>`:""}<p class="subtle" style="margin-top:9px">Novos arquivos são liberados automaticamente. Publicar serve para o histórico antigo ainda pendente; Revogar oculta um arquivo.</p></div>`:""}${firm?`<div class="hero"><div><small>ÁREA EXCLUSIVA DA EMPRESA</small><h2>${esc(firm.legal_name)}</h2><p>CNPJ ${esc(fmt(firm.cnpj))} · Documentos por competência e categoria.</p></div></div>`:""}<div class="stats"><div class="card stat"><span class="caption">${adminView()?"Documentos cadastrados":"Documentos disponíveis"}</span><strong>${items.length}</strong></div>${adminView()?`<div class="card stat"><span class="caption">Documentos liberados</span><strong>${items.filter(x=>x.published_at).length}</strong></div>`:""}<div class="card stat"><span class="caption">Categorias com arquivos</span><strong>${new Set(items.map(x=>x.category)).size}</strong></div></div><div class="section-title">Categorias</div><div class="cat-grid">${C.map(([id,n])=>`<button class="category" data-do="cat" data-val="${id}"><span class="cat-name">${esc(n)}</span><span class="cat-count">${items.filter(d=>d.category===id).length} documento(s)</span></button>`).join("")}</div><div class="section-title">Documentos recentes</div><div class="card card-pad">${files(items.slice().sort(documentSort).slice(0,5))}</div>`;
+ return `${title("Meus documentos",adminView()?"Conferência dos arquivos da empresa selecionada":"Documentos liberados pela GAV para sua empresa.")}${picker()}${adminView()?`<div style="margin:12px 0 20px"><button class="btn btn-dark" data-do="client-preview">Ver como o cliente</button>${firm?.cnpj==="60955798000157"?` <button class="btn btn-line" data-do="create-pilot-test">Gerar login de teste da JM Rocha</button> <button class="btn btn-line" data-do="remove-pilot-test">Desativar login de teste</button>`:""}${pilotTestCredential&&firm?.cnpj==="60955798000157"?`<div class="card card-pad" style="margin-top:14px"><strong>Acesso de teste criado (não encaminhe ao cliente)</strong><p>CNPJ de acesso: <strong>${esc(pilotTestCredential.cnpj)}</strong></p><p>Senha de teste: <code style="user-select:all;overflow-wrap:anywhere">${esc(pilotTestCredential.password)}</code></p><p class="subtle">Para testar o login real sem sair da GAV, abra o portal em uma janela anônima e entre com o CNPJ e esta senha. Apenas os arquivos publicados ficarão visíveis.</p></div>`:""}<p class="subtle" style="margin-top:9px">Novos arquivos são liberados automaticamente. Publicar serve para o histórico antigo ainda pendente; Revogar oculta um arquivo.</p></div>`:""}${firm?`<div class="hero"><div><small>ÁREA EXCLUSIVA DA EMPRESA</small><h2>${esc(firm.legal_name)}</h2><p>CNPJ ${esc(fmt(firm.cnpj))} · Documentos por competência e categoria.</p></div></div>`:""}<div class="stats"><div class="card stat"><span class="caption">${adminView()?"Documentos cadastrados":"Documentos disponíveis"}</span><strong>${items.length}</strong></div>${adminView()?`<div class="card stat"><span class="caption">Documentos liberados</span><strong>${items.filter(x=>x.published_at).length}</strong></div>`:""}<div class="card stat"><span class="caption">Categorias com arquivos</span><strong>${new Set(items.map(x=>x.category)).size}</strong></div></div><div class="section-title">Categorias</div><div class="cat-grid">${C.map(([id,n])=>`<button class="category" data-do="cat" data-val="${id}"><span class="cat-name">${esc(n)}</span><span class="cat-count">${items.filter(d=>d.category===id).length} documento(s)</span></button>`).join("")}</div><div class="section-title">Documentos recentes</div><div class="card card-pad">${selectionBar(items.slice().sort(documentSort).slice(0,5))}${files(items.slice().sort(documentSort).slice(0,5))}</div>`;
 }
 function recent(){
  const arr=filtered(),years=[...new Set(displayDocs().map(d=>d.year).filter(Boolean))].sort((a,b)=>b-a);
  const heading=view==="category"?(C.find(c=>c[0]===cat)?.[1]||"Documentos"):"Documentos";
- return `${title(heading,"Arquivos por mês, com visualização e download em um clique.")}<button class="btn btn-line btn-small" data-do="back" style="margin-bottom:16px">← Voltar</button>${picker()}<div class="gav-month-filter"><select id="yearSelect" class="input" aria-label="Selecionar ano"><option value="ALL">TODOS OS ANOS</option>${years.map(y=>`<option value="${y}" ${String(year)===String(y)?"selected":""}>${y}</option>`).join("")}</select><select id="monthSelect" class="input" aria-label="Selecionar mês"><option value="ALL">TODOS OS MESES</option>${M.map((m,i)=>`<option value="${i+1}" ${String(month)===String(i+1)?"selected":""}>${m}</option>`).join("")}</select></div><div class="card card-pad">${fileGroups(arr)}</div>`;
+ return `${title(heading,"Arquivos por mês, com visualização e download em um clique.")}<button class="btn btn-line btn-small" data-do="back" style="margin-bottom:16px">← Voltar</button>${picker()}<div class="gav-month-filter"><select id="yearSelect" class="input" aria-label="Selecionar ano"><option value="ALL">TODOS OS ANOS</option>${years.map(y=>`<option value="${y}" ${String(year)===String(y)?"selected":""}>${y}</option>`).join("")}</select><select id="monthSelect" class="input" aria-label="Selecionar mês"><option value="ALL">TODOS OS MESES</option>${M.map((m,i)=>`<option value="${i+1}" ${String(month)===String(i+1)?"selected":""}>${m}</option>`).join("")}</select></div><div class="card card-pad">${selectionBar(arr)}${fileGroups(arr)}</div>`;
 }
 function companiesPage(){
  return `${title("Empresas e permissões","Relação real de empresas cadastradas. O acesso de cada cliente será individual.")}<div class="card card-pad"><div class="file-list">${companies.map(c=>`<div class="file-row"><div class="file-expand"><b>${esc((c.code||"")+" · "+c.legal_name)}</b><small class="file-meta">CNPJ ${esc(fmt(c.cnpj))} · ${links.some(l=>l.company_id===c.id)?"Pasta vinculada":"Pasta ainda não vinculada"}</small></div><button class="btn btn-line btn-small" data-do="pick" data-val="${c.id}">Abrir empresa</button></div>`).join("")}</div></div><p class="footnote">Os clientes não visualizam a lista de empresas. O acesso depende de autorização individual registrada no servidor.</p>`;
@@ -307,25 +307,35 @@ async function downloadPdf(id){
 function render(){
  app.innerHTML=role?shell():login();
  app.querySelectorAll("[data-do]").forEach(b=>b.addEventListener("click",handle));
+ app.querySelectorAll("[data-check-id]").forEach(b=>b.addEventListener("change",()=>{
+  if(b.checked)checkedDocs.add(b.dataset.checkId);else checkedDocs.delete(b.dataset.checkId);
+  refreshSelectionToolbar();
+ }));
+ app.querySelector("[data-check-all]")?.addEventListener("change",event=>{
+  for(const d of visibleSelectionDocs()){if(event.currentTarget.checked)checkedDocs.add(d.id);else checkedDocs.delete(d.id)}
+  app.querySelectorAll("[data-check-id]").forEach(b=>{b.checked=checkedDocs.has(b.dataset.checkId)});
+  refreshSelectionToolbar();
+ });
  app.querySelector("#clientLogin")?.addEventListener("submit",loginClient);
  app.querySelector("#companySelect")?.addEventListener("change",e=>changeCompany(e.target.value));
- app.querySelector("#yearSelect")?.addEventListener("change",e=>{year=e.target.value;render()});
- app.querySelector("#monthSelect")?.addEventListener("change",e=>{month=e.target.value;render()});
+ app.querySelector("#yearSelect")?.addEventListener("change",e=>{resetSelection();year=e.target.value;render()});
+ app.querySelector("#monthSelect")?.addEventListener("change",e=>{resetSelection();month=e.target.value;render()});
  if(previewId)paintPreview();
+ refreshSelectionToolbar();
 }
-async function changeCompany(id){pilotTestCredential=null;previewAsClient=false;clientDocs=[];clearPdfCache();selected=id;view="home";await run(async()=>{await loadDocs()})}
+async function changeCompany(id){resetSelection();pilotTestCredential=null;previewAsClient=false;clientDocs=[];clearPdfCache();selected=id;view="home";await run(async()=>{await loadDocs()})}
 async function loginClient(e){e.preventDefault();const id=cn(app.querySelector("#cnpj")?.value),password=app.querySelector("#pwd")?.value;if(id.length!==14){notice="Informe um CNPJ com 14 números.";render();return}await run(async()=>{const {error}=await sb.auth.signInWithPassword({email:"cliente-"+id+"@acesso.gavsolucoescontabeis.com.br",password});if(error)throw Error("CNPJ ou senha inválidos.");await bootstrap()})}
 async function google(){const {error}=await sb.auth.signInWithOAuth({provider:"google",options:{redirectTo:location.origin+location.pathname,scopes:"https://www.googleapis.com/auth/drive.readonly",queryParams:{access_type:"offline",prompt:"consent"}}});if(error)showError(error)}
 
 async function handle(e){
  const a=e.currentTarget.dataset.do,v=e.currentTarget.dataset.val;
- if(a==="view"){view=v;cat="";year="ALL";month="ALL";navigationHistory.length=0;render();return}
- if(a==="back"){view="home";cat="";year="ALL";month="ALL";navigationHistory.length=0;render();return}
- if(a==="cat"){navigationHistory.push({view,cat,year,month});cat=v;view="category";year="ALL";month="ALL";render();return}
+ if(a==="view"){resetSelection();view=v;cat="";year="ALL";month="ALL";navigationHistory.length=0;render();return}
+ if(a==="back"){resetSelection();view="home";cat="";year="ALL";month="ALL";navigationHistory.length=0;render();return}
+ if(a==="cat"){resetSelection();navigationHistory.push({view,cat,year,month});cat=v;view="category";year="ALL";month="ALL";render();return}
  if(a==="google"){await google();return}
- if(a==="logout"){pilotTestCredential=null;previewAsClient=false;clientDocs=[];clearPdfCache();await sb.auth.signOut();session=null;role="";googleToken="";notice="";render();return}
+ if(a==="logout"){resetSelection();pilotTestCredential=null;previewAsClient=false;clientDocs=[];clearPdfCache();await sb.auth.signOut();session=null;role="";googleToken="";notice="";render();return}
  if(a==="pick"){await changeCompany(v);view="home";render();return}
- if(a==="client-preview"){
+ if(a==="client-preview"){resetSelection();
   if(role!=="admin"||previewAsClient)return;
   await run(async()=>{
    const result=await api("clientPreview",{companyId:selected});
@@ -346,10 +356,11 @@ async function handle(e){
   await run(async()=>{await api("removePilotTestAccess",{companyId:selected});pilotTestCredential=null;notice="Conta de teste desativada."});
   return;
  }
- if(a==="exit-preview"){
+ if(a==="exit-preview"){resetSelection();
   clearPdfCache();previewAsClient=false;clientDocs=[];
   view="home";cat="";year="ALL";month="ALL";render();return;
  }
+ if(a==="bulk-download"){await downloadSelectedZip();return}
  if(a==="pdf"){await openPdf(v);return}
  if(a==="download"||a==="preview-download"){await downloadPdf(v);return}
  if(a==="close-preview"){closePdf();return}
@@ -370,5 +381,5 @@ async function handle(e){
 }
 document.addEventListener("visibilitychange",()=>{if(!document.hidden)void syncPilot()});
 setInterval(()=>{if(!document.hidden)void syncPilot()},15*60*1000);
-sb.auth.onAuthStateChange((event,s)=>{if(event==="TOKEN_REFRESHED"&&s)session=s;if(event==="SIGNED_OUT"){pilotTestCredential=null;previewAsClient=false;clientDocs=[];clearPdfCache();role="";session=null;render()}});
+sb.auth.onAuthStateChange((event,s)=>{if(event==="TOKEN_REFRESHED"&&s)session=s;if(event==="SIGNED_OUT"){resetSelection();pilotTestCredential=null;previewAsClient=false;clientDocs=[];clearPdfCache();role="";session=null;render()}});
 await bootstrap();
