@@ -6,6 +6,7 @@ const logo="assets/logo-gav-sem-fundo.svg",lion="assets/leao-gav-sem-fundo.svg";
 const app=document.getElementById("app");
 const portalLayoutStyle=document.createElement("style");
 portalLayoutStyle.textContent="@media(min-width:721px){.shell.gav-portal-shell{display:block;padding-left:248px}.shell.gav-portal-shell>.side{position:fixed;inset:0 auto 0 0;width:248px;height:100dvh;max-height:100dvh;overflow-y:auto;overscroll-behavior:contain;z-index:65;box-sizing:border-box}.shell.gav-portal-shell>.app-main{width:100%;min-width:0}}@media(max-width:720px){.shell.gav-portal-shell{display:block;padding-left:0}.shell.gav-portal-shell>.side{display:none}}.gav-client-preview-banner{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;background:#fcf8ee;color:#5b4622;border:1px solid #dfc991;border-radius:10px;padding:13px 15px;margin:0 0 20px}.gav-client-preview-banner p{font-size:12px;margin:4px 0}.gav-client-preview-banner .btn{min-height:42px}";
+portalLayoutStyle.textContent += ".gav-process-head{display:flex;align-items:end;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:16px 0}.gav-process-filters{display:flex;gap:9px;align-items:end;flex-wrap:wrap}.gav-process-filters label{display:grid;gap:5px;font-size:12px;color:#69717b;font-weight:700}.gav-process-filters select{min-width:118px}.gav-process-cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:18px 0}.gav-process-card{padding:17px}.gav-process-card strong{display:block;font-size:25px}.gav-process-table{overflow-x:auto}.gav-process-row{display:grid;grid-template-columns:minmax(190px,2.3fr) repeat(3,minmax(110px,1fr)) minmax(110px,1.2fr) minmax(70px,.7fr);gap:12px;align-items:center;padding:13px 16px;border-bottom:1px solid #edf0f3;font-size:12px}.gav-process-row.gav-process-header{background:#f7f7f6;color:#666;font-size:11px;font-weight:800}.gav-process-row>div:first-child{min-width:0}.gav-process-row small{display:block;color:#7b838a;line-height:1.4;margin-top:4px}.gav-process-good{color:#137650;font-weight:800}.gav-process-pending{color:#a06921;font-weight:800}.gav-process-note{font-size:12px;color:#69717b;line-height:1.6;margin-top:16px}@media(max-width:860px){.gav-process-row{grid-template-columns:minmax(170px,2fr) repeat(3,minmax(100px,1fr)) minmax(100px,1fr) minmax(70px,.7fr);width:790px}.gav-process-cards{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:520px){.gav-process-cards{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.gav-process-card{padding:11px}.gav-process-card strong{font-size:20px}}";
 document.head.appendChild(portalLayoutStyle);
 const M=["JANEIRO","FEVEREIRO","MARÇO","ABRIL","MAIO","JUNHO","JULHO","AGOSTO","SETEMBRO","OUTUBRO","NOVEMBRO","DEZEMBRO","DÉCIMO TERCEIRO"];
 const C=[["ADMISSOES","Admissões"],["RESCISOES","Rescisões"],["FERIAS","Férias"],["FOLHA","Folha de Pagamento"],["GUIAS_IMPOSTOS","Guias e Impostos"],["OUTROS","Outros Documentos"]];
@@ -14,6 +15,9 @@ let previewAsClient=false,clientDocs=[],pilotTestCredential=null;
 let passwordChangeRequired=false,clientManaged=false,accessPanelOpen=false,accessPanelCompany="",accessStatus=null,clientCredential=null;
 let syncRuns=[],mappingReport=null,offices=[],officeId="";
 let folderLookup={officeId:"",loaded:false,items:[],error:""};
+const initialCompetence=new Date();initialCompetence.setDate(1);initialCompetence.setMonth(initialCompetence.getMonth()-1);
+let processingYear=initialCompetence.getFullYear(),processingMonth=initialCompetence.getMonth()+1;
+let processingData={officeId:"",year:0,month:0,loaded:false,companies:[],total:0,concluded:0,pending:0};
 try{officeId=sessionStorage.getItem("gav-selected-office")||""}catch(_e){}
 const adminView=()=>role==="admin"&&!previewAsClient;
 const displayDocs=()=>previewAsClient?clientDocs:docs;
@@ -123,10 +127,10 @@ const brand=()=>`<div class="logo-official"><img src="${logo}" alt="GAV Soluçõ
 function login(){
  return `<div class="login-wrap"><section class="login-brand"><div>${brand()}</div><div><div class="gold-line"></div><div class="gav-lion-login"><img src="${lion}" alt="Símbolo GAV"></div><h1>Seus documentos.<br>Em um só lugar.</h1><p>Documentos originais organizados por empresa, competência e categoria, com acesso individual e protegido.</p></div><span class="login-foot">Compromisso, organização e responsabilidade.</span></section><section class="login-panel"><div class="eyebrow">GAV COMPARTILHAR DOCS · PORTAL SEGURO</div><h2>Bem-vindo!</h2><p class="subtle">Entre com o CNPJ e a senha fornecida pela GAV.</p><form id="clientLogin"><div class="form-field"><label for="cnpj">CNPJ da empresa</label><input id="cnpj" class="input" placeholder="00.000.000/0000-00" autocomplete="username" required></div><div class="form-field"><label for="pwd">Senha</label><input id="pwd" class="input" type="password" autocomplete="current-password" required></div><button class="btn btn-dark login-action" type="submit">Acessar documentos</button></form><div style="margin-top:24px;border-top:1px solid #e3e3e3;padding-top:20px"><div class="subtle" style="font-size:12px;margin-bottom:10px">Acesso da administração GAV</div><button class="btn btn-line" data-do="google" ${busy?"disabled":""}>Entrar com Google · Administrador</button></div><p class="subtle" style="font-size:11px;margin-top:22px">Sua empresa precisa estar autorizada. Utilize a senha provisória fornecida pela GAV e troque-a no primeiro acesso. Para recuperar a senha, solicite à GAV.</p></section></div>`;
 }
-const nav=()=>adminView()?[["offices","Escritórios"],["home","Início"],["drive","Google Drive"]]:clientManaged?[["home","Início"],["security","Minha senha"]]:[["home","Início"]];
+const nav=()=>adminView()?[["offices","Escritórios"],["home","Início"],["processing","Processamento"],["drive","Google Drive"]]:clientManaged?[["home","Início"],["security","Minha senha"]]:[["home","Início"]];
 function shell(){
  const firm=current(),navLinks=nav();
- return `<div class="shell gav-portal-shell"><aside class="side"><div class="side-top"><div class="side-logo">${brand()}</div></div><div class="side-caption">NAVEGAÇÃO</div>${navLinks.map(([id,name])=>`<button class="nav ${view===id?"active":""}" data-do="view" data-val="${id}">${esc(name)}</button>`).join("")}<div class="gav-lion-sidebar" aria-label="Símbolo da GAV Soluções Contábeis"><img src="${lion}" alt="Leão GAV"></div><div class="side-bottom"><div style="font-weight:800;margin-bottom:9px">${adminView()?"Administrador GAV":"Portal do cliente"}</div><div class="subtle" style="margin-bottom:14px">Conexão segura · v0.11.1</div><button class="nav" data-do="${previewAsClient?"exit-preview":"logout"}">${previewAsClient?"Voltar à GAV":"Sair da conta"}</button></div></aside><main class="app-main"><header class="topbar"><div><span class="mobile-brand">GAV <small>SOLUÇÕES CONTÁBEIS</small></span><div class="header-title">${adminView()?"Painel administrativo":"Portal de documentos"}</div><div class="header-desc">${esc(adminView()?(officeLabel()+(firm?" · "+firm.legal_name:"")):(firm?.legal_name||"GAV Soluções Contábeis"))}</div></div><div class="top-actions"><div class="avatar">${adminView()?"AD":"CL"}</div><button class="btn btn-line btn-small" data-do="${previewAsClient?"exit-preview":"logout"}">${previewAsClient?"Voltar à GAV":"Sair"}</button></div></header><div class="content">${previewAsClient?`<div class="gav-client-preview-banner"><div><strong>Prévia do cliente — ${esc(firm?.legal_name||"empresa")}</strong><p>Mostra somente arquivos liberados. Não é login real e não concede acesso a ninguém.</p></div><button class="btn btn-dark btn-small" data-do="exit-preview">Voltar à administração</button></div>`:""}${notice?`<div class="error" style="display:block;margin-bottom:18px">${esc(notice)}</div>`:""}${busy?`<div class="card card-pad" style="margin-bottom:18px">Processando sua solicitação…</div>`:""}${content()}</div></main><nav class="bottom-bar" aria-label="Navegação">${navLinks.map(([id,name])=>`<button class="bottom-nav ${view===id?"active":""}" data-do="view" data-val="${id}">${esc(name)}</button>`).join("")}</nav></div>`;
+ return `<div class="shell gav-portal-shell"><aside class="side"><div class="side-top"><div class="side-logo">${brand()}</div></div><div class="side-caption">NAVEGAÇÃO</div>${navLinks.map(([id,name])=>`<button class="nav ${view===id?"active":""}" data-do="view" data-val="${id}">${esc(name)}</button>`).join("")}<div class="gav-lion-sidebar" aria-label="Símbolo da GAV Soluções Contábeis"><img src="${lion}" alt="Leão GAV"></div><div class="side-bottom"><div style="font-weight:800;margin-bottom:9px">${adminView()?"Administrador GAV":"Portal do cliente"}</div><div class="subtle" style="margin-bottom:14px">Conexão segura · v0.12.0</div><button class="nav" data-do="${previewAsClient?"exit-preview":"logout"}">${previewAsClient?"Voltar à GAV":"Sair da conta"}</button></div></aside><main class="app-main"><header class="topbar"><div><span class="mobile-brand">GAV <small>SOLUÇÕES CONTÁBEIS</small></span><div class="header-title">${adminView()?"Painel administrativo":"Portal de documentos"}</div><div class="header-desc">${esc(adminView()?(officeLabel()+(firm?" · "+firm.legal_name:"")):(firm?.legal_name||"GAV Soluções Contábeis"))}</div></div><div class="top-actions"><div class="avatar">${adminView()?"AD":"CL"}</div><button class="btn btn-line btn-small" data-do="${previewAsClient?"exit-preview":"logout"}">${previewAsClient?"Voltar à GAV":"Sair"}</button></div></header><div class="content">${previewAsClient?`<div class="gav-client-preview-banner"><div><strong>Prévia do cliente — ${esc(firm?.legal_name||"empresa")}</strong><p>Mostra somente arquivos liberados. Não é login real e não concede acesso a ninguém.</p></div><button class="btn btn-dark btn-small" data-do="exit-preview">Voltar à administração</button></div>`:""}${notice?`<div class="error" style="display:block;margin-bottom:18px">${esc(notice)}</div>`:""}${busy?`<div class="card card-pad" style="margin-bottom:18px">Processando sua solicitação…</div>`:""}${content()}</div></main><nav class="bottom-bar" aria-label="Navegação">${navLinks.map(([id,name])=>`<button class="bottom-nav ${view===id?"active":""}" data-do="view" data-val="${id}">${esc(name)}</button>`).join("")}</nav></div>`;
 }
 const title=(name,sub)=>`<div class="page-head"><div><div class="eyebrow">CENTRAL DE DOCUMENTOS</div><h1>${esc(name)}</h1><p>${esc(sub)}</p></div></div>`;
 const officePicker=()=>adminView()?`<div class="form-field"><label for="officeSelect">Escritório</label><select id="officeSelect" class="input">${offices.map(o=>`<option value="${esc(o.id)}" ${o.id===officeId?"selected":""}>${esc(officeName(o))}</option>`).join("")}</select></div>`:"";
@@ -306,6 +310,32 @@ function companiesPage(){
  const list=officeCompanies().filter(c=>c.is_active);
  return `${title("Empresas — "+officeLabel(),"Escolha uma empresa deste escritório para consultar seus documentos.")}${picker()}<div class="card card-pad" style="margin-top:18px">${list.length?`<div class="file-list">${list.map(c=>`<div class="file-row"><div class="file-expand"><b>${esc((c.code||"")+" · "+c.legal_name)}</b><small class="file-meta">CNPJ ${esc(fmt(c.cnpj))} · ${links.some(l=>l.company_id===c.id&&l.is_active)?"Pasta vinculada":"Pasta ainda não vinculada"}</small></div><button class="btn btn-line btn-small" data-do="pick" data-val="${esc(c.id)}">Abrir empresa</button></div>`).join("")}</div>`:`<div class="empty">Ainda não há empresas cadastradas em ${esc(officeLabel())}. <button class="btn btn-line btn-small" data-do="view" data-val="offices">Trocar escritório</button></div>`}</div><p class="footnote">As empresas de outros escritórios não aparecem nesta relação. O cliente também não visualiza a lista administrativa.</p>`;
 }
+async function loadProcessing(){
+ if(!adminView())return;
+ const office=officeId,y=processingYear,m=processingMonth;
+ processingData={officeId:office,year:y,month:m,loaded:false,companies:[],total:0,concluded:0,pending:0};
+ const result=await invoke("gav-processing-summary","summary",{officeId:office,year:y,month:m});
+ if(office===officeId&&y===processingYear&&m===processingMonth)processingData={...result,loaded:true};
+}
+function processingPage(){
+ const all=officeCompanies().filter(x=>x.is_active);
+ const currentData=processingData.officeId===officeId&&processingData.year===processingYear&&processingData.month===processingMonth?processingData:{loaded:false,companies:[],total:0,concluded:0,pending:0};
+ const years=Array.from({length:8},(_,i)=>new Date().getFullYear()+1-i);
+ const mark=(v)=>v?'<span class="gav-process-good">✓ Encontrado</span>':'<span class="gav-process-pending">— Ausente</span>';
+ let out=title("Processamento — "+officeLabel(),"Conferência automática da folha por empresa e competência, exclusiva da administração GAV.");
+ out+='<div class="gav-process-head">'+officePicker()+'<div class="gav-process-filters"><label>Competência<select class="input" id="processingMonthSelect">'+M.map((n,i)=>'<option value="'+(i+1)+'" '+(processingMonth===i+1?"selected":"")+'>'+esc(n)+'</option>').join("")+'</select></label><label>Ano<select class="input" id="processingYearSelect">'+years.map(y=>'<option value="'+y+'" '+(processingYear===y?"selected":"")+'>'+y+'</option>').join("")+'</select></label><button class="btn btn-dark btn-small" data-do="processing-refresh">Atualizar conferência</button></div></div>';
+ out+='<div class="gav-process-cards"><div class="card gav-process-card"><span class="subtle">Folhas cadastradas</span><strong>'+currentData.total+'</strong></div><div class="card gav-process-card"><span class="subtle">Concluídas</span><strong>'+currentData.concluded+'</strong></div><div class="card gav-process-card"><span class="subtle">Pendentes</span><strong>'+currentData.pending+'</strong></div></div>';
+ if(!currentData.loaded)return out+'<div class="card card-pad">Atualizando o controle de '+esc(M[processingMonth-1])+'/'+processingYear+'...</div>';
+ const columns='<div class="gav-process-row gav-process-header"><span>Empresa</span><span>DARF de INSS</span><span>FGTS mensal</span><span>Recibo DCTFWeb</span><span>Folha</span><span>Consultar</span></div>';
+ const rows=currentData.companies.map(c=>{
+  const ev=c.evidence||{},done=c.status==="CONCLUIDA";
+  const label=(key)=>mark(!!ev[key])+(ev[key]?'<small title="'+esc(ev[key].name)+'">'+esc(ev[key].name)+'</small>':"");
+  return '<div class="gav-process-row"><div><strong>'+esc((c.code||"")+" · "+c.legalName)+'</strong><small>'+esc(c.reason)+'</small></div><div>'+label("darf")+'</div><div>'+label("fgts")+'</div><div>'+label("dctf")+'</div><div class="'+(done?"gav-process-good":"gav-process-pending")+'">'+(done?"✓ Concluída":"• Pendente")+'</div><div><button class="btn btn-line btn-small" data-do="pick" data-val="'+esc(c.id)+'">Abrir</button></div></div>';
+ }).join("");
+ out+='<div class="card gav-process-table">'+columns+(rows||'<div class="card-pad">Nenhuma empresa possui a obrigação Folha configurada neste escritório.</div>')+'</div>';
+ out+='<p class="gav-process-note"><strong>Regra:</strong> DARF de INSS + guia mensal do FGTS, ou recibo de entrega da DCTFWeb. Relatórios de FGTS, declarações DCTFWeb sem recibo e FGTS rescisório não fecham a competência. O controle usa documentos já indexados no Drive; se acabou de salvar um arquivo, confira a sincronização antes de atualizar. Concluída indica documentação encontrada, não pagamento confirmado.</p>';
+ return out;
+}
 function drivePage(){
  const all=officeCompanies().filter(c=>c.is_active),linked=all.filter(c=>links.some(l=>l.company_id===c.id&&l.is_active));
  const completed=all.filter(c=>links.some(l=>l.company_id===c.id&&l.last_synced_at));
@@ -338,7 +368,7 @@ function drivePage(){
  }).join("")}
  </div></div>`;
 }
-function content(){if(clientManaged&&(passwordChangeRequired||view==="security"))return clientPasswordHtml();if(!companies.length)return title("Sem empresas autorizadas","O acesso está ativo, mas não há vínculo de empresa. Solicite liberação à GAV.");if(view==="offices"&&adminView())return officesPage();if(view==="companies"&&adminView())return companiesPage();if(view==="drive"&&adminView())return drivePage();if(view==="recent"||view==="category")return recent();return home()}
+function content(){if(clientManaged&&(passwordChangeRequired||view==="security"))return clientPasswordHtml();if(!companies.length)return title("Sem empresas autorizadas","O acesso está ativo, mas não há vínculo de empresa. Solicite liberação à GAV.");if(view==="offices"&&adminView())return officesPage();if(view==="companies"&&adminView())return companiesPage();if(view==="drive"&&adminView())return drivePage();if(view==="processing"&&adminView())return processingPage();if(view==="recent"||view==="category")return recent();return home()}
 function toastMessage(message){
  document.querySelectorAll(".gav-toast").forEach(e=>e.remove());
  const node=document.createElement("div");
@@ -450,6 +480,8 @@ function render(){
  app.querySelector("#clientLogin")?.addEventListener("submit",loginClient);
  app.querySelector("#clientPasswordForm")?.addEventListener("submit",saveClientPassword);
  app.querySelector("#officeSelect")?.addEventListener("change",e=>changeOffice(e.target.value));
+ app.querySelector("#processingMonthSelect")?.addEventListener("change",e=>{processingMonth=Number(e.target.value);void run(loadProcessing)});
+ app.querySelector("#processingYearSelect")?.addEventListener("change",e=>{processingYear=Number(e.target.value);void run(loadProcessing)});
  app.querySelector("#companySelect")?.addEventListener("change",e=>changeCompany(e.target.value));
  app.querySelector("#yearSelect")?.addEventListener("change",e=>{resetSelection();listPage=0;year=e.target.value;render()});
  app.querySelector("#monthSelect")?.addEventListener("change",e=>{resetSelection();listPage=0;month=e.target.value;render()});
@@ -499,13 +531,14 @@ async function google(){const {error}=await sb.auth.signInWithOAuth({provider:"g
 
 async function handle(e){
  const a=e.currentTarget.dataset.do,v=e.currentTarget.dataset.val;
- if(a==="view"){resetSelection();listPage=0;view=v;cat="";year="ALL";month="ALL";navigationHistory.length=0;render();return}
+ if(a==="view"){resetSelection();listPage=0;view=v;cat="";year="ALL";month="ALL";navigationHistory.length=0;if(v==="processing"&&adminView()){await run(loadProcessing)}else render();return}
  if(a==="back"){resetSelection();listPage=0;view="home";cat="";year="ALL";month="ALL";navigationHistory.length=0;render();return}
  if(a==="cat"){resetSelection();listPage=0;navigationHistory.push({view,cat,year,month});cat=v;view="category";year="ALL";month="ALL";render();return}
  if(a==="google"){await google();return}
  if(a==="logout"){try{sessionStorage.removeItem("gav-selected-office")}catch(_e){}resetSelection();pilotTestCredential=null;previewAsClient=false;clientDocs=[];clearPdfCache();await sb.auth.signOut();session=null;role="";googleToken="";notice="";render();return}
  if(a==="office-select"){await changeOffice(v);return}
  if(a==="catalog-refresh"){if(role==="admin"&&!previewAsClient)await run(loadOfficeFolders);return}
+ if(a==="processing-refresh"){if(adminView())await run(loadProcessing);return}
  if(a==="pick"){await changeCompany(v);return}
  if(a==="release-history"){
   if(role!=="admin"||previewAsClient)return;
