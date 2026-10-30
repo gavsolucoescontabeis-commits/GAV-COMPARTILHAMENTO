@@ -56,6 +56,15 @@ Deno.serve(async req=>{
    if(!isAdmin)q=q.eq("review_status","APROVADO").not("published_at","is",null);
    return reply({documents:check(await q.limit(1000))});
   }
+  if(action==="clientPreview"){
+   adminOnly();
+   const company=check(await supa.from("gav_companies").select("id,is_active").eq("id",companyId).eq("is_active",true).maybeSingle());
+   if(!company)error("Empresa não encontrada ou inativa.",404);
+   const documents=check(await supa.from("gav_documents")
+     .select("id,company_id,file_name,mime_type,relative_path,category,year,month,review_status,published_at")
+     .eq("company_id",companyId).eq("review_status","APROVADO").not("published_at","is",null).order("file_name").limit(1000));
+   return reply({documents,preview:true});
+  }
   if(action==="connectDrive"){
    adminOnly();
    if(typeof b.refreshToken!=="string"||b.refreshToken.length<20)error("Google não forneceu autorização offline. Reconecte com consentimento.",409);
