@@ -111,6 +111,50 @@ function sanitizeZipName(name){
  return (String(name||"documento").replace(/[\\/:*?"<>|\x00-\x1f]/g,"_").replace(/^\.+/,"_").trim().slice(0,160)||"documento");
 }
 
+
+async function downloadSelectedZip(){
+ if(bulkDownloading)return;
+ const items=visibleSelectionDocs().filter(d=>checkedDocs.has(d.id));
+ if(!items.length){toastMessage("Marque os documentos que deseja baixar.");return}
+ if(items.length>60){toastMessage("Selecione até 60 arquivos por ZIP. Use o filtro de mês para dividir os documentos.");return}
+ const company=selected,generation=pdfGeneration;
+ bulkDownloading=true;bulkProgress="Preparando arquivos...";refreshSelectionToolbar();
+ try{
+  const entries={};const names=new Set();let totalSize=0,done=0;
+  for(let i=0;i<items.length;i+=3){
+   await Promise.all(items.slice(i,i+3).map(async d=>{
+    const file=await fetchPdf(d.id,"download");
+    if(company!==selected||generation!==pdfGeneration||!role)throw Error("A sessão mudou. Faça a seleção novamente.");
+    totalSize+=file.blob.size;
+    if(totalSize>180*1024*1024)throw Error("O lote ultrapassa 180 MB. Selecione menos documentos.");
+    const category=sanitizeZipName((C.find(c=>c[0]===d.category)||[])[1]||"Documentos");
+    const month=d.month&&d.year?d.year+"/"+String(d.month).padStart(2,"0")+"-"+M[d.month-1]:d.year?String(d.year):"SEM_COMPETENCIA";
+    const name=sanitizeZipName(d.file_name);
+    let zipPath=category+"/"+month+"/"+name,serial=2;
+    while(names.has(zipPath)){zipPath=category+"/"+month+"/"+serial+"_"+name;serial++;}
+    names.add(zipPath);
+    entries[zipPath]=new Uint8Array(await file.blob.arrayBuffer());
+    done++;bulkProgress="Baixando: "+done+"/"+items.length;refreshSelectionToolbar();
+   }));
+  }
+  bulkProgress="Montando ZIP...";refreshSelectionToolbar();
+  const {zip}=await import("https://esm.sh/fflate@0.8.3");
+  const result=await new Promise((resolve,reject)=>{
+   zip(entries,{level:0},(error,data)=>error?reject(error):resolve(data));
+  });
+  if(company!==selected||generation!==pdfGeneration||!role)throw Error("A sessão mudou. Refaça a seleção.");
+  const blob=new Blob([result],{type:"application/zip"});
+  const url=URL.createObjectURL(blob),anchor=document.createElement("a");
+  anchor.href=url;
+  anchor.download="GAV_"+sanitizeZipName((current()?.legal_name||"EMPRESA").replace(/\s+/g,"_"))+"_"+new Date().toISOString().slice(0,10)+".zip";
+  document.body.appendChild(anchor);anchor.click();anchor.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),60000);
+  resetSelection();
+  toastMessage("Download do ZIP solicitado: "+items.length+" arquivos.");
+ }catch(e){toastMessage("Não foi possível baixar o ZIP: "+(e.message||String(e)))}
+ finally{bulkDownloading=false;bulkProgress="";refreshSelectionToolbar()}
+}
+
 function periodLabel(d){
  if(d.year&&d.month&&M[d.month-1])return M[d.month-1]+"/"+d.year;
  if(d.year)return "DOCUMENTOS DE "+d.year+" · SEM MÊS DEFINIDO";
