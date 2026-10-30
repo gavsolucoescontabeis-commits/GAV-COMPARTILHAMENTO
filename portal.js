@@ -406,6 +406,39 @@ async function handle(e){
  }
  if(a==="publish"){await run(async()=>{const d=docs.find(x=>x.id===v);await api(d.published_at?"unpublish":"publish",{companyId:selected,documentId:v});await loadDocs()});return}
  if(a==="link"){await run(async()=>{await api("linkPilot",{companyId:(companies.find(c=>c.cnpj==="60955798000157")||{}).id,googleToken});await bootstrap();view="drive"});return}
+
+ if(a==="ttm-expand"){
+  if(role!=="admin"||previewAsClient)return;
+  if(!window.confirm("Conferir as pastas da TTM e vincular somente as empresas com nome de pasta exatamente igual ao cadastrado? Nenhum documento antigo será publicado automaticamente."))return;
+  await run(async()=>{
+   const report=await invoke("gav-folder-expand","linkVerified",{});
+   mappingReport=report;
+   await bootstrap();view="drive";
+   notice=report.linked+" pasta(s) vinculada(s); "+report.already+" já vinculada(s). A importação inicial seguirá pelo servidor.";
+  });
+  return;
+ }
+ if(a==="index-company"){
+  if(role!=="admin"||previewAsClient||!companies.some(c=>c.id===v)||!links.some(l=>l.company_id===v&&l.is_active))return;
+  await run(async()=>{
+   const result=await invoke("gav-drive-index","index",{companyId:v});
+   await bootstrap();view="drive";
+   notice=result.indexed+" documentos verificados, "+result.newFiles+" novos; "+result.autoPublished+" liberados automaticamente.";
+  });
+  return;
+ }
+ if(a==="enable-company-auto"||a==="pause-company-auto"){
+  if(role!=="admin"||previewAsClient)return;
+  const company=companies.find(c=>c.id===v),link=links.find(l=>l.company_id===v&&l.is_active);
+  if(!company||!link)return;
+  if(!window.confirm((a==="enable-company-auto"?"Ativar":"Pausar")+" a liberação automática de arquivos NOVOS de "+company.legal_name+"? Os documentos antigos não serão alterados."))return;
+  await run(async()=>{
+   await api(a==="enable-company-auto"?"activateCompanyAutoSync":"pauseCompanyAutoSync",{companyId:v});
+   await bootstrap();view="drive";
+   notice="Regra automática atualizada para "+company.legal_name+".";
+  });
+  return;
+ }
  if(a==="index"){await syncPilot({interactive:true});render();return}
 }
 document.addEventListener("visibilitychange",()=>{if(!document.hidden)void syncPilot()});
