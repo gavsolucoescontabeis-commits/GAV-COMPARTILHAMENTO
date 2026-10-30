@@ -48,7 +48,10 @@ Deno.serve(async req=>{
    const companies=isAdmin?check(await supa.from("gav_companies").select("id,code,cnpj,legal_name,folder_label,office_id,is_active").order("code")):companyIds.length?check(await supa.from("gav_companies").select("id,code,cnpj,legal_name,folder_label,office_id,is_active").in("id",companyIds)):[];
    const linked=isAdmin?check(await supa.from("gav_drive_folders").select("company_id,is_active,auto_publish_new").eq("is_active",true)):[];
    const candidate=isAdmin?check(await supa.from("gav_drive_candidates").select("company_id,label,verified_at")):[];
-   return reply({role:isAdmin?"admin":"client",companies,linked,candidate,driveSecretsConfigured:!!(Deno.env.get("GOOGLE_OAUTH_CLIENT_ID")&&Deno.env.get("GOOGLE_OAUTH_CLIENT_SECRET"))});
+   const sync=isAdmin?check(await supa.from("gav_sync_runs")
+    .select("company_id,state,indexed_count,started_at,finished_at,error_safe")
+    .order("started_at",{ascending:false}).limit(250)):[];
+   return reply({role:isAdmin?"admin":"client",companies,linked,candidate,sync,driveSecretsConfigured:!!(Deno.env.get("GOOGLE_OAUTH_CLIENT_ID")&&Deno.env.get("GOOGLE_OAUTH_CLIENT_SECRET"))});
   }
   if(action==="documents"){
    companyOnly();
@@ -97,6 +100,65 @@ Deno.serve(async req=>{
    const membership=await supa.from("gav_memberships").upsert({user_id:userId,company_id:companyId,active:true},{onConflict:"user_id,company_id"});
    if(membership.error)error("Falha ao conceder acesso apenas à empresa-piloto.",502);
    return reply({cnpj:pilot.cnpj,password,test:true});
+  }
+  if(action==="activateCompanyAutoSync"||action==="pauseCompanyAutoSync"){
+   adminOnly();
+   const folder=check(await supa.from("gav_drive_folders").select("id,auto_publish_new")
+    .eq("company_id",companyId).eq("is_active",true).maybeSingle());
+   if(!folder)error("Vincule a pasta da empresa antes de ativar.",409);
+   if(action==="activateCompanyAutoSync"){
+    const completed=check(await supa.from("gav_sync_runs").select("id")
+     .eq("company_id",companyId).eq("state","CONCLUIDO").order("started_at",{ascending:false}).limit(1));
+    if(!completed.length)error("A primeira importação precisa ser concluída antes de ativar documentos novos.",409);
+   }
+   check(await supa.from("gav_drive_folders")
+    .update({auto_publish_new:action==="activateCompanyAutoSync"})
+    .eq("id",folder.id).eq("company_id",companyId));
+   return reply({ok:true,autoPublishNew:action==="activateCompanyAutoSync"});
+  }
+  if(action==="createCompanyTestAccess"||action==="removeCompanyTestAccess"){
+   adminOnly();
+   const company=check(await supa.from("gav_companies").select("id,cnpj,is_active")
+    .eq("id",companyId).eq("is_active",true).maybeSingle());
+   if(!company)error("Empresa não cadastrada ou inativa.",404);
+   const folder=check(await supa.from("gav_drive_folders").select("id")
+    .eq("company_id",companyId).eq("is_active",true).maybeSingle());
+   if(!folder)error("Empresa sem pasta verificada.",409);
+   const email="cliente-"+company.cnpj+"@acesso.gavsolucoescontabeis.com.br";
+   const listed=await supa.auth.admin.listUsers({page:1,perPage:1000});
+   if(listed.error)error("Não foi possível verificar os usuários.",502);
+   const existing=listed.data.users.find((u:any)=>u.email?.toLowerCase()===email);
+   if(existing&&!existing.app_metadata?.gav_test_account)error("Já existe acesso real para o cliente. Não alteramos sua conta.",409);
+   if(action==="removeCompanyTestAccess"){
+    if(existing){
+     const deleted=await supa.auth.admin.deleteUser(existing.id);
+     if(deleted.error)error("Não foi possível remover o acesso temporário.",502);
+    }
+    return reply({removed:true});
+   }
+   if(existing){
+    const other=check(await supa.from("gav_memberships").select("company_id")
+     .eq("user_id",existing.id).neq("company_id",companyId));
+    if(other.length)error("Conta já vinculada a outra empresa. Operação recusada.",403);
+   }
+   const chars="ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#";
+   const random=new Uint8Array(32);crypto.getRandomValues(random);
+   const password=Array.from(random,(n:number)=>chars[n%chars.length]).join("");
+   let uid:string;
+   if(existing){
+    const changed=await supa.auth.admin.updateUserById(existing.id,{password});
+    if(changed.error)error("Falha ao renovar senha temporária.",502);
+    uid=existing.id;
+   }else{
+    const created=await supa.auth.admin.createUser({email,password,email_confirm:true,
+     app_metadata:{gav_test_account:true}});
+    if(created.error||!created.data.user)error("Falha ao criar conta de teste.",502);
+    uid=created.data.user.id;
+   }
+   check(await supa.from("gav_memberships").upsert({
+    user_id:uid,company_id,active:true
+   },{onConflict:"user_id,company_id"}));
+   return reply({test:true,cnpj:company.cnpj,password});
   }
   if(action==="connectDrive"){
    adminOnly();
