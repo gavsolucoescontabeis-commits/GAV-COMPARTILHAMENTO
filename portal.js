@@ -221,7 +221,7 @@ function drivePage(){
  <div class="section-title">Carteira TTM</div>
  <p><strong>${all.length} empresas cadastradas</strong> · ${linked.length} com pasta vinculada · ${completed.length} com sincronização concluída.</p>
  <p class="subtle">Somente nomes de pasta correspondentes exatamente aos cadastros serão vinculados. Os documentos antigos ficam sem publicação até a conferência.</p>
- <button class="btn btn-dark" data-do="ttm-expand" ${busy?"disabled":""}>Conferir e vincular pastas da TTM</button>
+ <button class="btn btn-dark" data-do="ttm-expand" ${busy?"disabled":""}>Conferir e vincular pastas da TTM</button> <button class="btn btn-line" data-do="refresh-drive-status">Atualizar situação</button>
  <p class="subtle" style="margin-top:10px">Após a vinculação, o servidor fará a importação inicial das pastas verificadas, uma empresa por vez. Não é necessário manter o navegador aberto.</p>
  </div>
  ${reportHtml}
@@ -419,6 +419,11 @@ async function handle(e){
  if(a==="publish"){await run(async()=>{const d=docs.find(x=>x.id===v);await api(d.published_at?"unpublish":"publish",{companyId:selected,documentId:v});await loadDocs()});return}
  if(a==="link"){await run(async()=>{await api("linkPilot",{companyId:(companies.find(c=>c.cnpj==="60955798000157")||{}).id,googleToken});await bootstrap();view="drive"});return}
 
+ if(a==="refresh-drive-status"){
+  if(role!=="admin"||previewAsClient)return;
+  await run(async()=>{await bootstrap();view="drive"});
+  return;
+ }
  if(a==="ttm-expand"){
   if(role!=="admin"||previewAsClient)return;
   if(!window.confirm("Conferir as pastas da TTM e vincular somente as empresas com nome de pasta exatamente igual ao cadastrado? Nenhum documento antigo será publicado automaticamente."))return;
