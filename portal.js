@@ -252,10 +252,25 @@ function clientPasswordHtml(){
  return title(passwordChangeRequired?"Primeiro acesso — defina sua senha":"Minha senha",passwordChangeRequired?"Antes de acessar os documentos, cadastre sua senha definitiva.":"Altere sua senha quando precisar.")
  +'<div class="card card-pad" style="max-width:530px"><p class="subtle">A senha deve ter ao menos 12 caracteres, incluindo letras e números.</p><form id="clientPasswordForm"><div class="form-field"><label for="newClientPass">Nova senha</label><input id="newClientPass" class="input" type="password" minlength="12" maxlength="128" autocomplete="new-password" required></div><div class="form-field"><label for="repeatClientPass">Confirme a senha</label><input id="repeatClientPass" class="input" type="password" minlength="12" maxlength="128" autocomplete="new-password" required></div><button class="btn btn-dark login-action" type="submit">Salvar minha senha</button></form></div>';
 }
+function clientAccessHtml(){
+ if(!adminView()||!accessPanelOpen||accessPanelCompany!==selected)return "";
+ const info=accessStatus;
+ let out='<div class="card card-pad" style="margin:15px 0"><h3 class="block-title">Login do cliente</h3><p class="subtle">Somente acesso individual por CNPJ e senha. A GAV deve entregar a senha provisória ao responsável autorizado.</p>';
+ if(!info)return out+'<p class="subtle">Conferindo situação da conta...</p></div>';
+ const status=!info.exists?"Ainda não criado":!info.active?"Suspenso":info.needsPasswordChange?"Aguardando troca da senha":"Ativo";
+ out+='<div class="notice">CNPJ: <strong>'+esc(fmt(info.cnpj))+'</strong> · Situação: <strong>'+esc(status)+'</strong></div><div class="admin-actions" style="margin-top:14px">';
+ out+='<button class="btn btn-dark" data-do="issue-client-access">'+(info.exists?"Renovar senha / reativar":"Gerar acesso do cliente")+'</button>';
+ if(info.active)out+='<button class="btn btn-line" data-do="disable-client-access">Suspender acesso</button>';
+ out+='<button class="btn btn-line" data-do="close-client-access">Fechar</button></div>';
+ if(clientCredential?.companyId===selected){
+  out+='<div class="notice" style="margin-top:14px"><strong>Dados para entregar ao cliente — exibição temporária</strong><p><b>CNPJ:</b> '+esc(fmt(clientCredential.cnpj))+'</p><p><b>Senha provisória:</b> <code style="user-select:all;font-weight:800;overflow-wrap:anywhere">'+esc(clientCredential.password)+'</code></p><p class="subtle">Copie agora. Não há envio automático. A senha provisória deverá ser trocada no primeiro acesso.</p><button class="btn btn-dark btn-small" data-do="copy-client-access">Copiar mensagem para envio privado</button></div>';
+ }
+ return out+"</div>";
+}
 function home(){
  const firm=current(),items=displayDocs();
  if(adminView()&&!firm)return `${title("Início — "+officeLabel(),"Empresas e pastas do escritório selecionado.")}${picker()}<div class="card card-pad" style="margin-top:20px"><div class="empty">Nenhuma empresa com CNPJ cadastrado. Confira as pastas encontradas para vincular somente empresas autorizadas.</div></div>${folderCatalogHtml()}`;
- return `${title("Meus documentos",adminView()?"Conferência dos arquivos da empresa selecionada":"Documentos liberados pela GAV para sua empresa.")}${picker()}${adminView()?`<div style="margin:12px 0 20px"><button class="btn btn-dark" data-do="client-preview">Ver como o cliente</button>${items.some(d=>d.review_status==="PENDENTE")&&links.some(l=>l.company_id===firm?.id&&l.last_synced_at)?` <button class="btn btn-line" data-do="release-history">Liberar histórico após conferência</button>`:""}${links.some(l=>l.company_id===firm?.id&&l.is_active)?` <button class="btn btn-line" data-do="create-company-test">Gerar login de teste</button> <button class="btn btn-line" data-do="remove-company-test">Desativar login de teste</button>`:""}${pilotTestCredential&&pilotTestCredential.cnpj===firm?.cnpj?`<div class="card card-pad" style="margin-top:14px"><strong>Acesso de teste criado (não encaminhe ao cliente)</strong><p>CNPJ de acesso: <strong>${esc(pilotTestCredential.cnpj)}</strong></p><p>Senha de teste: <code style="user-select:all;overflow-wrap:anywhere">${esc(pilotTestCredential.password)}</code></p><p class="subtle">Para testar o login real sem sair da GAV, abra o portal em uma janela anônima e entre com o CNPJ e esta senha. Apenas os arquivos publicados ficarão visíveis.</p></div>`:""}<p class="subtle" style="margin-top:9px">Novos arquivos são liberados automaticamente. Publicar serve para o histórico antigo ainda pendente; Revogar oculta um arquivo.</p></div>`:""}${firm?`<div class="hero"><div><small>ÁREA EXCLUSIVA DA EMPRESA</small><h2>${esc(firm.legal_name)}</h2><p>CNPJ ${esc(fmt(firm.cnpj))} · Documentos por competência e categoria.</p></div></div>`:""}<div class="stats"><div class="card stat"><span class="caption">${adminView()?"Documentos cadastrados":"Documentos disponíveis"}</span><strong>${items.length}</strong></div>${adminView()?`<div class="card stat"><span class="caption">Documentos liberados</span><strong>${items.filter(x=>x.published_at).length}</strong></div>`:""}<div class="card stat"><span class="caption">Categorias com arquivos</span><strong>${new Set(items.map(x=>x.category)).size}</strong></div></div><div class="section-title">Categorias</div><div class="cat-grid">${C.map(([id,n])=>`<button class="category" data-do="cat" data-val="${id}"><span class="cat-name">${esc(n)}</span><span class="cat-count">${items.filter(d=>d.category===id).length} documento(s)</span></button>`).join("")}</div><div class="section-title">Documentos recentes</div><div class="card card-pad">${selectionBar(items.slice().sort(documentSort).slice(0,5))}${files(items.slice().sort(documentSort).slice(0,5))}</div>`;
+ return `${title("Meus documentos",adminView()?"Conferência dos arquivos da empresa selecionada":"Documentos liberados pela GAV para sua empresa.")}${picker()}${adminView()?`<div style="margin:12px 0 20px"><button class="btn btn-dark" data-do="client-preview">Ver como o cliente</button>${items.some(d=>d.review_status==="PENDENTE")&&links.some(l=>l.company_id===firm?.id&&l.last_synced_at)?` <button class="btn btn-line" data-do="release-history">Liberar histórico após conferência</button>`:""}${links.some(l=>l.company_id===firm?.id&&l.is_active)?` <button class="btn btn-dark" data-do="client-access">Gerenciar login do cliente</button> <button class="btn btn-line" data-do="create-company-test">Gerar login de teste</button> <button class="btn btn-line" data-do="remove-company-test">Desativar login de teste</button>`:""}${pilotTestCredential&&pilotTestCredential.cnpj===firm?.cnpj?`<div class="card card-pad" style="margin-top:14px"><strong>Acesso de teste criado (não encaminhe ao cliente)</strong><p>CNPJ de acesso: <strong>${esc(pilotTestCredential.cnpj)}</strong></p><p>Senha de teste: <code style="user-select:all;overflow-wrap:anywhere">${esc(pilotTestCredential.password)}</code></p><p class="subtle">Para testar o login real sem sair da GAV, abra o portal em uma janela anônima e entre com o CNPJ e esta senha. Apenas os arquivos publicados ficarão visíveis.</p></div>`:""}<p class="subtle" style="margin-top:9px">Novos arquivos são liberados automaticamente. Publicar serve para o histórico antigo ainda pendente; Revogar oculta um arquivo.</p></div>`:""}${adminView()?clientAccessHtml():""}${firm?`<div class="hero"><div><small>ÁREA EXCLUSIVA DA EMPRESA</small><h2>${esc(firm.legal_name)}</h2><p>CNPJ ${esc(fmt(firm.cnpj))} · Documentos por competência e categoria.</p></div></div>`:""}<div class="stats"><div class="card stat"><span class="caption">${adminView()?"Documentos cadastrados":"Documentos disponíveis"}</span><strong>${items.length}</strong></div>${adminView()?`<div class="card stat"><span class="caption">Documentos liberados</span><strong>${items.filter(x=>x.published_at).length}</strong></div>`:""}<div class="card stat"><span class="caption">Categorias com arquivos</span><strong>${new Set(items.map(x=>x.category)).size}</strong></div></div><div class="section-title">Categorias</div><div class="cat-grid">${C.map(([id,n])=>`<button class="category" data-do="cat" data-val="${id}"><span class="cat-name">${esc(n)}</span><span class="cat-count">${items.filter(d=>d.category===id).length} documento(s)</span></button>`).join("")}</div><div class="section-title">Documentos recentes</div><div class="card card-pad">${selectionBar(items.slice().sort(documentSort).slice(0,5))}${files(items.slice().sort(documentSort).slice(0,5))}</div>`;
 }
 function recent(){
  const arr=filtered().slice().sort(documentSort),years=[...new Set(displayDocs().map(d=>d.year).filter(Boolean))].sort((a,b)=>b-a);
@@ -443,7 +458,7 @@ function render(){
 }
 async function changeOffice(id){
  if(role!=="admin"||!offices.some(o=>o.id===id))return;
- resetSelection();listPage=0;pilotTestCredential=null;previewAsClient=false;clientDocs=[];mappingReport=null;
+ resetSelection();listPage=0;pilotTestCredential=null;previewAsClient=false;clientDocs=[];mappingReport=null;accessPanelOpen=false;accessStatus=null;clientCredential=null;
  clearPdfCache();officeId=id;
  try{sessionStorage.setItem("gav-selected-office",id)}catch(_e){}
  selected=officeCompanies()[0]?.id||"";
@@ -456,7 +471,7 @@ async function changeCompany(id){
   toastMessage("Selecione uma empresa do escritório atual.");return;
  }
  if(!companies.some(c=>c.id===id))return;
- resetSelection();listPage=0;pilotTestCredential=null;previewAsClient=false;clientDocs=[];clearPdfCache();
+ resetSelection();listPage=0;pilotTestCredential=null;previewAsClient=false;clientDocs=[];accessPanelOpen=false;accessStatus=null;clientCredential=null;clearPdfCache();
  selected=id;view="home";cat="";year="ALL";month="ALL";
  await run(async()=>{await loadDocs()});
 }
@@ -473,6 +488,11 @@ async function saveClientPassword(e){
   await bootstrap();
   toastMessage("Senha atualizada com sucesso.");
  });
+}
+async function openClientAccess(){
+ if(!adminView()||!selected)return;
+ accessPanelOpen=true;accessPanelCompany=selected;accessStatus=null;clientCredential=null;
+ await run(async()=>{accessStatus=await api("clientAccessStatus",{companyId:selected})});
 }
 async function loginClient(e){e.preventDefault();const id=cn(app.querySelector("#cnpj")?.value),password=app.querySelector("#pwd")?.value;if(id.length!==14){notice="Informe um CNPJ com 14 números.";render();return}await run(async()=>{const {error}=await sb.auth.signInWithPassword({email:"cliente-"+id+"@acesso.gavsolucoescontabeis.com.br",password});if(error)throw Error("CNPJ ou senha inválidos.");await bootstrap()})}
 async function google(){const {error}=await sb.auth.signInWithOAuth({provider:"google",options:{redirectTo:location.origin+location.pathname,scopes:"https://www.googleapis.com/auth/drive.readonly",queryParams:{access_type:"offline",prompt:"consent"}}});if(error)showError(error)}
@@ -497,6 +517,35 @@ async function handle(e){
    const result=await api("releaseCompanyHistory",{companyId:selected,confirmName:firm.legal_name});
    await loadDocs();notice=result.released+" documento(s) antigos liberados para "+firm.legal_name+".";
   });
+  return;
+ }
+ if(a==="client-access"){await openClientAccess();return}
+ if(a==="close-client-access"){accessPanelOpen=false;accessStatus=null;clientCredential=null;render();return}
+ if(a==="issue-client-access"){
+  if(!adminView()||accessPanelCompany!==selected||!accessStatus)return;
+  const wasCreated=!!accessStatus.exists;
+  const message=(wasCreated?"Renovar a senha e reativar o login":"Criar acesso individual para")+" "+(current()?.legal_name||"empresa")+"?\n\nApenas a GAV receberá a senha provisória. O cliente deverá trocá-la antes de consultar documentos.";
+  if(!window.confirm(message))return;
+  await run(async()=>{
+   const response=await api("issueClientAccess",{companyId:selected,confirmReset:wasCreated});
+   clientCredential={...response,companyId:selected};
+   accessStatus=await api("clientAccessStatus",{companyId:selected});
+  });return;
+ }
+ if(a==="disable-client-access"){
+  if(!adminView()||accessPanelCompany!==selected)return;
+  if(!window.confirm("Suspender o login desta empresa? Documentos e cadastros serão preservados."))return;
+  await run(async()=>{
+   await api("disableClientAccess",{companyId:selected});
+   clientCredential=null;
+   accessStatus=await api("clientAccessStatus",{companyId:selected});
+  });return;
+ }
+ if(a==="copy-client-access"){
+  if(!clientCredential||clientCredential.companyId!==selected)return;
+  const msg="GAV Soluções Contábeis — acesso aos documentos\nPortal: https://gavsolucoescontabeis-commits.github.io/GAV-COMPARTILHAMENTO/\nCNPJ: "+fmt(clientCredential.cnpj)+"\nSenha provisória: "+clientCredential.password+"\nNo primeiro acesso, você deverá criar sua senha definitiva.";
+  try{await navigator.clipboard.writeText(msg);toastMessage("Mensagem copiada. Envie somente ao responsável, de forma privada.")}
+  catch(e){toastMessage("Não foi possível copiar. Selecione os dados exibidos na tela.")}
   return;
  }
  if(a==="client-preview"){resetSelection();
