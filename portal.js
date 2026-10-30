@@ -244,8 +244,17 @@ function recent(){
  const from=arr.length?listPage*PAGE_SIZE+1:0,to=arr.length?Math.min(arr.length,(listPage+1)*PAGE_SIZE):0;
  return `${title(heading,"Arquivos por mês, com visualização e download em um clique.")}<button class="btn btn-line btn-small" data-do="back" style="margin-bottom:16px">← Voltar</button>${picker()}<div class="gav-month-filter"><select id="yearSelect" class="input" aria-label="Selecionar ano"><option value="ALL">TODOS OS ANOS</option>${years.map(y=>`<option value="${y}" ${String(year)===String(y)?"selected":""}>${y}</option>`).join("")}</select><select id="monthSelect" class="input" aria-label="Selecionar mês"><option value="ALL">TODOS OS MESES</option>${M.map((m,i)=>`<option value="${i+1}" ${String(month)===String(i+1)?"selected":""}>${m}</option>`).join("")}</select></div><div class="card card-pad">${selectionBar(shown)}${fileGroups(shown)}<div class="gav-doc-pager"><span>Exibindo ${from}–${to} de ${arr.length} documentos. Selecione um mês para localizar mais rápido.</span><div><button class="btn btn-line btn-small" data-do="prev-doc-page" ${listPage===0?"disabled":""}>Anterior</button> <button class="btn btn-line btn-small" data-do="next-doc-page" ${to>=arr.length?"disabled":""}>Próximos</button></div></div></div>`;
 }
+function officesPage(){
+ const cards=offices.map(o=>{
+  const firms=companies.filter(c=>c.office_id===o.id&&c.is_active);
+  const linked=firms.filter(c=>links.some(l=>l.company_id===c.id&&l.is_active)).length;
+  return `<button class="gav-office-card ${o.id===officeId?"is-current":""}" data-do="office-select" data-val="${esc(o.id)}"><span class="gav-office-card-title">${esc(o.display_name)}</span><span class="gav-office-card-count">${firms.length} ${firms.length===1?"empresa":"empresas"}</span><span class="gav-office-card-meta">${linked} pasta(s) vinculada(s)</span><span class="gav-office-card-link">Abrir escritório</span></button>`;
+ }).join("");
+ return `${title("Escritórios","Selecione o escritório para consultar somente as empresas e documentos dessa carteira.")}<div class="gav-office-grid">${cards}</div><p class="footnote">A organização por escritório é exclusiva do painel administrativo. O cliente continua acessando somente a própria empresa pelo CNPJ e senha.</p>`;
+}
 function companiesPage(){
- return `${title("Empresas e permissões","Relação real de empresas cadastradas. O acesso de cada cliente será individual.")}<div class="card card-pad"><div class="file-list">${companies.map(c=>`<div class="file-row"><div class="file-expand"><b>${esc((c.code||"")+" · "+c.legal_name)}</b><small class="file-meta">CNPJ ${esc(fmt(c.cnpj))} · ${links.some(l=>l.company_id===c.id)?"Pasta vinculada":"Pasta ainda não vinculada"}</small></div><button class="btn btn-line btn-small" data-do="pick" data-val="${c.id}">Abrir empresa</button></div>`).join("")}</div></div><p class="footnote">Os clientes não visualizam a lista de empresas. O acesso depende de autorização individual registrada no servidor.</p>`;
+ const list=officeCompanies().filter(c=>c.is_active);
+ return `${title("Empresas — "+officeLabel(),"Escolha uma empresa deste escritório para consultar seus documentos.")}${picker()}<div class="card card-pad" style="margin-top:18px">${list.length?`<div class="file-list">${list.map(c=>`<div class="file-row"><div class="file-expand"><b>${esc((c.code||"")+" · "+c.legal_name)}</b><small class="file-meta">CNPJ ${esc(fmt(c.cnpj))} · ${links.some(l=>l.company_id===c.id&&l.is_active)?"Pasta vinculada":"Pasta ainda não vinculada"}</small></div><button class="btn btn-line btn-small" data-do="pick" data-val="${esc(c.id)}">Abrir empresa</button></div>`).join("")}</div>`:`<div class="empty">Ainda não há empresas cadastradas em ${esc(officeLabel())}. <button class="btn btn-line btn-small" data-do="view" data-val="offices">Trocar escritório</button></div>`}</div><p class="footnote">As empresas de outros escritórios não aparecem nesta relação. O cliente também não visualiza a lista administrativa.</p>`;
 }
 function drivePage(){
  const all=companies.filter(c=>c.is_active),linked=all.filter(c=>links.some(l=>l.company_id===c.id&&l.is_active));
@@ -280,7 +289,7 @@ function drivePage(){
  }).join("")}
  </div></div>`;
 }
-function content(){if(!companies.length)return title("Sem empresas autorizadas","O acesso está ativo, mas não há vínculo de empresa. Solicite liberação à GAV.");if(view==="companies"&&role==="admin")return companiesPage();if(view==="drive"&&role==="admin")return drivePage();if(view==="recent"||view==="category")return recent();return home()}
+function content(){if(!companies.length)return title("Sem empresas autorizadas","O acesso está ativo, mas não há vínculo de empresa. Solicite liberação à GAV.");if(view==="offices"&&adminView())return officesPage();if(view==="companies"&&adminView())return companiesPage();if(view==="drive"&&adminView())return drivePage();if(view==="recent"||view==="category")return recent();return home()}
 function toastMessage(message){
  document.querySelectorAll(".gav-toast").forEach(e=>e.remove());
  const node=document.createElement("div");
