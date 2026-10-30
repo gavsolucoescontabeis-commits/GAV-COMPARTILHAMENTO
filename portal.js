@@ -152,12 +152,16 @@ async function downloadSelectedZip(){
     if(company!==selected||generation!==pdfGeneration||!role)throw Error("A sessão mudou. Faça a seleção novamente.");
     totalSize+=file.blob.size;
     if(totalSize>180*1024*1024)throw Error("O lote ultrapassa 180 MB. Selecione menos documentos.");
-    const category=sanitizeZipName((C.find(c=>c[0]===d.category)||[])[1]||"Documentos");
-    const month=d.month&&d.year?d.year+"/"+String(d.month).padStart(2,"0")+"-"+M[d.month-1]:d.year?String(d.year):"SEM_COMPETENCIA";
+    // ZIP sem pastas internas: o usuário já selecionou categoria e mês no portal.
     const name=sanitizeZipName(d.file_name);
-    let zipPath=category+"/"+month+"/"+name,serial=2;
-    while(names.has(zipPath)){zipPath=category+"/"+month+"/"+serial+"_"+name;serial++;}
-    names.add(zipPath);
+    const dot=name.lastIndexOf(".");
+    const stem=dot>0?name.slice(0,dot):name,ext=dot>0?name.slice(dot):"";
+    let zipPath=name,serial=2;
+    while(names.has(zipPath.toLocaleLowerCase("pt-BR"))){
+     zipPath=stem+" ("+serial+")"+ext;
+     serial++;
+    }
+    names.add(zipPath.toLocaleLowerCase("pt-BR"));
     entries[zipPath]=new Uint8Array(await file.blob.arrayBuffer());
     done++;bulkProgress="Baixando: "+done+"/"+items.length;refreshSelectionToolbar();
    }));
