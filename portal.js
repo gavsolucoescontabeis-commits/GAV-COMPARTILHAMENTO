@@ -261,7 +261,7 @@ function recent(){
 function folderCatalogHtml(){
  if(!adminView()||!supportsOfficeCatalog())return "";
  const full=folderLookup.officeId===officeId?folderLookup:{loaded:false,items:[],error:""};
- const data={...full,items:(full.items||[]).filter(f=>/^\\s*\\d{1,4}(?:\\s|[_.-]|$)/.test(f.name))};
+ const data={...full,items:(full.items||[]).filter(f=>/^\s*\d{1,4}(?:\s|[_.-]|$)/.test(f.name))};
  const unknown=data.items.filter(f=>!f.hasCnpj);
  let html='<div class="card card-pad" style="margin-top:18px"><h3 class="block-title">Empresas numeradas no Google Drive — '+esc(officeLabel())+'</h3><p class="subtle">Somente pastas com código numérico no início. Pastas sem número ficam fora desta carteira; cadastro avulso apenas quando solicitado.</p><button class="btn btn-line btn-small" data-do="catalog-refresh" '+(busy?"disabled":"")+'>Atualizar relação do Drive</button>';
  if(data.error)html+='<div class="notice" style="margin-top:12px">Consulta indisponível: '+esc(data.error)+'</div>';
