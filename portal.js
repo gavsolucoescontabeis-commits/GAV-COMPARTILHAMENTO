@@ -12,6 +12,7 @@ const C=[["ADMISSOES","Admissões"],["RESCISOES","Rescisões"],["FERIAS","Féria
 let role="",companies=[],docs=[],links=[],candidates=[],selected="",view="offices",cat="",year=2026,month="ALL",session=null,googleToken="",hasDriveSecret=false,notice="",busy=false;
 let previewAsClient=false,clientDocs=[],pilotTestCredential=null;
 let syncRuns=[],mappingReport=null,offices=[],officeId="";
+let folderLookup={officeId:"",loaded:false,items:[],error:""};
 try{officeId=sessionStorage.getItem("gav-selected-office")||""}catch(_e){}
 const adminView=()=>role==="admin"&&!previewAsClient;
 const displayDocs=()=>previewAsClient?clientDocs:docs;
@@ -30,6 +31,15 @@ const officeCompanies=()=>role==="admin"?companies.filter(c=>c.office_id===offic
 const officeName=o=>o?.code==="REL GAV"?"GAV":o?.display_name||"Selecione o escritório";
 const officeLabel=()=>officeName(currentOffice());
 const officeSort={TTM:0,"DS CONTÁBIL":1,"REL GAV":2,AVULSOS:3};
+const supportsOfficeCatalog=()=>["DS CONTÁBIL","REL GAV"].includes(currentOffice()?.code||"");
+async function loadOfficeFolders(){
+ const requested=officeId;
+ if(!supportsOfficeCatalog()){folderLookup={officeId:requested,loaded:true,items:[],error:""};return}
+ try{
+  const result=await invoke("gav-office-catalog","list",{officeId:requested});
+  if(requested===officeId)folderLookup={officeId:requested,loaded:true,items:result.folders||[],error:""};
+ }catch(e){if(requested===officeId)folderLookup={officeId:requested,loaded:true,items:[],error:e?.message||"Falha ao consultar as pastas."}}
+}
 const fmt=v=>v&&v.length===14?v.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/,"$1.$2.$3/$4-$5"):v;
 async function invoke(fn,action,body={}){
  const currentSession=await sb.auth.getSession();session=currentSession.data.session;const token=session?.access_token;if(!token)throw Error("Faça login novamente.");
@@ -238,8 +248,8 @@ function files(items){
 }
 function home(){
  const firm=current(),items=displayDocs();
- if(adminView()&&!firm)return `${title("Escritório — "+officeLabel(),"Escolha uma empresa para consultar os documentos.")}${picker()}<div class="card card-pad" style="margin-top:20px"><div class="empty">Este escritório ainda não possui empresas cadastradas. Você pode selecionar outro escritório sem alterar as pastas existentes.</div><button class="btn btn-line" data-do="view" data-val="offices">Ver escritórios</button></div>`;
- return `${title("Meus documentos",adminView()?"Conferência dos arquivos da empresa selecionada":"Documentos liberados pela GAV para sua empresa.")}${picker()}${adminView()?`<div style="margin:12px 0 20px"><button class="btn btn-dark" data-do="client-preview">Ver como o cliente</button>${items.some(d=>d.review_status==="PENDENTE")&&links.some(l=>l.company_id===firm?.id&&l.last_synced_at)?` <button class="btn btn-line" data-do="release-history">Liberar histórico após conferência</button>`:""}${links.some(l=>l.company_id===firm?.id&&l.is_active)?` <button class="btn btn-line" data-do="create-company-test">Gerar login de teste</button> <button class="btn btn-line" data-do="remove-company-test">Desativar login de teste</button>`:""}${pilotTestCredential&&pilotTestCredential.cnpj===firm?.cnpj?`<div class="card card-pad" style="margin-top:14px"><strong>Acesso de teste criado (não encaminhe ao cliente)</strong><p>CNPJ de acesso: <strong>${esc(pilotTestCredential.cnpj)}</strong></p><p>Senha de teste: <code style="user-select:all;overflow-wrap:anywhere">${esc(pilotTestCredential.password)}</code></p><p class="subtle">Para testar o login real sem sair da GAV, abra o portal em uma janela anônima e entre com o CNPJ e esta senha. Apenas os arquivos publicados ficarão visíveis.</p></div>`:""}<p class="subtle" style="margin-top:9px">Novos arquivos são liberados automaticamente. Publicar serve para o histórico antigo ainda pendente; Revogar oculta um arquivo.</p></div>`:""}${firm?`<div class="hero"><div><small>ÁREA EXCLUSIVA DA EMPRESA</small><h2>${esc(firm.legal_name)}</h2><p>CNPJ ${esc(fmt(firm.cnpj))} · Documentos por competência e categoria.</p></div></div>`:""}<div class="stats"><div class="card stat"><span class="caption">${adminView()?"Documentos cadastrados":"Documentos disponíveis"}</span><strong>${items.length}</strong></div>${adminView()?`<div class="card stat"><span class="caption">Documentos liberados</span><strong>${items.filter(x=>x.published_at).length}</strong></div>`:""}<div class="card stat"><span class="caption">Categorias com arquivos</span><strong>${new Set(items.map(x=>x.category)).size}</strong></div></div><div class="section-title">Categorias</div><div class="cat-grid">${C.map(([id,n])=>`<button class="category" data-do="cat" data-val="${id}"><span class="cat-name">${esc(n)}</span><span class="cat-count">${items.filter(d=>d.category===id).length} documento(s)</span></button>`).join("")}</div><div class="section-title">Documentos recentes</div><div class="card card-pad">${selectionBar(items.slice().sort(documentSort).slice(0,5))}${files(items.slice().sort(documentSort).slice(0,5))}</div>`;
+ if(adminView()&&!firm)return `${title("Início — "+officeLabel(),"Empresas e pastas do escritório selecionado.")}${picker()}<div class="card card-pad" style="margin-top:20px"><div class="empty">Nenhuma empresa com CNPJ cadastrado. Confira as pastas encontradas para vincular somente empresas autorizadas.</div></div>${folderCatalogHtml()}`;
+ return `${title("Meus documentos",adminView()?"Conferência dos arquivos da empresa selecionada":"Documentos liberados pela GAV para sua empresa.")}${picker()}${adminView()&&supportsOfficeCatalog()?folderCatalogHtml():""}${adminView()?`<div style="margin:12px 0 20px"><button class="btn btn-dark" data-do="client-preview">Ver como o cliente</button>${items.some(d=>d.review_status==="PENDENTE")&&links.some(l=>l.company_id===firm?.id&&l.last_synced_at)?` <button class="btn btn-line" data-do="release-history">Liberar histórico após conferência</button>`:""}${links.some(l=>l.company_id===firm?.id&&l.is_active)?` <button class="btn btn-line" data-do="create-company-test">Gerar login de teste</button> <button class="btn btn-line" data-do="remove-company-test">Desativar login de teste</button>`:""}${pilotTestCredential&&pilotTestCredential.cnpj===firm?.cnpj?`<div class="card card-pad" style="margin-top:14px"><strong>Acesso de teste criado (não encaminhe ao cliente)</strong><p>CNPJ de acesso: <strong>${esc(pilotTestCredential.cnpj)}</strong></p><p>Senha de teste: <code style="user-select:all;overflow-wrap:anywhere">${esc(pilotTestCredential.password)}</code></p><p class="subtle">Para testar o login real sem sair da GAV, abra o portal em uma janela anônima e entre com o CNPJ e esta senha. Apenas os arquivos publicados ficarão visíveis.</p></div>`:""}<p class="subtle" style="margin-top:9px">Novos arquivos são liberados automaticamente. Publicar serve para o histórico antigo ainda pendente; Revogar oculta um arquivo.</p></div>`:""}${firm?`<div class="hero"><div><small>ÁREA EXCLUSIVA DA EMPRESA</small><h2>${esc(firm.legal_name)}</h2><p>CNPJ ${esc(fmt(firm.cnpj))} · Documentos por competência e categoria.</p></div></div>`:""}<div class="stats"><div class="card stat"><span class="caption">${adminView()?"Documentos cadastrados":"Documentos disponíveis"}</span><strong>${items.length}</strong></div>${adminView()?`<div class="card stat"><span class="caption">Documentos liberados</span><strong>${items.filter(x=>x.published_at).length}</strong></div>`:""}<div class="card stat"><span class="caption">Categorias com arquivos</span><strong>${new Set(items.map(x=>x.category)).size}</strong></div></div><div class="section-title">Categorias</div><div class="cat-grid">${C.map(([id,n])=>`<button class="category" data-do="cat" data-val="${id}"><span class="cat-name">${esc(n)}</span><span class="cat-count">${items.filter(d=>d.category===id).length} documento(s)</span></button>`).join("")}</div><div class="section-title">Documentos recentes</div><div class="card card-pad">${selectionBar(items.slice().sort(documentSort).slice(0,5))}${files(items.slice().sort(documentSort).slice(0,5))}</div>`;
 }
 function recent(){
  const arr=filtered().slice().sort(documentSort),years=[...new Set(displayDocs().map(d=>d.year).filter(Boolean))].sort((a,b)=>b-a);
@@ -247,6 +257,20 @@ function recent(){
  const heading=view==="category"?(C.find(c=>c[0]===cat)?.[1]||"Documentos"):"Documentos";
  const from=arr.length?listPage*PAGE_SIZE+1:0,to=arr.length?Math.min(arr.length,(listPage+1)*PAGE_SIZE):0;
  return `${title(heading,"Arquivos por mês, com visualização e download em um clique.")}<button class="btn btn-line btn-small" data-do="back" style="margin-bottom:16px">← Voltar</button>${picker()}<div class="gav-month-filter"><select id="yearSelect" class="input" aria-label="Selecionar ano"><option value="ALL">TODOS OS ANOS</option>${years.map(y=>`<option value="${y}" ${String(year)===String(y)?"selected":""}>${y}</option>`).join("")}</select><select id="monthSelect" class="input" aria-label="Selecionar mês"><option value="ALL">TODOS OS MESES</option>${M.map((m,i)=>`<option value="${i+1}" ${String(month)===String(i+1)?"selected":""}>${m}</option>`).join("")}</select></div><div class="card card-pad">${selectionBar(shown)}${fileGroups(shown)}<div class="gav-doc-pager"><span>Exibindo ${from}–${to} de ${arr.length} documentos. Selecione um mês para localizar mais rápido.</span><div><button class="btn btn-line btn-small" data-do="prev-doc-page" ${listPage===0?"disabled":""}>Anterior</button> <button class="btn btn-line btn-small" data-do="next-doc-page" ${to>=arr.length?"disabled":""}>Próximos</button></div></div></div>`;
+}
+function folderCatalogHtml(){
+ if(!adminView()||!supportsOfficeCatalog())return "";
+ const data=folderLookup.officeId===officeId?folderLookup:{loaded:false,items:[],error:""};
+ const unknown=data.items.filter(f=>!f.hasCnpj);
+ let html='<div class="card card-pad" style="margin-top:18px"><h3 class="block-title">Pastas do Google Drive — '+esc(officeLabel())+'</h3><p class="subtle">Pastas localizadas na origem. Somente empresas com CNPJ confirmado poderão ser cadastradas. Nenhum documento é publicado automaticamente.</p><button class="btn btn-line btn-small" data-do="catalog-refresh" '+(busy?"disabled":"")+'>Buscar / atualizar pastas do Drive</button>';
+ if(data.error)html+='<div class="notice" style="margin-top:12px">Consulta indisponível: '+esc(data.error)+'</div>';
+ if(data.loaded)html+='<p class="subtle" style="margin:14px 0">'+data.items.length+' pasta(s) localizadas · '+(data.items.length-unknown.length)+' cadastrada(s) · '+unknown.length+' aguardando CNPJ.</p>';
+ else html+='<p class="subtle" style="margin-top:14px">A consulta das pastas ainda não foi realizada.</p>';
+ for(const f of unknown){
+  html+='<div class="gav-drive-row"><div class="gav-drive-firm"><strong>'+esc(f.name)+'</strong><small>Pasta encontrada, CNPJ pendente, arquivos não liberados</small></div><details style="min-width:245px"><summary class="btn btn-line btn-small" style="cursor:pointer">Conferir e cadastrar</summary><form data-office-register="'+esc(f.id)+'" style="display:grid;gap:8px;margin-top:10px"><label class="subtle">Razão social confirmada<input name="legalName" class="input" required minlength="2" maxlength="180" placeholder="Razão social completa"></label><label class="subtle">CNPJ<input name="cnpj" class="input" required maxlength="18" inputmode="numeric" placeholder="00.000.000/0001-00"></label><button class="btn btn-dark btn-small" type="submit">Cadastrar e vincular pasta</button></form></details></div>';
+ }
+ html+='<p class="footnote">Pastas não cadastradas não são visíveis aos clientes. A associação só ocorrerá após conferência do CNPJ e confirmação administrativa.</p></div>';
+ return html;
 }
 function officesPage(){
  const cards=offices.map(o=>{
@@ -280,6 +304,7 @@ function drivePage(){
  ${currentOffice()?.code==="TTM"?`<p class="subtle">Somente nomes de pasta correspondentes exatamente aos cadastros serão vinculados. O histórico não é publicado automaticamente.</p><button class="btn btn-dark" data-do="ttm-expand" ${busy?"disabled":""}>Conferir e vincular pastas da TTM</button> <p class="subtle" style="margin-top:10px">A importação inicial será realizada pelo servidor, uma empresa por vez.</p>`:`<p class="subtle">As empresas deste escritório serão cadastradas e vinculadas à sua pasta própria, sem misturar arquivos com a carteira TTM.</p>`} <button class="btn btn-line" data-do="refresh-drive-status">Atualizar situação</button>
  </div>
  ${reportHtml}
+ ${folderCatalogHtml()}
  <div class="card card-pad" style="margin-top:16px"><div class="section-title">Empresas e sincronização</div>
  <div class="gav-drive-table">
  ${all.map(c=>{
@@ -401,12 +426,24 @@ function render(){
   refreshSelectionToolbar();
  });
  app.querySelector("#clientLogin")?.addEventListener("submit",loginClient);
+ app.querySelectorAll("form[data-office-register]").forEach(f=>f.addEventListener("submit",e=>{e.preventDefault();void registerOfficeFolder(f)}));
  app.querySelector("#officeSelect")?.addEventListener("change",e=>changeOffice(e.target.value));
  app.querySelector("#companySelect")?.addEventListener("change",e=>changeCompany(e.target.value));
  app.querySelector("#yearSelect")?.addEventListener("change",e=>{resetSelection();listPage=0;year=e.target.value;render()});
  app.querySelector("#monthSelect")?.addEventListener("change",e=>{resetSelection();listPage=0;month=e.target.value;render()});
  if(previewId)paintPreview();
  refreshSelectionToolbar();
+}
+async function registerOfficeFolder(form){
+ if(role!=="admin"||previewAsClient||!supportsOfficeCatalog())return;
+ const folderId=form.dataset.officeRegister,folder=folderLookup.items.find(x=>x.id===folderId&&!x.hasCnpj);
+ if(!folder)return;
+ const legalName=form.querySelector('[name="legalName"]')?.value.trim()||"",cnpj=form.querySelector('[name="cnpj"]')?.value.trim()||"";
+ if(!window.confirm("Confirma que "+folder.name+" pertence à empresa "+legalName+" (CNPJ "+cnpj+")? Nenhum arquivo será publicado automaticamente."))return;
+ await run(async()=>{
+  const result=await invoke("gav-office-catalog","register",{officeId,folderId,legalName,cnpj});
+  await bootstrap();selected=result.companyId;await loadDocs();await loadOfficeFolders();view="home";notice=result.notice;
+ });
 }
 async function changeOffice(id){
  if(role!=="admin"||!offices.some(o=>o.id===id))return;
@@ -415,7 +452,8 @@ async function changeOffice(id){
  try{sessionStorage.setItem("gav-selected-office",id)}catch(_e){}
  selected=officeCompanies()[0]?.id||"";
  view="home";cat="";year="ALL";month="ALL";
- await run(async()=>{await loadDocs()});
+ folderLookup={officeId:id,loaded:false,items:[],error:""};
+ await run(async()=>{await loadDocs();await loadOfficeFolders()});
 }
 async function changeCompany(id){
  if(role==="admin"&&!officeCompanies().some(c=>c.id===id)){
@@ -437,6 +475,7 @@ async function handle(e){
  if(a==="google"){await google();return}
  if(a==="logout"){try{sessionStorage.removeItem("gav-selected-office")}catch(_e){}resetSelection();pilotTestCredential=null;previewAsClient=false;clientDocs=[];clearPdfCache();await sb.auth.signOut();session=null;role="";googleToken="";notice="";render();return}
  if(a==="office-select"){await changeOffice(v);return}
+ if(a==="catalog-refresh"){if(role==="admin"&&!previewAsClient)await run(loadOfficeFolders);return}
  if(a==="pick"){await changeCompany(v);return}
  if(a==="release-history"){
   if(role!=="admin"||previewAsClient)return;
