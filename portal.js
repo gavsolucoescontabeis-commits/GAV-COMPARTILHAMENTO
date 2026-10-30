@@ -12,7 +12,10 @@ const M=["JANEIRO","FEVEREIRO","MARÇO","ABRIL","MAIO","JUNHO","JULHO","AGOSTO",
 const C=[["ADMISSOES","Admissões"],["RESCISOES","Rescisões"],["FERIAS","Férias"],["FOLHA","Folha de Pagamento"],["GUIAS_IMPOSTOS","Guias e Impostos"],["OUTROS","Outros Documentos"]];
 let role="",companies=[],docs=[],links=[],candidates=[],selected="",view="offices",cat="",year=2026,month="ALL",session=null,googleToken="",hasDriveSecret=false,notice="",busy=false;
 let previewAsClient=false,clientDocs=[],pilotTestCredential=null;
-let passwordChangeRequired=false,clientManaged=false,accessPanelOpen=false,accessPanelCompany="",accessStatus=null,clientCredential=null;
+let passwordChangeRequired=false,clientManaged=false,accessPanelOpen=false,accessPanelCompany="",accessStatus=null,clientCredential=null,clientInvite=null;
+const invitationHash=location.hash.match(/^#convite=([a-f0-9]{64})$/i);
+let activationToken=invitationHash?.[1]?.toLowerCase()||"",activationCompany=null;
+if(activationToken)history.replaceState(null,"",location.pathname+location.search);
 let syncRuns=[],mappingReport=null,offices=[],officeId="";
 let folderLookup={officeId:"",loaded:false,items:[],error:""};
 const initialCompetence=new Date();initialCompetence.setDate(1);initialCompetence.setMonth(initialCompetence.getMonth()-1);
@@ -55,6 +58,14 @@ async function invoke(fn,action,body={}){
  if(!r.ok)throw Error(j.error||"Falha no servidor.");return j;
 }
 const api=(action,body={})=>invoke("gav-portal-api",action,body);
+async function publicActivation(action,body={}){
+ const r=await fetch(ROOT+"/functions/v1/gav-client-activate",{
+  method:"POST",headers:{"Content-Type":"application/json",apikey:PUB},
+  body:JSON.stringify({action,...body})});
+ const j=await r.json().catch(()=>({error:"Serviço indisponível."}));
+ if(!r.ok)throw Error(j.error||"Não foi possível ativar o acesso.");
+ return j;
+}
 const run=async task=>{busy=true;notice="";render();try{await task()}catch(e){notice=e.message||"Não foi possível concluir."}busy=false;render()};
 async function loadDocs(){
  const company=selected;
@@ -124,13 +135,28 @@ async function bootstrap(){
  }catch(e){role="";notice=e.message||"Erro de autenticação.";render()}
 }
 const brand=()=>`<div class="logo-official"><img src="${logo}" alt="GAV Soluções Contábeis" onerror="this.style.display='none'"><span class="logo-text">GAV <small>SOLUÇÕES CONTÁBEIS</small></span></div>`;
+function invitationLogin(){
+ const message=notice?'<div class="error" style="display:block;margin-bottom:15px">'+esc(notice)+'</div>':"";
+ const form=activationCompany?
+   '<h2>Crie sua senha</h2><p class="subtle">Empresa identificada: <strong>'+esc(activationCompany.legalName)+'</strong></p><p class="subtle">CNPJ: '+esc(fmt(activationCompany.cnpj))+'</p>'+
+   '<form id="clientActivationPassword"><div class="form-field"><label for="activatePassword">Nova senha</label><input id="activatePassword" class="input" type="password" minlength="12" maxlength="128" autocomplete="new-password" required></div>'+
+   '<div class="form-field"><label for="activatePasswordRepeat">Confirme a senha</label><input id="activatePasswordRepeat" class="input" type="password" minlength="12" maxlength="128" autocomplete="new-password" required></div>'+
+   '<p class="subtle">Use pelo menos 12 caracteres, com letras e números.</p><button class="btn btn-dark login-action" type="submit" '+(busy?"disabled":"")+'>Criar minha senha e entrar</button></form>':
+   '<h2>Primeiro acesso</h2><p class="subtle">Informe o CNPJ da empresa para identificar seu cadastro e criar sua senha.</p>'+
+   '<form id="clientActivationIdentify"><div class="form-field"><label for="activateCnpj">CNPJ da empresa</label><input id="activateCnpj" class="input" placeholder="00.000.000/0000-00" inputmode="numeric" autocomplete="username" required></div>'+
+   '<button class="btn btn-dark login-action" type="submit" '+(busy?"disabled":"")+'>Identificar empresa</button></form>';
+ return '<div class="login-wrap"><section class="login-brand"><div>'+brand()+'</div><div><div class="gold-line"></div><div class="gav-lion-login"><img src="'+lion+'" alt="Símbolo GAV"></div><h1>Seus documentos.<br>Em um só lugar.</h1><p>Acesso individual e protegido para sua empresa.</p></div><span class="login-foot">Compromisso, organização e responsabilidade.</span></section>'+
+ '<section class="login-panel"><div class="eyebrow">GAV COMPARTILHAR DOCS · ATIVAÇÃO DE CLIENTE</div>'+message+form+
+ '<p class="subtle" style="font-size:12px;margin-top:25px">Este convite é individual e válido uma única vez. Não encaminhe a outras pessoas.</p></section></div>';
+}
 function login(){
- return `<div class="login-wrap"><section class="login-brand"><div>${brand()}</div><div><div class="gold-line"></div><div class="gav-lion-login"><img src="${lion}" alt="Símbolo GAV"></div><h1>Seus documentos.<br>Em um só lugar.</h1><p>Documentos originais organizados por empresa, competência e categoria, com acesso individual e protegido.</p></div><span class="login-foot">Compromisso, organização e responsabilidade.</span></section><section class="login-panel"><div class="eyebrow">GAV COMPARTILHAR DOCS · PORTAL SEGURO</div><h2>Bem-vindo!</h2><p class="subtle">Entre com o CNPJ e a senha fornecida pela GAV.</p><form id="clientLogin"><div class="form-field"><label for="cnpj">CNPJ da empresa</label><input id="cnpj" class="input" placeholder="00.000.000/0000-00" autocomplete="username" required></div><div class="form-field"><label for="pwd">Senha</label><input id="pwd" class="input" type="password" autocomplete="current-password" required></div><button class="btn btn-dark login-action" type="submit">Acessar documentos</button></form><div style="margin-top:24px;border-top:1px solid #e3e3e3;padding-top:20px"><div class="subtle" style="font-size:12px;margin-bottom:10px">Acesso da administração GAV</div><button class="btn btn-line" data-do="google" ${busy?"disabled":""}>Entrar com Google · Administrador</button></div><p class="subtle" style="font-size:11px;margin-top:22px">Sua empresa precisa estar autorizada. Utilize a senha provisória fornecida pela GAV e troque-a no primeiro acesso. Para recuperar a senha, solicite à GAV.</p></section></div>`;
+ if(activationToken)return invitationLogin();
+ return `<div class="login-wrap"><section class="login-brand"><div>${brand()}</div><div><div class="gold-line"></div><div class="gav-lion-login"><img src="${lion}" alt="Símbolo GAV"></div><h1>Seus documentos.<br>Em um só lugar.</h1><p>Documentos originais organizados por empresa, competência e categoria, com acesso individual e protegido.</p></div><span class="login-foot">Compromisso, organização e responsabilidade.</span></section><section class="login-panel"><div class="eyebrow">GAV COMPARTILHAR DOCS · PORTAL SEGURO</div><h2>Bem-vindo!</h2><p class="subtle">Entre com o CNPJ e a senha que você cadastrou.</p><form id="clientLogin"><div class="form-field"><label for="cnpj">CNPJ da empresa</label><input id="cnpj" class="input" placeholder="00.000.000/0000-00" autocomplete="username" required></div><div class="form-field"><label for="pwd">Senha</label><input id="pwd" class="input" type="password" autocomplete="current-password" required></div><button class="btn btn-dark login-action" type="submit">Acessar documentos</button></form><div style="margin-top:24px;border-top:1px solid #e3e3e3;padding-top:20px"><div class="subtle" style="font-size:12px;margin-bottom:10px">Acesso da administração GAV</div><button class="btn btn-line" data-do="google" ${busy?"disabled":""}>Entrar com Google · Administrador</button></div><p class="subtle" style="font-size:11px;margin-top:22px">Sua empresa precisa estar autorizada. No primeiro acesso, use o convite individual enviado pela GAV no WhatsApp. <button class="btn btn-line btn-small" data-do="activation-help" type="button">Primeiro acesso: criar minha senha</button> Para recuperar a senha, solicite à GAV.</p></section></div>`;
 }
 const nav=()=>adminView()?[["offices","Escritórios"],["home","Início"],["processing","Processamento"],["drive","Google Drive"]]:clientManaged?[["home","Início"],["security","Minha senha"]]:[["home","Início"]];
 function shell(){
  const firm=current(),navLinks=nav();
- return `<div class="shell gav-portal-shell"><aside class="side"><div class="side-top"><div class="side-logo">${brand()}</div></div><div class="side-caption">NAVEGAÇÃO</div>${navLinks.map(([id,name])=>`<button class="nav ${view===id?"active":""}" data-do="view" data-val="${id}">${esc(name)}</button>`).join("")}<div class="gav-lion-sidebar" aria-label="Símbolo da GAV Soluções Contábeis"><img src="${lion}" alt="Leão GAV"></div><div class="side-bottom"><div style="font-weight:800;margin-bottom:9px">${adminView()?"Administrador GAV":"Portal do cliente"}</div><div class="subtle" style="margin-bottom:14px">Conexão segura · v0.12.4</div><button class="nav" data-do="${previewAsClient?"exit-preview":"logout"}">${previewAsClient?"Voltar à GAV":"Sair da conta"}</button></div></aside><main class="app-main"><header class="topbar"><div><span class="mobile-brand">GAV <small>SOLUÇÕES CONTÁBEIS</small></span><div class="header-title">${adminView()?"Painel administrativo":"Portal de documentos"}</div><div class="header-desc">${esc(adminView()?(officeLabel()+(firm?" · "+firm.legal_name:"")):(firm?.legal_name||"GAV Soluções Contábeis"))}</div></div><div class="top-actions"><div class="avatar">${adminView()?"AD":"CL"}</div><button class="btn btn-line btn-small" data-do="${previewAsClient?"exit-preview":"logout"}">${previewAsClient?"Voltar à GAV":"Sair"}</button></div></header><div class="content">${previewAsClient?`<div class="gav-client-preview-banner"><div><strong>Prévia do cliente — ${esc(firm?.legal_name||"empresa")}</strong><p>Mostra somente arquivos liberados. Não é login real e não concede acesso a ninguém.</p></div><button class="btn btn-dark btn-small" data-do="exit-preview">Voltar à administração</button></div>`:""}${notice?`<div class="error" style="display:block;margin-bottom:18px">${esc(notice)}</div>`:""}${busy?`<div class="card card-pad" style="margin-bottom:18px">Processando sua solicitação…</div>`:""}${content()}</div></main><nav class="bottom-bar" aria-label="Navegação">${navLinks.map(([id,name])=>`<button class="bottom-nav ${view===id?"active":""}" data-do="view" data-val="${id}">${esc(name)}</button>`).join("")}</nav></div>`;
+ return `<div class="shell gav-portal-shell"><aside class="side"><div class="side-top"><div class="side-logo">${brand()}</div></div><div class="side-caption">NAVEGAÇÃO</div>${navLinks.map(([id,name])=>`<button class="nav ${view===id?"active":""}" data-do="view" data-val="${id}">${esc(name)}</button>`).join("")}<div class="gav-lion-sidebar" aria-label="Símbolo da GAV Soluções Contábeis"><img src="${lion}" alt="Leão GAV"></div><div class="side-bottom"><div style="font-weight:800;margin-bottom:9px">${adminView()?"Administrador GAV":"Portal do cliente"}</div><div class="subtle" style="margin-bottom:14px">Conexão segura · v0.12.5</div><button class="nav" data-do="${previewAsClient?"exit-preview":"logout"}">${previewAsClient?"Voltar à GAV":"Sair da conta"}</button></div></aside><main class="app-main"><header class="topbar"><div><span class="mobile-brand">GAV <small>SOLUÇÕES CONTÁBEIS</small></span><div class="header-title">${adminView()?"Painel administrativo":"Portal de documentos"}</div><div class="header-desc">${esc(adminView()?(officeLabel()+(firm?" · "+firm.legal_name:"")):(firm?.legal_name||"GAV Soluções Contábeis"))}</div></div><div class="top-actions"><div class="avatar">${adminView()?"AD":"CL"}</div><button class="btn btn-line btn-small" data-do="${previewAsClient?"exit-preview":"logout"}">${previewAsClient?"Voltar à GAV":"Sair"}</button></div></header><div class="content">${previewAsClient?`<div class="gav-client-preview-banner"><div><strong>Prévia do cliente — ${esc(firm?.legal_name||"empresa")}</strong><p>Mostra somente arquivos liberados. Não é login real e não concede acesso a ninguém.</p></div><button class="btn btn-dark btn-small" data-do="exit-preview">Voltar à administração</button></div>`:""}${notice?`<div class="error" style="display:block;margin-bottom:18px">${esc(notice)}</div>`:""}${busy?`<div class="card card-pad" style="margin-bottom:18px">Processando sua solicitação…</div>`:""}${content()}</div></main><nav class="bottom-bar" aria-label="Navegação">${navLinks.map(([id,name])=>`<button class="bottom-nav ${view===id?"active":""}" data-do="view" data-val="${id}">${esc(name)}</button>`).join("")}</nav></div>`;
 }
 const title=(name,sub)=>`<div class="page-head"><div><div class="eyebrow">CENTRAL DE DOCUMENTOS</div><h1>${esc(name)}</h1><p>${esc(sub)}</p></div></div>`;
 const officePicker=()=>adminView()?`<div class="form-field"><label for="officeSelect">Escritório</label><select id="officeSelect" class="input">${offices.map(o=>`<option value="${esc(o.id)}" ${o.id===officeId?"selected":""}>${esc(officeName(o))}</option>`).join("")}</select></div>`:"";
@@ -259,13 +285,17 @@ function clientPasswordHtml(){
 function clientAccessHtml(){
  if(!adminView()||!accessPanelOpen||accessPanelCompany!==selected)return "";
  const info=accessStatus;
- let out='<div class="card card-pad" style="margin:15px 0"><h3 class="block-title">Login do cliente</h3><p class="subtle">Somente acesso individual por CNPJ e senha. A GAV deve entregar a senha provisória ao responsável autorizado.</p>';
+ let out='<div class="card card-pad" style="margin:15px 0"><h3 class="block-title">Login do cliente</h3><p class="subtle">Para o primeiro acesso, envie um convite individual ao WhatsApp do responsável. O cliente informa o CNPJ e cria a própria senha.</p>';
  if(!info)return out+'<p class="subtle">Conferindo situação da conta...</p></div>';
  const status=!info.exists?"Ainda não criado":!info.active?"Suspenso":info.needsPasswordChange?"Aguardando troca da senha":"Ativo";
  out+='<div class="notice">CNPJ: <strong>'+esc(fmt(info.cnpj))+'</strong> · Situação: <strong>'+esc(status)+'</strong></div><div class="admin-actions" style="margin-top:14px">';
- out+='<button class="btn btn-dark" data-do="issue-client-access">'+(info.exists?"Renovar senha / reativar":"Gerar acesso do cliente")+'</button>';
+ if(!info.exists||info.needsPasswordChange)out+='<button class="btn btn-dark" data-do="issue-client-invite">Gerar convite para criar senha</button>';
+ out+='<button class="btn btn-line" data-do="issue-client-access">'+(info.exists?"Renovar senha provisória":"Senha provisória (alternativa)")+'</button>';
  if(info.active)out+='<button class="btn btn-line" data-do="disable-client-access">Suspender acesso</button>';
  out+='<button class="btn btn-line" data-do="close-client-access">Fechar</button></div>';
+ if(clientInvite?.companyId===selected){
+  out+='<div class="notice" style="margin-top:14px"><strong>Convite pronto para enviar por WhatsApp</strong><p>CNPJ: <strong>'+esc(fmt(clientInvite.cnpj))+'</strong></p><p><code style="user-select:all;overflow-wrap:anywhere">'+esc(clientInvite.inviteUrl)+'</code></p><p class="subtle">Link individual de uso único, válido por 7 dias. Compartilhe somente com o responsável pela empresa.</p><button class="btn btn-dark btn-small" data-do="copy-client-invite">Copiar mensagem e convite</button></div>';
+ }
  if(clientCredential?.companyId===selected){
   out+='<div class="notice" style="margin-top:14px"><strong>Dados para entregar ao cliente — exibição temporária</strong><p><b>CNPJ:</b> '+esc(fmt(clientCredential.cnpj))+'</p><p><b>Senha provisória:</b> <code style="user-select:all;font-weight:800;overflow-wrap:anywhere">'+esc(clientCredential.password)+'</code></p><p class="subtle">Copie agora. Não há envio automático. A senha provisória deverá ser trocada no primeiro acesso.</p><button class="btn btn-dark btn-small" data-do="copy-client-access">Copiar mensagem para envio privado</button></div>';
  }
@@ -481,6 +511,8 @@ function render(){
   refreshSelectionToolbar();
  });
  app.querySelector("#clientLogin")?.addEventListener("submit",loginClient);
+ app.querySelector("#clientActivationIdentify")?.addEventListener("submit",identifyActivation);
+ app.querySelector("#clientActivationPassword")?.addEventListener("submit",completeActivation);
  app.querySelector("#clientPasswordForm")?.addEventListener("submit",saveClientPassword);
  app.querySelector("#officeSelect")?.addEventListener("change",e=>changeOffice(e.target.value));
  app.querySelector("#processingMonthSelect")?.addEventListener("change",e=>{processingMonth=Number(e.target.value);void run(loadProcessing)});
@@ -532,8 +564,36 @@ async function saveClientPassword(e){
 }
 async function openClientAccess(){
  if(!adminView()||!selected)return;
- accessPanelOpen=true;accessPanelCompany=selected;accessStatus=null;clientCredential=null;
+ accessPanelOpen=true;accessPanelCompany=selected;accessStatus=null;clientCredential=null;clientInvite=null;
  await run(async()=>{accessStatus=await api("clientAccessStatus",{companyId:selected})});
+}
+async function identifyActivation(e){
+ e.preventDefault();
+ const id=cn(app.querySelector("#activateCnpj")?.value);
+ if(id.length!==14){notice="Informe o CNPJ completo, com 14 números.";render();return}
+ await run(async()=>{
+  const result=await publicActivation("inspect",{token:activationToken,cnpj:id});
+  activationCompany={cnpj:result.cnpj,legalName:result.legalName};
+ });
+}
+async function completeActivation(e){
+ e.preventDefault();
+ if(!activationToken||!activationCompany)return;
+ const password=app.querySelector("#activatePassword")?.value||"";
+ const repeat=app.querySelector("#activatePasswordRepeat")?.value||"";
+ if(password!==repeat){notice="As senhas informadas não conferem.";render();return}
+ if(password.length<12||password.length>128||!/[A-Za-z]/.test(password)||!/[0-9]/.test(password)){
+  notice="Use uma senha com pelo menos 12 caracteres, incluindo letras e números.";render();return;
+ }
+ const companyCnpj=activationCompany.cnpj;
+ await run(async()=>{
+  await publicActivation("activate",{token:activationToken,cnpj:companyCnpj,password});
+  activationToken="";activationCompany=null;
+  const {error}=await sb.auth.signInWithPassword({
+   email:"cliente-"+companyCnpj+"@acesso.gavsolucoescontabeis.com.br",password});
+  if(error){notice="Senha criada. Faça login com seu CNPJ e a senha que acabou de cadastrar.";return}
+  await bootstrap();
+ });
 }
 async function loginClient(e){e.preventDefault();const id=cn(app.querySelector("#cnpj")?.value),password=app.querySelector("#pwd")?.value;if(id.length!==14){notice="Informe um CNPJ com 14 números.";render();return}await run(async()=>{const {error}=await sb.auth.signInWithPassword({email:"cliente-"+id+"@acesso.gavsolucoescontabeis.com.br",password});if(error)throw Error("CNPJ ou senha inválidos.");await bootstrap()})}
 async function google(){const {error}=await sb.auth.signInWithOAuth({provider:"google",options:{redirectTo:location.origin+location.pathname,scopes:"https://www.googleapis.com/auth/drive.readonly",queryParams:{access_type:"offline",prompt:"consent"}}});if(error)showError(error)}
@@ -561,7 +621,23 @@ async function handle(e){
   });
   return;
  }
+ if(a==="activation-help"){notice="Para criar sua senha, abra o convite individual enviado pela GAV ao WhatsApp do responsável da empresa.";render();return}
  if(a==="client-access"){await openClientAccess();return}
+ if(a==="issue-client-invite"){
+  if(!adminView()||accessPanelCompany!==selected||!accessStatus)return;
+  if(!window.confirm("Gerar link individual de ativação para "+(current()?.legal_name||"empresa")+"?\n\nO convite anterior, se existir, será cancelado. Envie o novo link somente ao responsável pelo WhatsApp."))return;
+  await run(async()=>{
+   const response=await invoke("gav-client-invite","create",{companyId:selected});
+   clientInvite={...response,companyId:selected};clientCredential=null;
+  });return;
+ }
+ if(a==="copy-client-invite"){
+  if(!clientInvite||clientInvite.companyId!==selected)return;
+  const msg="GAV Soluções Contábeis — ative seu acesso aos documentos\n\nAbra o link individual abaixo, informe o CNPJ da empresa e crie sua senha.\n\n"+clientInvite.inviteUrl+"\n\nCNPJ: "+fmt(clientInvite.cnpj)+"\nEste convite é individual e válido por 7 dias. Não encaminhe.";
+  try{await navigator.clipboard.writeText(msg);toastMessage("Convite copiado. Envie somente ao responsável pelo WhatsApp.")}
+  catch(e){toastMessage("Não foi possível copiar automaticamente. Copie o link exibido acima.")}
+  return;
+ }
  if(a==="close-client-access"){accessPanelOpen=false;accessStatus=null;clientCredential=null;render();return}
  if(a==="issue-client-access"){
   if(!adminView()||accessPanelCompany!==selected||!accessStatus)return;
@@ -579,7 +655,7 @@ async function handle(e){
   if(!window.confirm("Suspender o login desta empresa? Documentos e cadastros serão preservados."))return;
   await run(async()=>{
    await api("disableClientAccess",{companyId:selected});
-   clientCredential=null;
+   clientCredential=null;clientInvite=null;
    accessStatus=await api("clientAccessStatus",{companyId:selected});
   });return;
  }
