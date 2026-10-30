@@ -134,7 +134,10 @@ Deno.serve(async req=>{
     val(await s.from("gav_documents").update({review_status:"REMOVIDO",published_at:null})
      .eq("company_id",company).in("id",removed.map((d:any)=>d.id)));
    }
-   val(await s.from("gav_sync_runs").update({state:"CONCLUIDO",indexed_count:count,finished_at:new Date().toISOString()}).eq("id",runs.id));
+   const finishedAt=new Date().toISOString();
+   val(await s.from("gav_drive_folders").update({last_synced_at:finishedAt,last_indexed_count:count})
+    .eq("id",link.id).eq("company_id",company));
+   val(await s.from("gav_sync_runs").update({state:"CONCLUIDO",indexed_count:count,finished_at:finishedAt}).eq("id",runs.id));
    return new Response(JSON.stringify({indexed:count,newFiles:added,removedFiles:removed.length,folders:seen.size,autoPublished}),{headers:{...cors,"content-type":"application/json"}});
   }catch(e:any){await s.from("gav_sync_runs").update({state:"FALHOU",error_safe:String(e.message).slice(0,150),finished_at:new Date().toISOString()}).eq("id",runs.id);throw e}
  }catch(e:any){return new Response(JSON.stringify({error:String(e.message||"Falha")}),{status:e.status||500,headers:{...cors,"content-type":"application/json"}})}
