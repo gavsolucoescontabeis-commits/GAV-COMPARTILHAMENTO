@@ -10,7 +10,7 @@ document.head.appendChild(portalLayoutStyle);
 const M=["JANEIRO","FEVEREIRO","MARÇO","ABRIL","MAIO","JUNHO","JULHO","AGOSTO","SETEMBRO","OUTUBRO","NOVEMBRO","DEZEMBRO","DÉCIMO TERCEIRO"];
 const C=[["ADMISSOES","Admissões"],["RESCISOES","Rescisões"],["FERIAS","Férias"],["FOLHA","Folha de Pagamento"],["GUIAS_IMPOSTOS","Guias e Impostos"],["OUTROS","Outros Documentos"]];
 let role="",companies=[],docs=[],links=[],candidates=[],selected="",view="home",cat="",year=2026,month="ALL",session=null,googleToken="",hasDriveSecret=false,notice="",busy=false;
-let previewAsClient=false,clientDocs=[];
+let previewAsClient=false,clientDocs=[],pilotTestCredential=null;
 const adminView=()=>role==="admin"&&!previewAsClient;
 const displayDocs=()=>previewAsClient?clientDocs:docs;
 let previewId="",previewLoading=false,downloadBusy="";
@@ -117,7 +117,7 @@ function files(items){
 }
 function home(){
  const firm=current(),items=displayDocs();
- return `${title("Meus documentos",adminView()?"Conferência dos arquivos da empresa selecionada":"Documentos liberados pela GAV para sua empresa.")}${picker()}${adminView()?`<div style="margin:12px 0 20px"><button class="btn btn-dark" data-do="client-preview">Ver como o cliente</button><p class="subtle" style="margin-top:9px">Novos arquivos são liberados automaticamente. Publicar serve para o histórico antigo ainda pendente; Revogar oculta um arquivo.</p></div>`:""}${firm?`<div class="hero"><div><small>ÁREA EXCLUSIVA DA EMPRESA</small><h2>${esc(firm.legal_name)}</h2><p>CNPJ ${esc(fmt(firm.cnpj))} · Documentos por competência e categoria.</p></div></div>`:""}<div class="stats"><div class="card stat"><span class="caption">Documentos cadastrados</span><strong>${items.length}</strong></div><div class="card stat"><span class="caption">Documentos liberados</span><strong>${items.filter(x=>x.published_at).length}</strong></div><div class="card stat"><span class="caption">Categorias com arquivos</span><strong>${new Set(items.map(x=>x.category)).size}</strong></div></div><div class="section-title">Categorias</div><div class="cat-grid">${C.map(([id,n])=>`<button class="category" data-do="cat" data-val="${id}"><span class="cat-name">${esc(n)}</span><span class="cat-count">${items.filter(d=>d.category===id).length} documento(s)</span></button>`).join("")}</div><div class="section-title">Documentos recentes</div><div class="card card-pad">${files(items.slice().sort(documentSort).slice(0,5))}</div>`;
+ return `${title("Meus documentos",adminView()?"Conferência dos arquivos da empresa selecionada":"Documentos liberados pela GAV para sua empresa.")}${picker()}${adminView()?`<div style="margin:12px 0 20px"><button class="btn btn-dark" data-do="client-preview">Ver como o cliente</button>${firm?.cnpj==="60955798000157"?` <button class="btn btn-line" data-do="create-pilot-test">Gerar login de teste da JM Rocha</button> <button class="btn btn-line" data-do="remove-pilot-test">Desativar login de teste</button>`:""}${pilotTestCredential&&firm?.cnpj==="60955798000157"?`<div class="card card-pad" style="margin-top:14px"><strong>Acesso de teste criado (não encaminhe ao cliente)</strong><p>CNPJ de acesso: <strong>${esc(pilotTestCredential.cnpj)}</strong></p><p>Senha de teste: <code style="user-select:all;overflow-wrap:anywhere">${esc(pilotTestCredential.password)}</code></p><p class="subtle">Para testar o login real sem sair da GAV, abra o portal em uma janela anônima e entre com o CNPJ e esta senha. Apenas os arquivos publicados ficarão visíveis.</p></div>`:""}<p class="subtle" style="margin-top:9px">Novos arquivos são liberados automaticamente. Publicar serve para o histórico antigo ainda pendente; Revogar oculta um arquivo.</p></div>`:""}${firm?`<div class="hero"><div><small>ÁREA EXCLUSIVA DA EMPRESA</small><h2>${esc(firm.legal_name)}</h2><p>CNPJ ${esc(fmt(firm.cnpj))} · Documentos por competência e categoria.</p></div></div>`:""}<div class="stats"><div class="card stat"><span class="caption">Documentos cadastrados</span><strong>${items.length}</strong></div><div class="card stat"><span class="caption">Documentos liberados</span><strong>${items.filter(x=>x.published_at).length}</strong></div><div class="card stat"><span class="caption">Categorias com arquivos</span><strong>${new Set(items.map(x=>x.category)).size}</strong></div></div><div class="section-title">Categorias</div><div class="cat-grid">${C.map(([id,n])=>`<button class="category" data-do="cat" data-val="${id}"><span class="cat-name">${esc(n)}</span><span class="cat-count">${items.filter(d=>d.category===id).length} documento(s)</span></button>`).join("")}</div><div class="section-title">Documentos recentes</div><div class="card card-pad">${files(items.slice().sort(documentSort).slice(0,5))}</div>`;
 }
 function recent(){
  const arr=filtered(),years=[...new Set(displayDocs().map(d=>d.year).filter(Boolean))].sort((a,b)=>b-a);
@@ -238,7 +238,7 @@ function render(){
  app.querySelector("#monthSelect")?.addEventListener("change",e=>{month=e.target.value;render()});
  if(previewId)paintPreview();
 }
-async function changeCompany(id){previewAsClient=false;clientDocs=[];clearPdfCache();selected=id;view="home";await run(async()=>{await loadDocs()})}
+async function changeCompany(id){pilotTestCredential=null;previewAsClient=false;clientDocs=[];clearPdfCache();selected=id;view="home";await run(async()=>{await loadDocs()})}
 async function loginClient(e){e.preventDefault();const id=cn(app.querySelector("#cnpj")?.value),password=app.querySelector("#pwd")?.value;if(id.length!==14){notice="Informe um CNPJ com 14 números.";render();return}await run(async()=>{const {error}=await sb.auth.signInWithPassword({email:"cliente-"+id+"@acesso.gavsolucoescontabeis.com.br",password});if(error)throw Error("CNPJ ou senha inválidos.");await bootstrap()})}
 async function google(){const {error}=await sb.auth.signInWithOAuth({provider:"google",options:{redirectTo:location.origin+location.pathname,scopes:"https://www.googleapis.com/auth/drive.readonly",queryParams:{access_type:"offline",prompt:"consent"}}});if(error)showError(error)}
 
@@ -248,7 +248,7 @@ async function handle(e){
  if(a==="back"){view="home";cat="";year="ALL";month="ALL";navigationHistory.length=0;render();return}
  if(a==="cat"){navigationHistory.push({view,cat,year,month});cat=v;view="category";year="ALL";month="ALL";render();return}
  if(a==="google"){await google();return}
- if(a==="logout"){previewAsClient=false;clientDocs=[];clearPdfCache();await sb.auth.signOut();session=null;role="";googleToken="";notice="";render();return}
+ if(a==="logout"){pilotTestCredential=null;previewAsClient=false;clientDocs=[];clearPdfCache();await sb.auth.signOut();session=null;role="";googleToken="";notice="";render();return}
  if(a==="pick"){await changeCompany(v);view="home";render();return}
  if(a==="client-preview"){
   if(role!=="admin"||previewAsClient)return;
@@ -257,6 +257,18 @@ async function handle(e){
    clearPdfCache();clientDocs=result.documents||[];previewAsClient=true;
    view="home";cat="";year="ALL";month="ALL";
   });
+  return;
+ }
+ if(a==="create-pilot-test"){
+  if(role!=="admin"||previewAsClient||current()?.cnpj!=="60955798000157")return;
+  if(!window.confirm("Criar ou renovar uma conta de TESTE da JM Rocha? Ela poderá acessar somente os documentos já publicados dessa empresa. Não compartilhe esta senha com o cliente."))return;
+  await run(async()=>{pilotTestCredential=await api("createPilotTestAccess",{companyId:selected})});
+  return;
+ }
+ if(a==="remove-pilot-test"){
+  if(role!=="admin"||previewAsClient||current()?.cnpj!=="60955798000157")return;
+  if(!window.confirm("Desativar e excluir a conta de teste da JM Rocha?"))return;
+  await run(async()=>{await api("removePilotTestAccess",{companyId:selected});pilotTestCredential=null;notice="Conta de teste desativada."});
   return;
  }
  if(a==="exit-preview"){
@@ -283,5 +295,5 @@ async function handle(e){
 }
 document.addEventListener("visibilitychange",()=>{if(!document.hidden)void syncPilot()});
 setInterval(()=>{if(!document.hidden)void syncPilot()},15*60*1000);
-sb.auth.onAuthStateChange((event,s)=>{if(event==="TOKEN_REFRESHED"&&s)session=s;if(event==="SIGNED_OUT"){previewAsClient=false;clientDocs=[];clearPdfCache();role="";session=null;render()}});
+sb.auth.onAuthStateChange((event,s)=>{if(event==="TOKEN_REFRESHED"&&s)session=s;if(event==="SIGNED_OUT"){pilotTestCredential=null;previewAsClient=false;clientDocs=[];clearPdfCache();role="";session=null;render()}});
 await bootstrap();
