@@ -11,6 +11,7 @@ const M=["JANEIRO","FEVEREIRO","MARÇO","ABRIL","MAIO","JUNHO","JULHO","AGOSTO",
 const C=[["ADMISSOES","Admissões"],["RESCISOES","Rescisões"],["FERIAS","Férias"],["FOLHA","Folha de Pagamento"],["GUIAS_IMPOSTOS","Guias e Impostos"],["OUTROS","Outros Documentos"]];
 let role="",companies=[],docs=[],links=[],candidates=[],selected="",view="offices",cat="",year=2026,month="ALL",session=null,googleToken="",hasDriveSecret=false,notice="",busy=false;
 let previewAsClient=false,clientDocs=[],pilotTestCredential=null;
+let passwordChangeRequired=false,clientManaged=false,accessPanelOpen=false,accessPanelCompany="",accessStatus=null,clientCredential=null;
 let syncRuns=[],mappingReport=null,offices=[],officeId="";
 let folderLookup={officeId:"",loaded:false,items:[],error:""};
 try{officeId=sessionStorage.getItem("gav-selected-office")||""}catch(_e){}
@@ -98,7 +99,7 @@ async function bootstrap(){
  if(!session){role="";render();return}
  if(session.provider_token)googleToken=session.provider_token;
  try{
-  const me=await api("me");role=me.role;companies=me.companies||[];offices=role==="admin"?(me.offices||[]).sort((a,b)=>(officeSort[a.code]??99)-(officeSort[b.code]??99)):[];links=me.linked||[];candidates=me.candidate||[];syncRuns=me.sync||[];hasDriveSecret=me.driveSecretsConfigured;
+  const me=await api("me");role=me.role;passwordChangeRequired=!!me.passwordChangeRequired;clientManaged=!!me.clientManaged;companies=me.companies||[];offices=role==="admin"?(me.offices||[]).sort((a,b)=>(officeSort[a.code]??99)-(officeSort[b.code]??99)):[];links=me.linked||[];candidates=me.candidate||[];syncRuns=me.sync||[];hasDriveSecret=me.driveSecretsConfigured;
   if(role==="admin"){
    if(!offices.some(o=>o.id===officeId)){
     officeId=offices.find(o=>o.code==="TTM")?.id||offices[0]?.id||"";
@@ -113,18 +114,19 @@ async function bootstrap(){
   if(role==="admin"&&session.provider_refresh_token){
    try{await api("connectDrive",{refreshToken:session.provider_refresh_token})}catch(e){notice="Autenticação concluída, mas não foi possível guardar o acesso offline do Drive: "+e.message}
   }
-  await loadDocs();render();
+  if(passwordChangeRequired){docs=[];view="home"}else await loadDocs();
+  render();
   if(role==="admin")void syncPilot();
  }catch(e){role="";notice=e.message||"Erro de autenticação.";render()}
 }
 const brand=()=>`<div class="logo-official"><img src="${logo}" alt="GAV Soluções Contábeis" onerror="this.style.display='none'"><span class="logo-text">GAV <small>SOLUÇÕES CONTÁBEIS</small></span></div>`;
 function login(){
- return `<div class="login-wrap"><section class="login-brand"><div>${brand()}</div><div><div class="gold-line"></div><div class="gav-lion-login"><img src="${lion}" alt="Símbolo GAV"></div><h1>Seus documentos.<br>Em um só lugar.</h1><p>Documentos originais organizados por empresa, competência e categoria, com acesso individual e protegido.</p></div><span class="login-foot">Compromisso, organização e responsabilidade.</span></section><section class="login-panel"><div class="eyebrow">GAV COMPARTILHAR DOCS · PORTAL SEGURO</div><h2>Bem-vindo!</h2><p class="subtle">Entre com o CNPJ e a senha fornecida pela GAV.</p><form id="clientLogin"><div class="form-field"><label for="cnpj">CNPJ da empresa</label><input id="cnpj" class="input" placeholder="00.000.000/0000-00" autocomplete="username" required></div><div class="form-field"><label for="pwd">Senha</label><input id="pwd" class="input" type="password" autocomplete="current-password" required></div><button class="btn btn-dark login-action" type="submit">Acessar documentos</button></form><div style="margin-top:24px;border-top:1px solid #e3e3e3;padding-top:20px"><div class="subtle" style="font-size:12px;margin-bottom:10px">Acesso da administração GAV</div><button class="btn btn-line" data-do="google" ${busy?"disabled":""}>Entrar com Google · Administrador</button></div><p class="subtle" style="font-size:11px;margin-top:22px">Sua conta precisa estar previamente autorizada pela GAV. Não existe cadastro público.</p></section></div>`;
+ return `<div class="login-wrap"><section class="login-brand"><div>${brand()}</div><div><div class="gold-line"></div><div class="gav-lion-login"><img src="${lion}" alt="Símbolo GAV"></div><h1>Seus documentos.<br>Em um só lugar.</h1><p>Documentos originais organizados por empresa, competência e categoria, com acesso individual e protegido.</p></div><span class="login-foot">Compromisso, organização e responsabilidade.</span></section><section class="login-panel"><div class="eyebrow">GAV COMPARTILHAR DOCS · PORTAL SEGURO</div><h2>Bem-vindo!</h2><p class="subtle">Entre com o CNPJ e a senha fornecida pela GAV.</p><form id="clientLogin"><div class="form-field"><label for="cnpj">CNPJ da empresa</label><input id="cnpj" class="input" placeholder="00.000.000/0000-00" autocomplete="username" required></div><div class="form-field"><label for="pwd">Senha</label><input id="pwd" class="input" type="password" autocomplete="current-password" required></div><button class="btn btn-dark login-action" type="submit">Acessar documentos</button></form><div style="margin-top:24px;border-top:1px solid #e3e3e3;padding-top:20px"><div class="subtle" style="font-size:12px;margin-bottom:10px">Acesso da administração GAV</div><button class="btn btn-line" data-do="google" ${busy?"disabled":""}>Entrar com Google · Administrador</button></div><p class="subtle" style="font-size:11px;margin-top:22px">Sua empresa precisa estar autorizada. Utilize a senha provisória fornecida pela GAV e troque-a no primeiro acesso. Para recuperar a senha, solicite à GAV.</p></section></div>`;
 }
-const nav=()=>adminView()?[["offices","Escritórios"],["home","Início"],["drive","Google Drive"]]:[["home","Início"]];
+const nav=()=>adminView()?[["offices","Escritórios"],["home","Início"],["drive","Google Drive"]]:clientManaged?[["home","Início"],["security","Minha senha"]]:[["home","Início"]];
 function shell(){
  const firm=current(),navLinks=nav();
- return `<div class="shell gav-portal-shell"><aside class="side"><div class="side-top"><div class="side-logo">${brand()}</div></div><div class="side-caption">NAVEGAÇÃO</div>${navLinks.map(([id,name])=>`<button class="nav ${view===id?"active":""}" data-do="view" data-val="${id}">${esc(name)}</button>`).join("")}<div class="gav-lion-sidebar" aria-label="Símbolo da GAV Soluções Contábeis"><img src="${lion}" alt="Leão GAV"></div><div class="side-bottom"><div style="font-weight:800;margin-bottom:9px">${adminView()?"Administrador GAV":"Portal do cliente"}</div><div class="subtle" style="margin-bottom:14px">Conexão segura · v0.10.4</div><button class="nav" data-do="${previewAsClient?"exit-preview":"logout"}">${previewAsClient?"Voltar à GAV":"Sair da conta"}</button></div></aside><main class="app-main"><header class="topbar"><div><span class="mobile-brand">GAV <small>SOLUÇÕES CONTÁBEIS</small></span><div class="header-title">${adminView()?"Painel administrativo":"Portal de documentos"}</div><div class="header-desc">${esc(adminView()?(officeLabel()+(firm?" · "+firm.legal_name:"")):(firm?.legal_name||"GAV Soluções Contábeis"))}</div></div><div class="top-actions"><div class="avatar">${adminView()?"AD":"CL"}</div><button class="btn btn-line btn-small" data-do="${previewAsClient?"exit-preview":"logout"}">${previewAsClient?"Voltar à GAV":"Sair"}</button></div></header><div class="content">${previewAsClient?`<div class="gav-client-preview-banner"><div><strong>Prévia do cliente — ${esc(firm?.legal_name||"empresa")}</strong><p>Mostra somente arquivos liberados. Não é login real e não concede acesso a ninguém.</p></div><button class="btn btn-dark btn-small" data-do="exit-preview">Voltar à administração</button></div>`:""}${notice?`<div class="error" style="display:block;margin-bottom:18px">${esc(notice)}</div>`:""}${busy?`<div class="card card-pad" style="margin-bottom:18px">Processando sua solicitação…</div>`:""}${content()}</div></main><nav class="bottom-bar" aria-label="Navegação">${navLinks.map(([id,name])=>`<button class="bottom-nav ${view===id?"active":""}" data-do="view" data-val="${id}">${esc(name)}</button>`).join("")}</nav></div>`;
+ return `<div class="shell gav-portal-shell"><aside class="side"><div class="side-top"><div class="side-logo">${brand()}</div></div><div class="side-caption">NAVEGAÇÃO</div>${navLinks.map(([id,name])=>`<button class="nav ${view===id?"active":""}" data-do="view" data-val="${id}">${esc(name)}</button>`).join("")}<div class="gav-lion-sidebar" aria-label="Símbolo da GAV Soluções Contábeis"><img src="${lion}" alt="Leão GAV"></div><div class="side-bottom"><div style="font-weight:800;margin-bottom:9px">${adminView()?"Administrador GAV":"Portal do cliente"}</div><div class="subtle" style="margin-bottom:14px">Conexão segura · v0.11.0</div><button class="nav" data-do="${previewAsClient?"exit-preview":"logout"}">${previewAsClient?"Voltar à GAV":"Sair da conta"}</button></div></aside><main class="app-main"><header class="topbar"><div><span class="mobile-brand">GAV <small>SOLUÇÕES CONTÁBEIS</small></span><div class="header-title">${adminView()?"Painel administrativo":"Portal de documentos"}</div><div class="header-desc">${esc(adminView()?(officeLabel()+(firm?" · "+firm.legal_name:"")):(firm?.legal_name||"GAV Soluções Contábeis"))}</div></div><div class="top-actions"><div class="avatar">${adminView()?"AD":"CL"}</div><button class="btn btn-line btn-small" data-do="${previewAsClient?"exit-preview":"logout"}">${previewAsClient?"Voltar à GAV":"Sair"}</button></div></header><div class="content">${previewAsClient?`<div class="gav-client-preview-banner"><div><strong>Prévia do cliente — ${esc(firm?.legal_name||"empresa")}</strong><p>Mostra somente arquivos liberados. Não é login real e não concede acesso a ninguém.</p></div><button class="btn btn-dark btn-small" data-do="exit-preview">Voltar à administração</button></div>`:""}${notice?`<div class="error" style="display:block;margin-bottom:18px">${esc(notice)}</div>`:""}${busy?`<div class="card card-pad" style="margin-bottom:18px">Processando sua solicitação…</div>`:""}${content()}</div></main><nav class="bottom-bar" aria-label="Navegação">${navLinks.map(([id,name])=>`<button class="bottom-nav ${view===id?"active":""}" data-do="view" data-val="${id}">${esc(name)}</button>`).join("")}</nav></div>`;
 }
 const title=(name,sub)=>`<div class="page-head"><div><div class="eyebrow">CENTRAL DE DOCUMENTOS</div><h1>${esc(name)}</h1><p>${esc(sub)}</p></div></div>`;
 const officePicker=()=>adminView()?`<div class="form-field"><label for="officeSelect">Escritório</label><select id="officeSelect" class="input">${offices.map(o=>`<option value="${esc(o.id)}" ${o.id===officeId?"selected":""}>${esc(officeName(o))}</option>`).join("")}</select></div>`:"";
@@ -246,6 +248,10 @@ function files(items){
   return `<div class="gav-doc-row"><label class="gav-doc-checkbox" title="Selecionar para baixar"><input type="checkbox" data-check-id="${esc(d.id)}" aria-label="Selecionar ${esc(d.file_name)}" ${checkedDocs.has(d.id)?"checked":""} ${bulkDownloading?"disabled":""}></label><span class="gav-doc-file" aria-hidden="true">${kind}</span><div class="gav-doc-main"><strong class="gav-doc-name">${esc(d.file_name)}</strong><span class="gav-doc-detail">${esc(date)}${status}</span></div><div class="gav-doc-actions"><button class="btn btn-line btn-small gav-btn-preview" data-do="pdf" data-val="${esc(d.id)}" aria-label="Visualizar ${esc(d.file_name)}">Visualizar</button><button class="btn btn-dark btn-small gav-btn-download" data-do="download" data-val="${esc(d.id)}" aria-label="Baixar ${esc(d.file_name)}">Baixar</button>${adminView()?`<button class="btn btn-line btn-small" data-do="publish" data-val="${esc(d.id)}">${d.published_at?"Revogar":"Publicar"}</button>`:""}</div></div>`;
  }).join("")}</div>`;
 }
+function clientPasswordHtml(){
+ return title(passwordChangeRequired?"Primeiro acesso — defina sua senha":"Minha senha",passwordChangeRequired?"Antes de acessar os documentos, cadastre sua senha definitiva.":"Altere sua senha quando precisar.")
+ +'<div class="card card-pad" style="max-width:530px"><p class="subtle">A senha deve ter ao menos 12 caracteres, incluindo letras e números.</p><form id="clientPasswordForm"><div class="form-field"><label for="newClientPass">Nova senha</label><input id="newClientPass" class="input" type="password" minlength="12" maxlength="128" autocomplete="new-password" required></div><div class="form-field"><label for="repeatClientPass">Confirme a senha</label><input id="repeatClientPass" class="input" type="password" minlength="12" maxlength="128" autocomplete="new-password" required></div><button class="btn btn-dark login-action" type="submit">Salvar minha senha</button></form></div>';
+}
 function home(){
  const firm=current(),items=displayDocs();
  if(adminView()&&!firm)return `${title("Início — "+officeLabel(),"Empresas e pastas do escritório selecionado.")}${picker()}<div class="card card-pad" style="margin-top:20px"><div class="empty">Nenhuma empresa com CNPJ cadastrado. Confira as pastas encontradas para vincular somente empresas autorizadas.</div></div>${folderCatalogHtml()}`;
@@ -317,7 +323,7 @@ function drivePage(){
  }).join("")}
  </div></div>`;
 }
-function content(){if(!companies.length)return title("Sem empresas autorizadas","O acesso está ativo, mas não há vínculo de empresa. Solicite liberação à GAV.");if(view==="offices"&&adminView())return officesPage();if(view==="companies"&&adminView())return companiesPage();if(view==="drive"&&adminView())return drivePage();if(view==="recent"||view==="category")return recent();return home()}
+function content(){if(clientManaged&&(passwordChangeRequired||view==="security"))return clientPasswordHtml();if(!companies.length)return title("Sem empresas autorizadas","O acesso está ativo, mas não há vínculo de empresa. Solicite liberação à GAV.");if(view==="offices"&&adminView())return officesPage();if(view==="companies"&&adminView())return companiesPage();if(view==="drive"&&adminView())return drivePage();if(view==="recent"||view==="category")return recent();return home()}
 function toastMessage(message){
  document.querySelectorAll(".gav-toast").forEach(e=>e.remove());
  const node=document.createElement("div");
@@ -427,6 +433,7 @@ function render(){
   refreshSelectionToolbar();
  });
  app.querySelector("#clientLogin")?.addEventListener("submit",loginClient);
+ app.querySelector("#clientPasswordForm")?.addEventListener("submit",saveClientPassword);
  app.querySelector("#officeSelect")?.addEventListener("change",e=>changeOffice(e.target.value));
  app.querySelector("#companySelect")?.addEventListener("change",e=>changeCompany(e.target.value));
  app.querySelector("#yearSelect")?.addEventListener("change",e=>{resetSelection();listPage=0;year=e.target.value;render()});
@@ -452,6 +459,20 @@ async function changeCompany(id){
  resetSelection();listPage=0;pilotTestCredential=null;previewAsClient=false;clientDocs=[];clearPdfCache();
  selected=id;view="home";cat="";year="ALL";month="ALL";
  await run(async()=>{await loadDocs()});
+}
+async function saveClientPassword(e){
+ e.preventDefault();
+ const p=app.querySelector("#newClientPass")?.value||"",confirmPass=app.querySelector("#repeatClientPass")?.value||"";
+ if(p!==confirmPass){toastMessage("As senhas informadas não são iguais.");return}
+ if(p.length<12||!/[a-zA-Z]/.test(p)||!/[0-9]/.test(p)){toastMessage("Use pelo menos 12 caracteres, com letras e números.");return}
+ await run(async()=>{
+  await api("changeClientPassword",{password:p});
+  const r=await sb.auth.refreshSession();
+  if(r.error)throw Error("Senha alterada. Saia e entre novamente usando a senha nova.");
+  passwordChangeRequired=false;view="home";
+  await bootstrap();
+  toastMessage("Senha atualizada com sucesso.");
+ });
 }
 async function loginClient(e){e.preventDefault();const id=cn(app.querySelector("#cnpj")?.value),password=app.querySelector("#pwd")?.value;if(id.length!==14){notice="Informe um CNPJ com 14 números.";render();return}await run(async()=>{const {error}=await sb.auth.signInWithPassword({email:"cliente-"+id+"@acesso.gavsolucoescontabeis.com.br",password});if(error)throw Error("CNPJ ou senha inválidos.");await bootstrap()})}
 async function google(){const {error}=await sb.auth.signInWithOAuth({provider:"google",options:{redirectTo:location.origin+location.pathname,scopes:"https://www.googleapis.com/auth/drive.readonly",queryParams:{access_type:"offline",prompt:"consent"}}});if(error)showError(error)}
