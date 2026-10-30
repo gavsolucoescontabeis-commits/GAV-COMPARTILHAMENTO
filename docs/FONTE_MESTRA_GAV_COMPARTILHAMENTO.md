@@ -181,3 +181,17 @@ Os relatórios terão quadradinhos individuais, **Marcar todos** dos arquivos da
 Os testes de login CNPJ/senha são preparados por empresa: somente um administrador pode criar um usuário **temporário** com senha forte, verificar a visão do cliente, e depois desativá-lo. Nenhum cliente recebe acesso externo automaticamente. **Ver como o cliente** continua alternativa de prévia sem criar conta. As carteiras DS CONTÁBIL, REL GAV e AVULSOS continuam isoladas e carecem de cadastro/revisão antes de importar.
 
 Regra contínua: preservar os módulos aprovados, a barra lateral fixa, a marca GAV/leão, publicação automática somente quando a pasta está autorizada, e bloqueios manuais persistentes. Continuar diretamente no GitHub/Supabase sem gerar ZIP de instalação.
+
+---
+
+## Aditivo 30/10/2026 — ZIP direto e divisão de escritórios (v0.10.2)
+
+**ZIP direto:** ao escolher documentos para baixar, o ZIP deve abrir com os PDFs/imagens diretamente na raiz, sem árvore de pastas do tipo Folha de Pagamento → ano → mês. O cliente já sabe o que escolheu por categoria e competência. Nomes iguais devem ser preservados por sufixos numéricos como `DARF (2).pdf`, sem perda de extensão, mantendo limites anteriores de volume, arquivos originais e autorização a cada download.
+
+**Hierarquia administrativa:** a GAV administra diversas carteiras e precisa separar **Escritório → Empresa → Documentos**. Quatro escritórios já cadastrados no Supabase: TTM, DS CONTÁBIL, REL GAV, AVULSOS. TTM possui 18 empresas atualmente; os demais ainda precisam de cadastro e vinculação. O painel ganha tela de **Escritórios**, filtro de escritório e seleção de empresa limitada ao escritório escolhido. A tela de Google Drive e a relação de empresas também respeitam o escritório atual. Não mostrar empresa de outro escritório durante a seleção e não preencher a tela de um escritório vazio com documentos da carteira anterior.
+
+**Acesso dos clientes:** não introduzir escolha de escritórios para o cliente final; ele deve visualizar exclusivamente sua empresa por CNPJ e senha. A API envia os dados de escritórios somente ao administrador autenticado. O filtro da UI não substitui as regras de autorização do servidor. Não misturar escritórios nem alterar vínculo de CNPJ automaticamente. A função de vinculação de pastas TTM é usada somente na TTM.
+
+**Identidade e estabilidade:** manter barra preta fixa, marca/leão GAV, downloads individuais e múltiplos, publicação automática de arquivos novos somente nas pastas previamente aprovadas e Revogar persistente. Não regressar a versões antigas da interface.
+
+Estado: v0.10.2 foi publicado no GitHub e o endpoint administrativo de escritórios atualizado. Sintaxe de JavaScript e testes isolados de nomes ZIP e cartões de escritório aprovados; comportamento em navegador real ainda não foi validado nesta etapa.
