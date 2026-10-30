@@ -55,18 +55,25 @@ Deno.serve(async req=>{
   }
   if(action==="documents"){
    companyOnly();
-   let q=supa.from("gav_documents").select("id,company_id,file_name,mime_type,relative_path,category,year,month,review_status,published_at").eq("company_id",companyId).neq("review_status","REMOVIDO").order("file_name");
+   const page=Number(b.page||0);
+   if(!Number.isInteger(page)||page<0||page>40)error("Página inválida.",400);
+   let q=supa.from("gav_documents").select("id,company_id,file_name,mime_type,relative_path,category,year,month,review_status,published_at")
+    .eq("company_id",companyId).neq("review_status","REMOVIDO").order("file_name").order("id");
    if(!isAdmin)q=q.eq("review_status","APROVADO").not("published_at","is",null);
-   return reply({documents:check(await q.limit(1000))});
+   const rows=check(await q.range(page*500,page*500+499));
+   return reply({documents:rows,hasMore:rows.length===500,page});
   }
   if(action==="clientPreview"){
    adminOnly();
    const company=check(await supa.from("gav_companies").select("id,is_active").eq("id",companyId).eq("is_active",true).maybeSingle());
    if(!company)error("Empresa não encontrada ou inativa.",404);
+   const page=Number(b.page||0);
+   if(!Number.isInteger(page)||page<0||page>40)error("Página inválida.",400);
    const documents=check(await supa.from("gav_documents")
      .select("id,company_id,file_name,mime_type,relative_path,category,year,month,review_status,published_at")
-     .eq("company_id",companyId).eq("review_status","APROVADO").not("published_at","is",null).order("file_name").limit(1000));
-   return reply({documents,preview:true});
+     .eq("company_id",companyId).eq("review_status","APROVADO")
+     .not("published_at","is",null).order("file_name").order("id").range(page*500,page*500+499));
+   return reply({documents,preview:true,hasMore:documents.length===500,page});
   }
   if(action==="createPilotTestAccess"||action==="removePilotTestAccess"){
    adminOnly();
