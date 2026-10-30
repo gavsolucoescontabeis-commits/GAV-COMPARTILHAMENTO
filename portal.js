@@ -80,6 +80,37 @@ function shell(){
 const title=(name,sub)=>`<div class="page-head"><div><div class="eyebrow">CENTRAL DE DOCUMENTOS</div><h1>${esc(name)}</h1><p>${esc(sub)}</p></div></div>`;
 const picker=()=>adminView()?`<div class="form-field" style="max-width:460px"><label>Empresa selecionada</label><select id="companySelect" class="input">${companies.map(c=>`<option value="${c.id}" ${c.id===selected?"selected":""}>${esc((c.code||"")+" · "+c.legal_name)}</option>`).join("")}</select></div>`:"";
 const filtered=()=>displayDocs().filter(d=>(year==="ALL"||d.year===Number(year))&&(month==="ALL"||d.month===Number(month))&&(view!=="category"||d.category===cat));
+
+const checkedDocs=new Set();
+let bulkDownloading=false,bulkProgress="";
+function visibleSelectionDocs(){
+ if(view==="category"||view==="recent")return filtered();
+ if(view==="home")return displayDocs().slice().sort(documentSort).slice(0,5);
+ return [];
+}
+function resetSelection(){checkedDocs.clear();bulkProgress="";}
+function selectionBar(items){
+ const count=items.filter(d=>checkedDocs.has(d.id)).length;
+ const all=items.length>0&&count===items.length;
+ return '<div class="gav-bulk-toolbar" role="group" aria-label="Download de varios documentos">'
+  +'<label class="gav-select-all-label"><input type="checkbox" data-check-all '+(all?'checked ':'')+(!items.length||bulkDownloading?'disabled ':'')+'> Marcar todos ('+items.length+')</label>'
+  +'<span class="gav-select-count" id="gavSelectionCount">'+count+' selecionado(s)</span>'
+  +'<button class="btn btn-dark btn-small" data-do="bulk-download" id="gavDownloadSelected" '+(!count||bulkDownloading?'disabled':'')+'>'+(bulkDownloading?esc(bulkProgress||"Preparando ZIP..."):"Baixar selecionados")+'</button>'
+  +'</div>';
+}
+function refreshSelectionToolbar(){
+ const eligible=visibleSelectionDocs();
+ const count=eligible.filter(d=>checkedDocs.has(d.id)).length;
+ const all=document.querySelector("[data-check-all]");
+ if(all){all.checked=eligible.length>0&&count===eligible.length;all.indeterminate=count>0&&count<eligible.length;}
+ const label=document.getElementById("gavSelectionCount");if(label)label.textContent=count+" selecionado(s)";
+ const btn=document.getElementById("gavDownloadSelected");
+ if(btn){btn.disabled=!count||bulkDownloading;btn.textContent=bulkDownloading?(bulkProgress||"Preparando ZIP..."):"Baixar selecionados";}
+}
+function sanitizeZipName(name){
+ return (String(name||"documento").replace(/[\\/:*?"<>|\x00-\x1f]/g,"_").replace(/^\.+/,"_").trim().slice(0,160)||"documento");
+}
+
 function periodLabel(d){
  if(d.year&&d.month&&M[d.month-1])return M[d.month-1]+"/"+d.year;
  if(d.year)return "DOCUMENTOS DE "+d.year+" · SEM MÊS DEFINIDO";
