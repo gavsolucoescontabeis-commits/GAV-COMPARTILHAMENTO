@@ -257,13 +257,13 @@ function companiesPage(){
  return `${title("Empresas — "+officeLabel(),"Escolha uma empresa deste escritório para consultar seus documentos.")}${picker()}<div class="card card-pad" style="margin-top:18px">${list.length?`<div class="file-list">${list.map(c=>`<div class="file-row"><div class="file-expand"><b>${esc((c.code||"")+" · "+c.legal_name)}</b><small class="file-meta">CNPJ ${esc(fmt(c.cnpj))} · ${links.some(l=>l.company_id===c.id&&l.is_active)?"Pasta vinculada":"Pasta ainda não vinculada"}</small></div><button class="btn btn-line btn-small" data-do="pick" data-val="${esc(c.id)}">Abrir empresa</button></div>`).join("")}</div>`:`<div class="empty">Ainda não há empresas cadastradas em ${esc(officeLabel())}. <button class="btn btn-line btn-small" data-do="view" data-val="offices">Trocar escritório</button></div>`}</div><p class="footnote">As empresas de outros escritórios não aparecem nesta relação. O cliente também não visualiza a lista administrativa.</p>`;
 }
 function drivePage(){
- const all=companies.filter(c=>c.is_active),linked=all.filter(c=>links.some(l=>l.company_id===c.id&&l.is_active));
+ const all=officeCompanies().filter(c=>c.is_active),linked=all.filter(c=>links.some(l=>l.company_id===c.id&&l.is_active));
  const completed=all.filter(c=>links.some(l=>l.company_id===c.id&&l.last_synced_at));
- const report=mappingReport;
+ const report=currentOffice()?.code==="TTM"?mappingReport:null;
  const reportHtml=report?'<div class="card card-pad" style="margin:16px 0"><strong>Conferência das pastas TTM</strong><p class="subtle">'
    +report.linked+' novas pastas vinculadas; '+report.already+' já estavam vinculadas.</p>'
    +(report.summary||[]).map(r=>'<div class="gav-drive-row"><span>'+esc(r.code+' · '+r.name)+'</span><small>'+esc(r.status.replaceAll("_"," "))+'</small></div>').join("")+'</div>':"";
- return `${title("Google Drive","Pastas verificadas por empresa, com importação segura e arquivos novos automáticos após revisão.")}
+ return `${title("Google Drive — "+officeLabel(),"Pastas verificadas por empresa, com importação segura e arquivos novos automáticos após revisão.")}${officePicker()}
  <div class="card card-pad">
  <div class="section-title">Conexão Google Drive</div>
  <p>Os documentos continuam nas pastas originais. O servidor consulta apenas empresas autorizadas.</p>
@@ -271,11 +271,9 @@ function drivePage(){
  <p class="subtle" style="margin-top:10px">Credenciais: ${hasDriveSecret?"configuradas":"pendentes"}. ${esc(autoSyncLastResult)}</p>
  </div>
  <div class="card card-pad" style="margin-top:16px">
- <div class="section-title">Carteira TTM</div>
+ <div class="section-title">Carteira ${esc(officeLabel())}</div>
  <p><strong>${all.length} empresas cadastradas</strong> · ${linked.length} com pasta vinculada · ${completed.length} com sincronização concluída.</p>
- <p class="subtle">Somente nomes de pasta correspondentes exatamente aos cadastros serão vinculados. Os documentos antigos ficam sem publicação até a conferência.</p>
- <button class="btn btn-dark" data-do="ttm-expand" ${busy?"disabled":""}>Conferir e vincular pastas da TTM</button> <button class="btn btn-line" data-do="refresh-drive-status">Atualizar situação</button>
- <p class="subtle" style="margin-top:10px">Após a vinculação, o servidor fará a importação inicial das pastas verificadas, uma empresa por vez. Não é necessário manter o navegador aberto.</p>
+ ${currentOffice()?.code==="TTM"?`<p class="subtle">Somente nomes de pasta correspondentes exatamente aos cadastros serão vinculados. O histórico não é publicado automaticamente.</p><button class="btn btn-dark" data-do="ttm-expand" ${busy?"disabled":""}>Conferir e vincular pastas da TTM</button> <p class="subtle" style="margin-top:10px">A importação inicial será realizada pelo servidor, uma empresa por vez.</p>`:`<p class="subtle">As empresas deste escritório serão cadastradas e vinculadas à sua pasta própria, sem misturar arquivos com a carteira TTM.</p>`} <button class="btn btn-line" data-do="refresh-drive-status">Atualizar situação</button>
  </div>
  ${reportHtml}
  <div class="card card-pad" style="margin-top:16px"><div class="section-title">Empresas e sincronização</div>
