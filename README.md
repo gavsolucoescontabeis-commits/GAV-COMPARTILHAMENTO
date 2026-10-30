@@ -1,6 +1,6 @@
 # GAV Compartilhar Docs — Portal seguro
 
-**Versão atual: v0.9.5 · Download simplificado e sincronização automática no servidor**
+**Versão atual: v0.9.7 · Barra lateral fixa e teste de acesso do cliente**
 
 **Acesso permanente:** https://gavsolucoescontabeis-commits.github.io/GAV-COMPARTILHAMENTO/
 
@@ -74,3 +74,7 @@ O frontend reutiliza por curto prazo os PDFs abertos na sessão (cache limitado 
 - A atualização depende da sincronização local do Google Drive com a nuvem e da validade da autorização offline. Uma configuração OAuth em modo `Testando` pode exigir renovação do consentimento.
 
 **Estado importante:** o download pelo navegador e a navegação dos clientes finais ainda necessitam de teste prático. Nenhuma conta cliente foi criada neste piloto.
+
+
+## Ajustes de 30/10/2026
+A barra lateral GAV permanece fixa durante a rolagem no computador. O administrador dispõe de **Ver como o cliente**, mostrando somente documentos aprovados e publicados, sem criar uma conta. Para teste real, o painel também permite gerar e desativar credenciais temporárias para a JM Rocha, após confirmação explícita; nenhum usuário é gerado automaticamente. O teste verdadeiro de login ainda depende da execução no navegador. Novos arquivos continuam sendo liberados automaticamente na próxima sincronização, enquanto o histórico pendente precisa de conferência.
