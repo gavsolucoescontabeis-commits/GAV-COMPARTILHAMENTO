@@ -1,6 +1,6 @@
 # GAV Compartilhar Docs — Portal seguro
 
-**Versão atual: v0.9.7 · Barra lateral fixa e teste de acesso do cliente**
+**Versão atual: v0.10.1 · Carteira TTM e download múltiplo em ZIP**
 
 **Acesso permanente:** https://gavsolucoescontabeis-commits.github.io/GAV-COMPARTILHAMENTO/
 
@@ -78,3 +78,19 @@ O frontend reutiliza por curto prazo os PDFs abertos na sessão (cache limitado 
 
 ## Ajustes de 30/10/2026
 A barra lateral GAV permanece fixa durante a rolagem no computador. O administrador dispõe de **Ver como o cliente**, mostrando somente documentos aprovados e publicados, sem criar uma conta. Para teste real, o painel também permite gerar e desativar credenciais temporárias para a JM Rocha, após confirmação explícita; nenhum usuário é gerado automaticamente. O teste verdadeiro de login ainda depende da execução no navegador. Novos arquivos continuam sendo liberados automaticamente na próxima sincronização, enquanto o histórico pendente precisa de conferência.
+
+## Implementação de 30/10/2026 — v0.10.1
+
+**Download múltiplo:** quadradinho ao lado de cada documento; **Marcar todos** seleciona os arquivos **da página atual** (60 por página), com filtros de competência e botões Anterior/Próximos. **Baixar selecionados** gera um único ZIP com pastas por categoria e competência, mantendo os documentos originais PDF/JPG/PNG/WebP. Limites por lote: até 60 arquivos e 180 MB, para evitar travamentos. A biblioteca `fflate@0.8.3` é carregada somente durante a operação, e cada arquivo continua sujeito à autorização individual no backend. Validação sintática feita; teste prático completo no navegador ainda necessário.
+
+**Expansão TTM:** as 18 empresas estavam cadastradas no Supabase. A consulta ao Drive confirmou a existência de 18 pastas com nomes **exatamente iguais** aos `folder_label` existentes, sob a raiz aprovada. Foi criada a Edge Function protegida `gav-folder-expand`, com conferência e botão administrativo **Conferir e vincular pastas da TTM**. O botão vincula apenas correspondências exatas, com pasta diretamente contida na raiz autorizada. A nova associação **não publica os documentos antigos**. No momento da implantação do código, apenas a JM Rocha já tinha o vínculo no banco; as demais empresas **aguardavam o acionamento do botão administrativo**. Nunca afirmar que todas já foram importadas sem conferir o estado atual.
+
+**Indexação inicial:** job `gav-drive-initial-import-5m` foi ativado no Supabase; a cada cinco minutos procura uma pasta vinculada e verificada sem importação concluída e solicita uma indexação autenticada. O job não fica varrendo a raiz inteira de 97 mil arquivos: processa cada pasta de empresa individualmente. Cada pasta mantém `last_synced_at` e `last_indexed_count` no banco. A função `gav-drive-index` passou a inserir metadados em lotes para reduzir custos de consultas. O limite técnico atual é até 6 mil documentos e 700 subpastas por empresa em uma única execução; erros e empresas acima desse limite precisam de uma solução incremental própria antes de declarar importação completa. Não mover ou renomear arquivos no Google Drive.
+
+**Publicação:** importações iniciais das demais empresas entram como **pendentes**, até a GAV conferir o acervo. Existe a opção administrativa **Liberar histórico após conferência**; a confirmação exige a empresa correta. O botão **Ativar novos automáticos**, disponível após a primeira sincronização concluída, habilita a publicação automática de documentos **futuros**. Documentos bloqueados ou excluídos continuam bloqueados. O cron normal `gav-drive-pilot-sync-15m` faz sincronizações de empresas autorizadas com `auto_publish_new=true`.
+
+**Teste de clientes:** todas as empresas vinculadas podem ter um **login temporário de teste** criado pelo administrador por ação confirmada no painel. A credencial é específica para cada CNPJ, gera senha forte no servidor, não dá acesso às outras empresas e pode ser desativada. A opção **Ver como o cliente** permite prévia filtrada sem criar usuário. Os clientes externos não receberam credenciais automaticamente.
+
+**Escopo:** expansão desta fase é a carteira TTM já cadastrada. As carteiras DS CONTÁBIL, REL GAV e AVULSOS não podem ser liberadas por nomes aproximados: exigem cadastro e revisão de CNPJ e pasta, conservando o isolamento por escritório.
+
+**Segurança:** este repositório é público. Não inserir IDs de pastas privadas, CNPJs de clientes, tokens Vault, refresh tokens ou arquivos reais neste README. O backend guarda apenas metadados necessários e valida autorização a cada download.
