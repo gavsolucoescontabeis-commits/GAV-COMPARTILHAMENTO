@@ -105,9 +105,11 @@ const picker=()=>adminView()?`<div class="form-field" style="max-width:460px"><l
 const filtered=()=>displayDocs().filter(d=>(year==="ALL"||d.year===Number(year))&&(month==="ALL"||d.month===Number(month))&&(view!=="category"||d.category===cat));
 
 const checkedDocs=new Set();
+let listPage=0;
+const PAGE_SIZE=60;
 let bulkDownloading=false,bulkProgress="";
 function visibleSelectionDocs(){
- if(view==="category"||view==="recent")return filtered();
+ if(view==="category"||view==="recent")return filtered().slice().sort(documentSort).slice(listPage*PAGE_SIZE,(listPage+1)*PAGE_SIZE);
  if(view==="home")return displayDocs().slice().sort(documentSort).slice(0,5);
  return [];
 }
@@ -218,9 +220,11 @@ function home(){
  return `${title("Meus documentos",adminView()?"Conferência dos arquivos da empresa selecionada":"Documentos liberados pela GAV para sua empresa.")}${picker()}${adminView()?`<div style="margin:12px 0 20px"><button class="btn btn-dark" data-do="client-preview">Ver como o cliente</button>${items.some(d=>d.review_status==="PENDENTE")&&links.some(l=>l.company_id===firm?.id&&l.last_synced_at)?` <button class="btn btn-line" data-do="release-history">Liberar histórico após conferência</button>`:""}${links.some(l=>l.company_id===firm?.id&&l.is_active)?` <button class="btn btn-line" data-do="create-company-test">Gerar login de teste</button> <button class="btn btn-line" data-do="remove-company-test">Desativar login de teste</button>`:""}${pilotTestCredential&&pilotTestCredential.cnpj===firm?.cnpj?`<div class="card card-pad" style="margin-top:14px"><strong>Acesso de teste criado (não encaminhe ao cliente)</strong><p>CNPJ de acesso: <strong>${esc(pilotTestCredential.cnpj)}</strong></p><p>Senha de teste: <code style="user-select:all;overflow-wrap:anywhere">${esc(pilotTestCredential.password)}</code></p><p class="subtle">Para testar o login real sem sair da GAV, abra o portal em uma janela anônima e entre com o CNPJ e esta senha. Apenas os arquivos publicados ficarão visíveis.</p></div>`:""}<p class="subtle" style="margin-top:9px">Novos arquivos são liberados automaticamente. Publicar serve para o histórico antigo ainda pendente; Revogar oculta um arquivo.</p></div>`:""}${firm?`<div class="hero"><div><small>ÁREA EXCLUSIVA DA EMPRESA</small><h2>${esc(firm.legal_name)}</h2><p>CNPJ ${esc(fmt(firm.cnpj))} · Documentos por competência e categoria.</p></div></div>`:""}<div class="stats"><div class="card stat"><span class="caption">${adminView()?"Documentos cadastrados":"Documentos disponíveis"}</span><strong>${items.length}</strong></div>${adminView()?`<div class="card stat"><span class="caption">Documentos liberados</span><strong>${items.filter(x=>x.published_at).length}</strong></div>`:""}<div class="card stat"><span class="caption">Categorias com arquivos</span><strong>${new Set(items.map(x=>x.category)).size}</strong></div></div><div class="section-title">Categorias</div><div class="cat-grid">${C.map(([id,n])=>`<button class="category" data-do="cat" data-val="${id}"><span class="cat-name">${esc(n)}</span><span class="cat-count">${items.filter(d=>d.category===id).length} documento(s)</span></button>`).join("")}</div><div class="section-title">Documentos recentes</div><div class="card card-pad">${selectionBar(items.slice().sort(documentSort).slice(0,5))}${files(items.slice().sort(documentSort).slice(0,5))}</div>`;
 }
 function recent(){
- const arr=filtered(),years=[...new Set(displayDocs().map(d=>d.year).filter(Boolean))].sort((a,b)=>b-a);
+ const arr=filtered().slice().sort(documentSort),years=[...new Set(displayDocs().map(d=>d.year).filter(Boolean))].sort((a,b)=>b-a);
+ const shown=arr.slice(listPage*PAGE_SIZE,(listPage+1)*PAGE_SIZE);
  const heading=view==="category"?(C.find(c=>c[0]===cat)?.[1]||"Documentos"):"Documentos";
- return `${title(heading,"Arquivos por mês, com visualização e download em um clique.")}<button class="btn btn-line btn-small" data-do="back" style="margin-bottom:16px">← Voltar</button>${picker()}<div class="gav-month-filter"><select id="yearSelect" class="input" aria-label="Selecionar ano"><option value="ALL">TODOS OS ANOS</option>${years.map(y=>`<option value="${y}" ${String(year)===String(y)?"selected":""}>${y}</option>`).join("")}</select><select id="monthSelect" class="input" aria-label="Selecionar mês"><option value="ALL">TODOS OS MESES</option>${M.map((m,i)=>`<option value="${i+1}" ${String(month)===String(i+1)?"selected":""}>${m}</option>`).join("")}</select></div><div class="card card-pad">${selectionBar(arr)}${fileGroups(arr)}</div>`;
+ const from=arr.length?listPage*PAGE_SIZE+1:0,to=arr.length?Math.min(arr.length,(listPage+1)*PAGE_SIZE):0;
+ return `${title(heading,"Arquivos por mês, com visualização e download em um clique.")}<button class="btn btn-line btn-small" data-do="back" style="margin-bottom:16px">← Voltar</button>${picker()}<div class="gav-month-filter"><select id="yearSelect" class="input" aria-label="Selecionar ano"><option value="ALL">TODOS OS ANOS</option>${years.map(y=>`<option value="${y}" ${String(year)===String(y)?"selected":""}>${y}</option>`).join("")}</select><select id="monthSelect" class="input" aria-label="Selecionar mês"><option value="ALL">TODOS OS MESES</option>${M.map((m,i)=>`<option value="${i+1}" ${String(month)===String(i+1)?"selected":""}>${m}</option>`).join("")}</select></div><div class="card card-pad">${selectionBar(shown)}${fileGroups(shown)}<div class="gav-doc-pager"><span>Exibindo ${from}–${to} de ${arr.length} documentos. Selecione um mês para localizar mais rápido.</span><div><button class="btn btn-line btn-small" data-do="prev-doc-page" ${listPage===0?"disabled":""}>Anterior</button> <button class="btn btn-line btn-small" data-do="next-doc-page" ${to>=arr.length?"disabled":""}>Próximos</button></div></div></div>`;
 }
 function companiesPage(){
  return `${title("Empresas e permissões","Relação real de empresas cadastradas. O acesso de cada cliente será individual.")}<div class="card card-pad"><div class="file-list">${companies.map(c=>`<div class="file-row"><div class="file-expand"><b>${esc((c.code||"")+" · "+c.legal_name)}</b><small class="file-meta">CNPJ ${esc(fmt(c.cnpj))} · ${links.some(l=>l.company_id===c.id)?"Pasta vinculada":"Pasta ainda não vinculada"}</small></div><button class="btn btn-line btn-small" data-do="pick" data-val="${c.id}">Abrir empresa</button></div>`).join("")}</div></div><p class="footnote">Os clientes não visualizam a lista de empresas. O acesso depende de autorização individual registrada no servidor.</p>`;
@@ -369,8 +373,8 @@ function render(){
  });
  app.querySelector("#clientLogin")?.addEventListener("submit",loginClient);
  app.querySelector("#companySelect")?.addEventListener("change",e=>changeCompany(e.target.value));
- app.querySelector("#yearSelect")?.addEventListener("change",e=>{resetSelection();year=e.target.value;render()});
- app.querySelector("#monthSelect")?.addEventListener("change",e=>{resetSelection();month=e.target.value;render()});
+ app.querySelector("#yearSelect")?.addEventListener("change",e=>{resetSelection();listPage=0;year=e.target.value;render()});
+ app.querySelector("#monthSelect")?.addEventListener("change",e=>{resetSelection();listPage=0;month=e.target.value;render()});
  if(previewId)paintPreview();
  refreshSelectionToolbar();
 }
@@ -380,9 +384,9 @@ async function google(){const {error}=await sb.auth.signInWithOAuth({provider:"g
 
 async function handle(e){
  const a=e.currentTarget.dataset.do,v=e.currentTarget.dataset.val;
- if(a==="view"){resetSelection();view=v;cat="";year="ALL";month="ALL";navigationHistory.length=0;render();return}
- if(a==="back"){resetSelection();view="home";cat="";year="ALL";month="ALL";navigationHistory.length=0;render();return}
- if(a==="cat"){resetSelection();navigationHistory.push({view,cat,year,month});cat=v;view="category";year="ALL";month="ALL";render();return}
+ if(a==="view"){resetSelection();listPage=0;view=v;cat="";year="ALL";month="ALL";navigationHistory.length=0;render();return}
+ if(a==="back"){resetSelection();listPage=0;view="home";cat="";year="ALL";month="ALL";navigationHistory.length=0;render();return}
+ if(a==="cat"){resetSelection();listPage=0;navigationHistory.push({view,cat,year,month});cat=v;view="category";year="ALL";month="ALL";render();return}
  if(a==="google"){await google();return}
  if(a==="logout"){resetSelection();pilotTestCredential=null;previewAsClient=false;clientDocs=[];clearPdfCache();await sb.auth.signOut();session=null;role="";googleToken="";notice="";render();return}
  if(a==="pick"){await changeCompany(v);view="home";render();return}
@@ -422,6 +426,12 @@ async function handle(e){
  if(a==="exit-preview"){resetSelection();
   clearPdfCache();previewAsClient=false;clientDocs=[];
   view="home";cat="";year="ALL";month="ALL";render();return;
+ }
+ if(a==="next-doc-page"||a==="prev-doc-page"){
+  const all=filtered().length,maximum=Math.max(0,Math.ceil(all/PAGE_SIZE)-1);
+  resetSelection();
+  listPage=Math.min(maximum,Math.max(0,listPage+(a==="next-doc-page"?1:-1)));
+  render();return;
  }
  if(a==="bulk-download"){await downloadSelectedZip();return}
  if(a==="pdf"){await openPdf(v);return}
