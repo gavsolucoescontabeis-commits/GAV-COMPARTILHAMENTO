@@ -399,13 +399,30 @@ function render(){
   refreshSelectionToolbar();
  });
  app.querySelector("#clientLogin")?.addEventListener("submit",loginClient);
+ app.querySelector("#officeSelect")?.addEventListener("change",e=>changeOffice(e.target.value));
  app.querySelector("#companySelect")?.addEventListener("change",e=>changeCompany(e.target.value));
  app.querySelector("#yearSelect")?.addEventListener("change",e=>{resetSelection();listPage=0;year=e.target.value;render()});
  app.querySelector("#monthSelect")?.addEventListener("change",e=>{resetSelection();listPage=0;month=e.target.value;render()});
  if(previewId)paintPreview();
  refreshSelectionToolbar();
 }
-async function changeCompany(id){resetSelection();pilotTestCredential=null;previewAsClient=false;clientDocs=[];clearPdfCache();selected=id;view="home";await run(async()=>{await loadDocs()})}
+async function changeOffice(id){
+ if(role!=="admin"||!offices.some(o=>o.id===id))return;
+ resetSelection();listPage=0;pilotTestCredential=null;previewAsClient=false;clientDocs=[];mappingReport=null;
+ clearPdfCache();officeId=id;
+ selected=officeCompanies()[0]?.id||"";
+ view="companies";cat="";year="ALL";month="ALL";
+ await run(async()=>{await loadDocs()});
+}
+async function changeCompany(id){
+ if(role==="admin"&&!officeCompanies().some(c=>c.id===id)){
+  toastMessage("Selecione uma empresa do escritório atual.");return;
+ }
+ if(!companies.some(c=>c.id===id))return;
+ resetSelection();listPage=0;pilotTestCredential=null;previewAsClient=false;clientDocs=[];clearPdfCache();
+ selected=id;view="home";cat="";year="ALL";month="ALL";
+ await run(async()=>{await loadDocs()});
+}
 async function loginClient(e){e.preventDefault();const id=cn(app.querySelector("#cnpj")?.value),password=app.querySelector("#pwd")?.value;if(id.length!==14){notice="Informe um CNPJ com 14 números.";render();return}await run(async()=>{const {error}=await sb.auth.signInWithPassword({email:"cliente-"+id+"@acesso.gavsolucoescontabeis.com.br",password});if(error)throw Error("CNPJ ou senha inválidos.");await bootstrap()})}
 async function google(){const {error}=await sb.auth.signInWithOAuth({provider:"google",options:{redirectTo:location.origin+location.pathname,scopes:"https://www.googleapis.com/auth/drive.readonly",queryParams:{access_type:"offline",prompt:"consent"}}});if(error)showError(error)}
 
@@ -416,7 +433,8 @@ async function handle(e){
  if(a==="cat"){resetSelection();listPage=0;navigationHistory.push({view,cat,year,month});cat=v;view="category";year="ALL";month="ALL";render();return}
  if(a==="google"){await google();return}
  if(a==="logout"){resetSelection();pilotTestCredential=null;previewAsClient=false;clientDocs=[];clearPdfCache();await sb.auth.signOut();session=null;role="";googleToken="";notice="";render();return}
- if(a==="pick"){await changeCompany(v);view="home";render();return}
+ if(a==="office-select"){await changeOffice(v);return}
+ if(a==="pick"){await changeCompany(v);return}
  if(a==="release-history"){
   if(role!=="admin"||previewAsClient)return;
   const firm=current(),pending=docs.filter(d=>d.review_status==="PENDENTE");
