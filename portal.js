@@ -4,10 +4,12 @@ const PUB="sb_publishable_QpDD6nZEdRPtvOeJCSOZ9A_FMaA2Za7";
 const sb=createClient(ROOT,PUB,{auth:{autoRefreshToken:true,persistSession:true,detectSessionInUrl:true}});
 const logo="assets/logo-gav-sem-fundo.svg",lion="assets/leao-gav-sem-fundo.svg";
 const app=document.getElementById("app");
-let gavInstallPrompt=null;
+let gavInstallPrompt=window.__gavInstallPrompt||null;
 const gavInstalled=()=>window.matchMedia("(display-mode: standalone)").matches||navigator.standalone===true;
-window.addEventListener("beforeinstallprompt",event=>{event.preventDefault();gavInstallPrompt=event});
-window.addEventListener("appinstalled",()=>{gavInstallPrompt=null});
+window.addEventListener("beforeinstallprompt",event=>{
+ event.preventDefault();gavInstallPrompt=event;window.__gavInstallPrompt=event;
+});
+window.addEventListener("appinstalled",()=>{gavInstallPrompt=null;window.__gavInstallPrompt=null;document.querySelector(".gav-install-modal")?.remove();});
 if("serviceWorker" in navigator)window.addEventListener("load",()=>{
  navigator.serviceWorker.register("./sw.js",{scope:"./"}).catch(()=>{});
 });
@@ -164,6 +166,41 @@ async function bootstrap(){
  }catch(e){role="";notice=e.message||"Erro de autenticação.";render()}
 }
 const brand=()=>`<div class="logo-official"><img src="${logo}" alt="GAV Soluções Contábeis" onerror="this.style.display='none'"><span class="logo-text">GAV <small>SOLUÇÕES CONTÁBEIS</small></span></div>`;
+function showInstallDialog(){
+ document.querySelector(".gav-install-modal")?.remove();
+ const already=gavInstalled();
+ const hasNative=!!(window.__gavInstallPrompt||gavInstallPrompt);
+ const wrapper=document.createElement("div");
+ wrapper.className="overlay gav-install-modal";
+ wrapper.innerHTML='<div class="modal" role="dialog" aria-modal="true" aria-labelledby="gav-install-title" style="max-width:540px">'+
+ '<div class="modal-head"><div><div class="eyebrow">GAV COMPARTILHAMENTO</div><h3 id="gav-install-title" style="margin:8px 0 0;font-size:20px">Instalar no Windows</h3></div>'+
+ '<button type="button" class="btn btn-line btn-small" data-install-close>Fechar</button></div>'+
+ '<div class="modal-body" style="line-height:1.65">'+
+ '<p style="margin:0 0 13px">Instale o portal para abrir pelo próprio ícone do leão na área de trabalho ou no menu Iniciar.</p>'+
+ '<div class="notice" data-install-status style="margin-bottom:16px">'+(already?"O aplicativo já está aberto como programa instalado.":hasNative?"O navegador permite iniciar a instalação por aqui.":"O Chrome ainda não disponibilizou a instalação automática nesta aba. Siga a opção do próprio navegador abaixo.")+'</div>'+
+ (hasNative&&!already?'<button class="btn btn-dark" type="button" data-install-native style="width:100%;margin-bottom:15px">Instalar agora</button>':"")+
+ '<div style="border-top:1px solid #e6e8eb;padding-top:13px"><strong>Se a instalação automática não abrir:</strong>'+
+ '<p style="font-size:13px;margin:9px 0"><b>Google Chrome:</b> clique no menu de três pontos (⋮) e procure <b>Transmitir, salvar e compartilhar → Instalar página como app</b>, ou o ícone de instalação na barra de endereços.</p>'+
+ '<p style="font-size:13px;margin:9px 0"><b>Microsoft Edge:</b> menu de três pontos (⋯) → <b>Aplicativos → Instalar este site como um aplicativo</b>.</p>'+
+ '<p class="subtle" style="margin:10px 0 0">Se só aparecer “Criar atalho”, use essa opção provisoriamente. A instalação depende do Chrome e pode não estar disponível se o aplicativo já estiver instalado no mesmo perfil.</p></div>'+
+ '</div></div>';
+ document.body.appendChild(wrapper);
+ const close=()=>wrapper.remove();
+ wrapper.querySelector("[data-install-close]").addEventListener("click",close);
+ wrapper.addEventListener("click",event=>{if(event.target===wrapper)close()});
+ wrapper.querySelector("[data-install-native]")?.addEventListener("click",async()=>{
+  const install=window.__gavInstallPrompt||gavInstallPrompt;
+  const status=wrapper.querySelector("[data-install-status]");
+  if(!install){status.textContent="O navegador não está oferecendo a instalação automática. Siga as instruções abaixo.";return}
+  try{
+   await install.prompt();
+   const result=await install.userChoice;
+   gavInstallPrompt=null;window.__gavInstallPrompt=null;
+   if(result?.outcome==="accepted"){status.textContent="Instalação aceita. Confira o menu Iniciar do Windows.";wrapper.querySelector("[data-install-native]")?.remove();}
+   else{status.textContent="A instalação não foi confirmada. Você ainda pode utilizar o menu do navegador.";wrapper.querySelector("[data-install-native]")?.remove();}
+  }catch(_err){status.textContent="A instalação automática não pôde ser aberta. Utilize o menu do navegador indicado abaixo.";wrapper.querySelector("[data-install-native]")?.remove();}
+ });
+}
 const installButton=()=>gavInstalled()?"":'<button class="btn btn-line btn-small" type="button" data-do="install-app" style="margin-top:14px;align-self:flex-start">Instalar GAV Compartilhamento no computador</button>';
 function invitationLogin(){
  const message=notice?'<div class="error" style="display:block;margin-bottom:15px">'+esc(notice)+'</div>':"";
@@ -186,7 +223,7 @@ function login(){
 const nav=()=>adminView()?[["offices","Escritórios"],["home","Início"],["processing","Processamento"],["drive","Google Drive"],["companies","Empresas"]]:clientManaged?[["home","Início"],["security","Minha senha"]]:[["home","Início"]];
 function shell(){
  const firm=current(),navLinks=nav();
- return `<div class="shell gav-portal-shell"><aside class="side"><div class="side-top"><div class="side-logo">${brand()}</div></div><div class="side-caption">NAVEGAÇÃO</div>${navLinks.map(([id,name])=>`<button class="nav ${view===id?"active":""}" data-do="view" data-val="${id}">${esc(name)}</button>`).join("")}<div class="gav-lion-sidebar" aria-label="Símbolo da GAV Soluções Contábeis"><img src="${lion}" alt="Leão GAV"></div><div class="side-bottom"><div style="font-weight:800;margin-bottom:9px">${adminView()?"Administrador GAV":"Portal do cliente"}</div><div class="subtle" style="margin-bottom:14px">Conexão segura · v0.13.3</div><button class="nav" data-do="${previewAsClient?"exit-preview":"logout"}">${previewAsClient?"Voltar à GAV":"Sair da conta"}</button></div></aside><main class="app-main"><header class="topbar"><div><span class="mobile-brand">GAV <small>SOLUÇÕES CONTÁBEIS</small></span><div class="header-title">${adminView()?"Painel administrativo":"Portal de documentos"}</div><div class="header-desc">${esc(adminView()?(officeLabel()+(firm?" · "+firm.legal_name:"")):(firm?.legal_name||"GAV Soluções Contábeis"))}</div></div><div class="top-actions">${!adminView()&&!gavInstalled()?`<button class="btn btn-line btn-small" data-do="install-app">Instalar app</button>`:""}<div class="avatar">${adminView()?"AD":"CL"}</div><button class="btn btn-line btn-small" data-do="${previewAsClient?"exit-preview":"logout"}">${previewAsClient?"Voltar à GAV":"Sair"}</button></div></header><div class="content">${previewAsClient?`<div class="gav-client-preview-banner"><div><strong>Prévia do cliente — ${esc(firm?.legal_name||"empresa")}</strong><p>Mostra somente arquivos liberados. Não é login real e não concede acesso a ninguém.</p></div><button class="btn btn-dark btn-small" data-do="exit-preview">Voltar à administração</button></div>`:""}${notice?`<div class="error" style="display:block;margin-bottom:18px">${esc(notice)}</div>`:""}${busy?`<div class="card card-pad" style="margin-bottom:18px">Processando sua solicitação…</div>`:""}${content()}</div></main><nav class="bottom-bar" aria-label="Navegação">${navLinks.map(([id,name])=>`<button class="bottom-nav ${view===id?"active":""}" data-do="view" data-val="${id}">${esc(name)}</button>`).join("")}</nav></div>`;
+ return `<div class="shell gav-portal-shell"><aside class="side"><div class="side-top"><div class="side-logo">${brand()}</div></div><div class="side-caption">NAVEGAÇÃO</div>${navLinks.map(([id,name])=>`<button class="nav ${view===id?"active":""}" data-do="view" data-val="${id}">${esc(name)}</button>`).join("")}<div class="gav-lion-sidebar" aria-label="Símbolo da GAV Soluções Contábeis"><img src="${lion}" alt="Leão GAV"></div><div class="side-bottom"><div style="font-weight:800;margin-bottom:9px">${adminView()?"Administrador GAV":"Portal do cliente"}</div><div class="subtle" style="margin-bottom:14px">Conexão segura · v0.13.4</div><button class="nav" data-do="${previewAsClient?"exit-preview":"logout"}">${previewAsClient?"Voltar à GAV":"Sair da conta"}</button></div></aside><main class="app-main"><header class="topbar"><div><span class="mobile-brand">GAV <small>SOLUÇÕES CONTÁBEIS</small></span><div class="header-title">${adminView()?"Painel administrativo":"Portal de documentos"}</div><div class="header-desc">${esc(adminView()?(officeLabel()+(firm?" · "+firm.legal_name:"")):(firm?.legal_name||"GAV Soluções Contábeis"))}</div></div><div class="top-actions">${!gavInstalled()?`<button class="btn btn-line btn-small" data-do="install-app">Instalar app</button>`:""}<div class="avatar">${adminView()?"AD":"CL"}</div><button class="btn btn-line btn-small" data-do="${previewAsClient?"exit-preview":"logout"}">${previewAsClient?"Voltar à GAV":"Sair"}</button></div></header><div class="content">${previewAsClient?`<div class="gav-client-preview-banner"><div><strong>Prévia do cliente — ${esc(firm?.legal_name||"empresa")}</strong><p>Mostra somente arquivos liberados. Não é login real e não concede acesso a ninguém.</p></div><button class="btn btn-dark btn-small" data-do="exit-preview">Voltar à administração</button></div>`:""}${notice?`<div class="error" style="display:block;margin-bottom:18px">${esc(notice)}</div>`:""}${busy?`<div class="card card-pad" style="margin-bottom:18px">Processando sua solicitação…</div>`:""}${content()}</div></main><nav class="bottom-bar" aria-label="Navegação">${navLinks.map(([id,name])=>`<button class="bottom-nav ${view===id?"active":""}" data-do="view" data-val="${id}">${esc(name)}</button>`).join("")}</nav></div>`;
 }
 const title=(name,sub)=>`<div class="page-head"><div><div class="eyebrow">CENTRAL DE DOCUMENTOS</div><h1>${esc(name)}</h1><p>${esc(sub)}</p></div></div>`;
 const officePicker=()=>adminView()?`<div class="form-field"><label for="officeSelect">Escritório</label><select id="officeSelect" class="input">${offices.map(o=>`<option value="${esc(o.id)}" ${o.id===officeId?"selected":""}>${esc(officeName(o))}</option>`).join("")}</select></div>`:"";
@@ -461,7 +498,7 @@ function drivePage(){
  <div class="card card-pad">
  <div class="section-title">Conexão Google Drive</div>
  <p>Os documentos continuam nas pastas originais. O servidor consulta apenas empresas autorizadas.</p>
- <button class="btn btn-line" data-do="google">Autorizar / renovar Google Drive</button>
+ <button class="btn btn-line" data-do="google-drive">Autorizar / renovar Google Drive</button>
  <p class="subtle" style="margin-top:10px">Credenciais: ${hasDriveSecret?"configuradas":"pendentes"}. ${esc(autoSyncLastResult)}</p>
  </div>
  <div class="card card-pad" style="margin-top:16px">
@@ -733,7 +770,15 @@ async function completeActivation(e){
  });
 }
 async function loginClient(e){e.preventDefault();const id=cn(app.querySelector("#cnpj")?.value),password=app.querySelector("#pwd")?.value;if(id.length!==14){notice="Informe um CNPJ com 14 números.";render();return}await run(async()=>{const {error}=await sb.auth.signInWithPassword({email:"cliente-"+id+"@acesso.gavsolucoescontabeis.com.br",password});if(error)throw Error("CNPJ ou senha inválidos.");await bootstrap()})}
-async function google(){const {error}=await sb.auth.signInWithOAuth({provider:"google",options:{redirectTo:location.origin+location.pathname,scopes:"https://www.googleapis.com/auth/drive.readonly",queryParams:{access_type:"offline",prompt:"consent"}}});if(error)showError(error)}
+async function google({renewDrive=false}={}){
+ const options={redirectTo:location.origin+location.pathname};
+ if(renewDrive){
+  options.scopes="https://www.googleapis.com/auth/drive.readonly";
+  options.queryParams={access_type:"offline",prompt:"consent"};
+ }
+ const {error}=await sb.auth.signInWithOAuth({provider:"google",options});
+ if(error)showError(error);
+}
 
 async function handle(e){
  const a=e.currentTarget.dataset.do,v=e.currentTarget.dataset.val;
@@ -751,6 +796,7 @@ async function handle(e){
  if(a==="back"){resetSelection();listPage=0;view="home";cat="";year="ALL";month="ALL";navigationHistory.length=0;render();return}
  if(a==="cat"){resetSelection();listPage=0;navigationHistory.push({view,cat,year,month});cat=v;view="category";year="ALL";month="ALL";render();return}
  if(a==="google"){await google();return}
+ if(a==="google-drive"){if(adminView())await google({renewDrive:true});return}
  if(a==="logout"){try{sessionStorage.removeItem("gav-selected-office")}catch(_e){}resetSelection();pilotTestCredential=null;previewAsClient=false;clientDocs=[];clearPdfCache();await sb.auth.signOut();session=null;role="";googleToken="";notice="";render();return}
  if(a==="office-select"){await changeOffice(v);return}
  if(a==="catalog-refresh"){if(role==="admin"&&!previewAsClient)await run(loadOfficeFolders);return}
@@ -768,17 +814,7 @@ async function handle(e){
   });
   return;
  }
- if(a==="install-app"){
-  if(gavInstalled())return;
-  if(gavInstallPrompt){
-   const prompt=gavInstallPrompt;gavInstallPrompt=null;
-   try{await prompt.prompt();const choice=await prompt.userChoice;if(choice?.outcome==="accepted")toastMessage("Instalação solicitada. Confira o aplicativo no Windows.");}
-   catch(_e){toastMessage("Use a opção Instalar aplicativo no navegador.");}
-  }else{
-   window.alert("Para instalar com o ícone do leão no Windows:\n\nMicrosoft Edge: menu (...) > Aplicativos > Instalar este site como um aplicativo.\n\nGoogle Chrome: procure o ícone de instalação na barra de endereços ou no menu (...) > Salvar e compartilhar > Instalar página como app.\n\nO navegador solicitará a confirmação. O aplicativo continua precisando de internet.");
-  }
-  return;
- }
+ if(a==="install-app"){showInstallDialog();return}
  if(a==="activation-cancel"){
   activationToken="";activationCompany=null;notice="";
   try{sessionStorage.removeItem("gav-activation-token")}catch(_e){}
