@@ -21,11 +21,18 @@ jobs:
         uses: actions/checkout@v4
       - name: Configurar GitHub Pages
         uses: actions/configure-pages@v5
+      - name: Preparar Python para os ícones
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Preparar conversão do ícone GAV
+        run: python -m pip install --disable-pip-version-check "Pillow==11.3.0"
       - name: Preparar somente arquivos públicos
         run: |
           mkdir -p _site
-          cp index.html portal.js portal-ui.css _site/
+          cp index.html portal.js portal-ui.css manifest.webmanifest sw.js _site/
           cp -R assets _site/assets
+          python scripts/build_gav_icons.py _site
           touch _site/.nojekyll
           printf '%s\n' "$GITHUB_SHA" > _site/revision.txt
           python3 - <<'PY'

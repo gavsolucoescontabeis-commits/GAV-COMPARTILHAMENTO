@@ -1,0 +1,26 @@
+{
+  "id": "/GAV-COMPARTILHAMENTO/",
+  "name": "GAV Compartilhamento · Soluções Contábeis",
+  "short_name": "GAV Docs",
+  "description": "Portal seguro de documentos da GAV Soluções Contábeis",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#141618",
+  "theme_color": "#141618",
+  "lang": "pt-BR",
+  "icons": [
+    {
+      "src": "./assets/gav-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./assets/gav-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
