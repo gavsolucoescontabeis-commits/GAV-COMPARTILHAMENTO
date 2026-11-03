@@ -242,18 +242,6 @@ Substituída a antiga identidade preto/dourado pela nova identidade visual ofici
 As referências anteriores do tipo "barra preta", "layout preto/dourado" são históricas e **não** reinstalam a paleta antiga.
 
 
-## Correção da identidade visual — 03/11/2026 · v0.13.13 (vinho como principal)
+### Ajuste visual 03/11/2026 — v0.13.14 (retorno ao aspecto anterior)
 
-**Esclarecimento e autorização do responsável:** o objetivo original era que cada sistema GAV tivesse sua própria cor predominante; não foi autorizada uma base azul comum. A aplicação v0.13.12 deixou o GAV Compartilhar excessivamente azul, semelhante ao Fiscal, e foi corrigida nesta versão.
-
-- **Cor predominante exclusiva do GAV Compartilhar:** vinho `#7A3E52`; vinho escuro `#542837` para contraste e hover.
-
-- **Destaques:** menu lateral, login, faixas institucionais, botões principais, filtros ativos, cartões selecionados e navegação em vinho.
-
-- **Contrastes visuais:** fundo marfim suave `#F8F5F2`, cartões brancos `#FFFFFF`, texto carvão quente `#342C31`, texto secundário `#6C6066`, bordas `#E5D9DD`, dourado institucional `#B68A3C`. Botões alternativos dourados ou brancos com contorno vinho.
-
-- **Proibido** introduzir a paleta azul ou azul-petróleo de outros sistemas como base do GAV Compartilhar. Verde e âmbar permanecem apenas para estados semânticos de sucesso/alerta.
-
-- Logotipos oficiais dourados e leão mantidos sem modificações, telas/estrutura/fluxos/permissões/regras intactos. Preservar PWA e publicação pela mesma URL.
-
-**Precedência:** este refinamento v0.13.13 substitui **somente a orientação de base azul comum** registrada em v0.13.12. Toda regra de não regressão segue vigente.
+Por solicitação expressa do responsável, a experiência visual foi restaurada ao estado **v0.13.12**, anterior ao vinho predominante da v0.13.13. A restauração é estritamente visual e preserva código funcional, integração Google Drive, cadastros, processamento e permissões. A numeração avança para v0.13.14 para o PWA detectar e oferecer a atualização. Eventual nova proposta visual exige autorização específica.

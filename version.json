@@ -1,5 +1,5 @@
 {
-  "version": "0.13.13",
+  "version": "0.13.14",
   "release": "2026-11-03",
-  "notes": "Identidade exclusiva vinho da GAV Compartilhar: menu, login, destaques e botões; marfim e dourado como contraste."
+  "notes": "Restauração do visual aprovado na v0.13.12, mantendo integralmente funcionalidades e integrações."
 }
