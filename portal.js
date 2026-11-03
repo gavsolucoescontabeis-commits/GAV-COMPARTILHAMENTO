@@ -20,7 +20,7 @@ portalLayoutStyle.textContent += ".gav-process-head{display:flex;align-items:end
 document.head.appendChild(portalLayoutStyle);
 const M=["JANEIRO","FEVEREIRO","MARÇO","ABRIL","MAIO","JUNHO","JULHO","AGOSTO","SETEMBRO","OUTUBRO","NOVEMBRO","DEZEMBRO","DÉCIMO TERCEIRO"];
 const C=[["ADMISSOES","Admissões"],["RESCISOES","Rescisões"],["FERIAS","Férias"],["FOLHA","Folha de Pagamento"],["GUIAS_IMPOSTOS","Guias e Impostos"],["OUTROS","Outros Documentos"]];
-let role="",companies=[],docs=[],links=[],candidates=[],selected="",view="offices",cat="",year=2026,month="ALL",session=null,googleToken="",hasDriveSecret=false,notice="",busy=false;
+let role="",companies=[],docs=[],links=[],candidates=[],selected="",view="offices",cat="",year=new Date().getFullYear(),month="ALL",session=null,googleToken="",hasDriveSecret=false,notice="",busy=false;
 let previewAsClient=false,clientDocs=[],pilotTestCredential=null;
 let passwordChangeRequired=false,clientManaged=false,accessPanelOpen=false,accessPanelCompany="",accessStatus=null,clientCredential=null,clientInvite=null;
 const invitationHash=location.hash.match(/^#convite=([a-f0-9]{64})$/i);
@@ -132,7 +132,7 @@ async function syncPilot({interactive=false}={}){
  try{
   const result=await invoke("gav-drive-index","index",{companyId:pilot.id});
   autoSyncLastResult="Última verificação: "+new Date().toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})+" · "+result.newFiles+" novos";
-  if(selected===pilot.id){await loadDocs();render()}
+  if(selected===pilot.id){await loadDocs()} // Atualiza o estado em segundo plano, sem tirar o usuário da tela em uso.
   if(result.newFiles&&interactive)toastMessage(result.newFiles+" novo(s) arquivo(s); "+result.autoPublished+" liberado(s) automaticamente.");
  }catch(e){
   autoSyncLastResult="Sincronização pendente: "+(e.message||"verifique a autorização do Drive");
@@ -223,12 +223,24 @@ function login(){
 const nav=()=>adminView()?[["offices","Escritórios"],["home","Início"],["processing","Processamento"],["drive","Google Drive"],["companies","Empresas"]]:clientManaged?[["home","Início"],["security","Minha senha"]]:[["home","Início"]];
 function shell(){
  const firm=current(),navLinks=nav();
- return `<div class="shell gav-portal-shell"><aside class="side"><div class="side-top"><div class="side-logo">${brand()}</div></div><div class="side-caption">NAVEGAÇÃO</div>${navLinks.map(([id,name])=>`<button class="nav ${view===id?"active":""}" data-do="view" data-val="${id}">${esc(name)}</button>`).join("")}<div class="gav-lion-sidebar" aria-label="Símbolo da GAV Soluções Contábeis"><img src="${lion}" alt="Leão GAV"></div><div class="side-bottom"><div style="font-weight:800;margin-bottom:9px">${adminView()?"Administrador GAV":"Portal do cliente"}</div><div class="subtle" style="margin-bottom:14px">Conexão segura · v0.13.5</div><button class="nav" data-do="${previewAsClient?"exit-preview":"logout"}">${previewAsClient?"Voltar à GAV":"Sair da conta"}</button></div></aside><main class="app-main"><header class="topbar"><div><span class="mobile-brand">GAV <small>SOLUÇÕES CONTÁBEIS</small></span><div class="header-title">${adminView()?"Painel administrativo":"Portal de documentos"}</div><div class="header-desc">${esc(adminView()?(officeLabel()+(firm?" · "+firm.legal_name:"")):(firm?.legal_name||"GAV Soluções Contábeis"))}</div></div><div class="top-actions">${!gavInstalled()?`<button class="btn btn-line btn-small" data-do="install-app">Instalar app</button>`:""}<div class="avatar">${adminView()?"AD":"CL"}</div><button class="btn btn-line btn-small" data-do="${previewAsClient?"exit-preview":"logout"}">${previewAsClient?"Voltar à GAV":"Sair"}</button></div></header><div class="content">${previewAsClient?`<div class="gav-client-preview-banner"><div><strong>Prévia do cliente — ${esc(firm?.legal_name||"empresa")}</strong><p>Mostra somente arquivos liberados. Não é login real e não concede acesso a ninguém.</p></div><button class="btn btn-dark btn-small" data-do="exit-preview">Voltar à administração</button></div>`:""}${notice?`<div class="error" style="display:block;margin-bottom:18px">${esc(notice)}</div>`:""}${busy?`<div class="card card-pad" style="margin-bottom:18px">Processando sua solicitação…</div>`:""}${content()}</div></main><nav class="bottom-bar" aria-label="Navegação">${navLinks.map(([id,name])=>`<button class="bottom-nav ${view===id?"active":""}" data-do="view" data-val="${id}">${esc(name)}</button>`).join("")}</nav></div>`;
+ return `<div class="shell gav-portal-shell"><aside class="side"><div class="side-top"><div class="side-logo">${brand()}</div></div><div class="side-caption">NAVEGAÇÃO</div>${navLinks.map(([id,name])=>`<button class="nav ${view===id?"active":""}" data-do="view" data-val="${id}">${esc(name)}</button>`).join("")}<div class="gav-lion-sidebar" aria-label="Símbolo da GAV Soluções Contábeis"><img src="${lion}" alt="Leão GAV"></div><div class="side-bottom"><div style="font-weight:800;margin-bottom:9px">${adminView()?"Administrador GAV":"Portal do cliente"}</div><div class="subtle" style="margin-bottom:14px">Conexão segura · v0.13.6</div><button class="nav" data-do="${previewAsClient?"exit-preview":"logout"}">${previewAsClient?"Voltar à GAV":"Sair da conta"}</button></div></aside><main class="app-main"><header class="topbar"><div><span class="mobile-brand">GAV <small>SOLUÇÕES CONTÁBEIS</small></span><div class="header-title">${adminView()?"Painel administrativo":"Portal de documentos"}</div><div class="header-desc">${esc(adminView()?(officeLabel()+(firm?" · "+firm.legal_name:"")):(firm?.legal_name||"GAV Soluções Contábeis"))}</div></div><div class="top-actions">${!gavInstalled()?`<button class="btn btn-line btn-small" data-do="install-app">Instalar app</button>`:""}<div class="avatar">${adminView()?"AD":"CL"}</div><button class="btn btn-line btn-small" data-do="${previewAsClient?"exit-preview":"logout"}">${previewAsClient?"Voltar à GAV":"Sair"}</button></div></header><div class="content">${previewAsClient?`<div class="gav-client-preview-banner"><div><strong>Prévia do cliente — ${esc(firm?.legal_name||"empresa")}</strong><p>Mostra somente arquivos liberados. Não é login real e não concede acesso a ninguém.</p></div><button class="btn btn-dark btn-small" data-do="exit-preview">Voltar à administração</button></div>`:""}${notice?`<div class="error" style="display:block;margin-bottom:18px">${esc(notice)}</div>`:""}${busy?`<div class="card card-pad" style="margin-bottom:18px">Processando sua solicitação…</div>`:""}${content()}</div></main><nav class="bottom-bar" aria-label="Navegação">${navLinks.map(([id,name])=>`<button class="bottom-nav ${view===id?"active":""}" data-do="view" data-val="${id}">${esc(name)}</button>`).join("")}</nav></div>`;
 }
 const title=(name,sub)=>`<div class="page-head"><div><div class="eyebrow">CENTRAL DE DOCUMENTOS</div><h1>${esc(name)}</h1><p>${esc(sub)}</p></div></div>`;
 const officePicker=()=>adminView()?`<div class="form-field"><label for="officeSelect">Escritório</label><select id="officeSelect" class="input">${offices.map(o=>`<option value="${esc(o.id)}" ${o.id===officeId?"selected":""}>${esc(officeName(o))}</option>`).join("")}</select></div>`:"";
 const picker=()=>adminView()?`<div class="gav-scope-picker">${officePicker()}<div class="form-field"><label for="companySelect">Empresa do escritório</label><select id="companySelect" class="input" ${officeCompanies().length?"":"disabled"}>${officeCompanies().length?officeCompanies().map(c=>`<option value="${esc(c.id)}" ${c.id===selected?"selected":""}>${esc((c.code||"")+" · "+c.legal_name)}</option>`).join(""):`<option>Nenhuma empresa cadastrada</option>`}</select></div></div>`:"";
 const filtered=()=>displayDocs().filter(d=>(year==="ALL"||d.year===Number(year))&&(month==="ALL"||d.month===Number(month))&&(view!=="category"||d.category===cat));
+// Ao entrar na categoria, priorizar a competência do mês anterior quando houver arquivos.
+// Se não houver, usar o mês corrente com arquivos; se também não houver, exibir todos os meses do ano atual.
+function suggestDocumentPeriod(category=""){
+ const now=new Date(),prior=new Date(now.getFullYear(),now.getMonth()-1,1);
+ const available=displayDocs().filter(d=>!category||d.category===category);
+ const has=(y,m)=>available.some(d=>Number(d.year)===y&&Number(d.month)===m);
+ if(has(prior.getFullYear(),prior.getMonth()+1)){
+  year=prior.getFullYear();month=prior.getMonth()+1;
+ }else{
+  year=now.getFullYear();month=has(year,now.getMonth()+1)?now.getMonth()+1:"ALL";
+ }
+}
 
 const checkedDocs=new Set();
 let listPage=0;
@@ -374,7 +386,7 @@ function home(){
  return `${title("Meus documentos",adminView()?"Conferência dos arquivos da empresa selecionada":"Documentos liberados pela GAV para sua empresa.")}${picker()}${adminView()?`<div style="margin:12px 0 20px"><button class="btn btn-dark" data-do="client-preview">Ver como o cliente</button>${items.some(d=>d.review_status==="PENDENTE")&&links.some(l=>l.company_id===firm?.id&&l.last_synced_at)?` <button class="btn btn-line" data-do="release-history">Liberar histórico após conferência</button>`:""}${links.some(l=>l.company_id===firm?.id&&l.is_active)?` <button class="btn btn-dark" data-do="client-access">Gerenciar login do cliente</button> <button class="btn btn-line" data-do="create-company-test">Gerar login de teste</button> <button class="btn btn-line" data-do="remove-company-test">Desativar login de teste</button>`:""}${pilotTestCredential&&pilotTestCredential.cnpj===firm?.cnpj?`<div class="card card-pad" style="margin-top:14px"><strong>Acesso de teste criado (não encaminhe ao cliente)</strong><p>CNPJ de acesso: <strong>${esc(pilotTestCredential.cnpj)}</strong></p><p>Senha de teste: <code style="user-select:all;overflow-wrap:anywhere">${esc(pilotTestCredential.password)}</code></p><p class="subtle">Para testar o login real sem sair da GAV, abra o portal em uma janela anônima e entre com o CNPJ e esta senha. Apenas os arquivos publicados ficarão visíveis.</p></div>`:""}<p class="subtle" style="margin-top:9px">Novos arquivos são liberados automaticamente. Publicar serve para o histórico antigo ainda pendente; Revogar oculta um arquivo.</p></div>`:""}${adminView()?clientAccessHtml():""}${firm?`<div class="hero"><div><small>ÁREA EXCLUSIVA DA EMPRESA</small><h2>${esc(firm.legal_name)}</h2><p>CNPJ ${esc(fmt(firm.cnpj))} · Documentos por competência e categoria.</p></div></div>`:""}<div class="stats"><div class="card stat"><span class="caption">${adminView()?"Documentos cadastrados":"Documentos disponíveis"}</span><strong>${items.length}</strong></div>${adminView()?`<div class="card stat"><span class="caption">Documentos liberados</span><strong>${items.filter(x=>x.published_at).length}</strong></div>`:""}<div class="card stat"><span class="caption">Categorias com arquivos</span><strong>${new Set(items.map(x=>x.category)).size}</strong></div></div><div class="section-title">Categorias</div><div class="cat-grid">${C.map(([id,n])=>`<button class="category" data-do="cat" data-val="${id}"><span class="cat-name">${esc(n)}</span><span class="cat-count">${items.filter(d=>d.category===id).length} documento(s)</span></button>`).join("")}</div><div class="section-title">Documentos recentes</div><div class="card card-pad">${selectionBar(items.slice().sort(documentSort).slice(0,5))}${files(items.slice().sort(documentSort).slice(0,5))}</div>`;
 }
 function recent(){
- const arr=filtered().slice().sort(documentSort),years=[...new Set(displayDocs().map(d=>d.year).filter(Boolean))].sort((a,b)=>b-a);
+ const arr=filtered().slice().sort(documentSort),years=[...new Set([new Date().getFullYear(),...displayDocs().map(d=>d.year).filter(Boolean)])].sort((a,b)=>b-a);
  const shown=arr.slice(listPage*PAGE_SIZE,(listPage+1)*PAGE_SIZE);
  const heading=view==="category"?(C.find(c=>c[0]===cat)?.[1]||"Documentos"):"Documentos";
  const from=arr.length?listPage*PAGE_SIZE+1:0,to=arr.length?Math.min(arr.length,(listPage+1)*PAGE_SIZE):0;
@@ -783,7 +795,8 @@ async function google({renewDrive=false}={}){
 async function handle(e){
  const a=e.currentTarget.dataset.do,v=e.currentTarget.dataset.val;
  if(a==="view"){
-  resetSelection();listPage=0;view=v;cat="";year="ALL";month="ALL";navigationHistory.length=0;
+  resetSelection();listPage=0;view=v;cat="";year=new Date().getFullYear();month="ALL";navigationHistory.length=0;
+  if(v==="recent")suggestDocumentPeriod();
   if(v==="processing"&&adminView())await run(loadProcessing);
   else if(v==="companies"&&adminView()){if(companyFolders.officeId!==officeId||!companyFolders.loaded)await run(loadCompanyFolders);else render()}
   else render();return;
@@ -794,7 +807,7 @@ async function handle(e){
  if(a==="company-cancel"){companyEditorOpen=false;companyEditId="";render();return}
  if(a==="company-reload-folders"){if(adminView())await run(loadCompanyFolders);return}
  if(a==="back"){resetSelection();listPage=0;view="home";cat="";year="ALL";month="ALL";navigationHistory.length=0;render();return}
- if(a==="cat"){resetSelection();listPage=0;navigationHistory.push({view,cat,year,month});cat=v;view="category";year="ALL";month="ALL";render();return}
+ if(a==="cat"){resetSelection();listPage=0;navigationHistory.push({view,cat,year,month});cat=v;view="category";suggestDocumentPeriod(cat);render();return}
  if(a==="google"){await google();return}
  if(a==="google-drive"){if(adminView())await google({renewDrive:true});return}
  if(a==="logout"){try{sessionStorage.removeItem("gav-selected-office")}catch(_e){}resetSelection();pilotTestCredential=null;previewAsClient=false;clientDocs=[];clearPdfCache();await sb.auth.signOut();session=null;role="";googleToken="";notice="";render();return}
