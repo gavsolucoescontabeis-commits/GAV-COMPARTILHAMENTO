@@ -5,7 +5,7 @@ const sb=createClient(ROOT,PUB,{auth:{autoRefreshToken:true,persistSession:true,
 const logo="assets/logo-gav-sem-fundo.svg",lion="assets/leao-gav-sem-fundo.svg";
 const app=document.getElementById("app");
 
-const GAV_PORTAL_VERSION="0.13.10";
+const GAV_PORTAL_VERSION="0.13.11";
 let gavAvailableVersion="",gavVersionCheckRunning=false;
 const comparePortalVersions=(left,right)=>{
  const a=left.split(".").map(Number),b=right.split(".").map(Number);
@@ -544,7 +544,7 @@ function processingPage(){
    const state=withoutMovement?"Sem movimento":done?"Concluída":"Pendente";
    const stateClass=withoutMovement?"is-without-movement":done?"is-complete":"is-pending";
    const action=isParcel?"":withoutMovement?
-    '<button type="button" class="gav-process-toggle" data-do="processing-resume" data-val="'+esc(c.id)+'">Reativar</button>':
+    (c.inactivityActive?'<button type="button" class="gav-process-toggle" data-do="processing-resume" data-val="'+esc(c.id)+'">Reativar</button>':""):
     !done?'<button type="button" class="gav-process-toggle" data-do="processing-inactive" data-val="'+esc(c.id)+'">Sem movimento</button>':"";
    return '<div class="gav-process-row"><div class="gav-process-company"><strong>'+esc((c.code||"")+" · "+c.legalName)+'</strong>'+cnpjField+'<small>'+esc(c.serviceLabel||"Folha")+' · '+esc(c.reason)+'</small></div><div>'+label("darf")+'</div><div>'+label("fgts")+'</div><div>'+receiptOrGps()+'</div><div>'+label("parcelamento")+'</div><div class="gav-process-result"><span class="gav-process-status '+stateClass+'" aria-label="'+state+'">'+(withoutMovement?"○ ":done?"✓ ":"• ")+state+'</span>'+action+'</div><div><button class="btn btn-line btn-small" data-do="pick" data-val="'+esc(c.id)+'">Abrir</button></div></div>';
  }).join("");
