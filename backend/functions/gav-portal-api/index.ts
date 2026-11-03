@@ -25,6 +25,22 @@ async function tokenFrom(body:any,admin:boolean){
  if(!res.ok)error("Renove a autorização do Drive pela conta GAV.",409);
  return (await res.json()).access_token;
 }
+
+async function gavClientUser(email:string){
+ for(let page=1;page<=25;page++){
+  const r=await supa.auth.admin.listUsers({page,perPage:1000});
+  if(r.error)error("Falha na consulta dos acessos.",502);
+  const u=(r.data.users||[]).find((x:any)=>x.email?.toLowerCase()===email);
+  if(u)return u;
+  if((r.data.users||[]).length<1000)break;
+ }
+ return null;
+}
+function gavNewPassword(){
+ const chars="ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$";
+ const buf=new Uint8Array(28);crypto.getRandomValues(buf);
+ return Array.from(buf,(x:number)=>chars[x%chars.length]).join("");
+}
 Deno.serve(async req=>{
  if(req.method==="OPTIONS")return new Response(null,{status:204,headers});
  if(req.method!=="POST")return reply({error:"Método inválido."},405);
@@ -39,22 +55,150 @@ Deno.serve(async req=>{
   if(isOwner)check(await supa.from("gav_admin_users").upsert({user_id:user.id,active:true},{onConflict:"user_id"}));
   const adminRows=check(await supa.from("gav_admin_users").select("user_id").eq("user_id",user.id).eq("active",true));
   const isAdmin=!!isOwner&&adminRows.length>0;
-  const members=check(await supa.from("gav_memberships").select("company_id").eq("user_id",user.id).eq("active",true));
+  const members=check(await supa.from("gav_memberships").select("company_id,password_change_required").eq("user_id",user.id).eq("active",true));
   const companyIds=members.map((m:any)=>m.company_id);
   const b=await req.json(),action=String(b.action||""),companyId=String(b.companyId||"");
   const adminOnly=()=>{if(!isAdmin)error("Somente administrador GAV.",403)};
   const companyOnly=()=>{if(!isAdmin&&!companyIds.includes(companyId))error("Empresa não autorizada.",403)};
+
+  const changeRequired=!isAdmin&&(user.app_metadata?.gav_password_change_required===true||members.some((m:any)=>m.password_change_required));
+  if(action==="changeClientPassword"){
+   if(isAdmin||user.app_metadata?.gav_account_kind!=="client"||
+     !companyIds.includes(String(user.app_metadata?.gav_company_id||"")))
+     error("Acesso de cliente não autorizado.",403);
+   const password=String(b.password||"");
+   if(password.length<12||password.length>128||!/[a-zA-Z]/.test(password)||!/[0-9]/.test(password))
+     error("Use uma senha com pelo menos 12 caracteres, incluindo letras e números.",400);
+   const issuedAt=Date.parse(String(user.app_metadata?.gav_password_issued_at||""));
+   const signedAt=Date.parse(String(user.last_sign_in_at||""));
+   if(Number.isFinite(issuedAt)&&(!Number.isFinite(signedAt)||signedAt<=issuedAt))
+     error("Saia e entre novamente com a senha provisória antes de escolher uma nova senha.",403);
+   const updated=await supa.auth.admin.updateUserById(user.id,
+    {password,app_metadata:{...user.app_metadata,gav_password_change_required:false,gav_password_changed_at:new Date().toISOString()}});
+   if(updated.error)error("Não foi possível alterar a senha. Tente novamente.",502);
+   check(await supa.from("gav_memberships").update({password_change_required:false}).eq("user_id",user.id));
+   return reply({ok:true});
+  }
+  
+  // Ligação individual autorizada: não presumir vínculo por sócio, nome ou escritório.
+  if(action==="linkClientCompany"||action==="unlinkClientCompany"){
+   adminOnly();
+   const targetCompanyId=String(b.targetCompanyId||"");
+   if(!/^[0-9a-f-]{36}$/i.test(companyId)||!/^[0-9a-f-]{36}$/i.test(targetCompanyId)||companyId===targetCompanyId)
+     error("Selecione duas empresas distintas.",400);
+   const firms=check(await supa.from("gav_companies").select("id,cnpj,legal_name,is_active")
+     .in("id",[companyId,targetCompanyId]));
+   if(firms.length!==2||firms.some((c:any)=>!c.is_active))error("Empresas inexistentes ou inativas.",409);
+   const origin=firms.find((c:any)=>c.id===companyId)!;
+   const target=firms.find((c:any)=>c.id===targetCompanyId)!;
+   const originUser=await gavClientUser("cliente-"+origin.cnpj+"@acesso.gavsolucoescontabeis.com.br");
+   if(!originUser||originUser.app_metadata?.gav_test_account||
+      originUser.app_metadata?.gav_account_kind!=="client"||
+      originUser.app_metadata?.gav_company_id!==companyId)
+      error("Ative antes o login definitivo do CNPJ de origem.",409);
+   const originPrimary=check(await supa.from("gav_memberships")
+     .select("active,password_change_required").eq("user_id",originUser.id)
+     .eq("company_id",companyId).maybeSingle());
+   if(!originPrimary?.active||originPrimary.password_change_required||
+      originUser.app_metadata?.gav_password_change_required===true)
+      error("O CNPJ de origem precisa estar ativo e com senha definitiva.",409);
+   const reciprocal=b.reciprocal===true;
+   let targetUser:any=null;
+   if(reciprocal){
+     targetUser=await gavClientUser("cliente-"+target.cnpj+"@acesso.gavsolucoescontabeis.com.br");
+     if(!targetUser||targetUser.app_metadata?.gav_test_account||
+        targetUser.app_metadata?.gav_account_kind!=="client"||
+        targetUser.app_metadata?.gav_company_id!==targetCompanyId)
+       error("Ative o login definitivo do segundo CNPJ para liberar as duas entradas.",409);
+     const secondaryPrimary=check(await supa.from("gav_memberships")
+       .select("active,password_change_required").eq("user_id",targetUser.id)
+       .eq("company_id",targetCompanyId).maybeSingle());
+     if(!secondaryPrimary?.active||secondaryPrimary.password_change_required||
+         targetUser.app_metadata?.gav_password_change_required===true)
+       error("O login do segundo CNPJ precisa ter senha definitiva.",409);
+   }
+   if(action==="linkClientCompany"){
+     const folders=check(await supa.from("gav_drive_folders").select("company_id")
+       .in("company_id",[companyId,targetCompanyId]).eq("is_active",true));
+     if(![companyId,targetCompanyId].every((id:string)=>folders.some((f:any)=>f.company_id===id)))
+       error("As duas empresas devem ter pasta do Drive autorizada.",409);
+     check(await supa.from("gav_memberships").upsert(
+       {user_id:originUser.id,company_id:targetCompanyId,active:true,password_change_required:false},
+       {onConflict:"user_id,company_id"}));
+     if(reciprocal)check(await supa.from("gav_memberships").upsert(
+       {user_id:targetUser.id,company_id:companyId,active:true,password_change_required:false},
+       {onConflict:"user_id,company_id"}));
+     check(await supa.from("gav_audit_events").insert([
+       {actor_user_id:user.id,company_id:targetCompanyId,action:"CLIENT_COMPANY_LINKED"},
+       ...(reciprocal?[{actor_user_id:user.id,company_id:companyId,action:"CLIENT_COMPANY_LINKED_RECIPROCAL"}]:[])
+     ]));
+     return reply({ok:true,linked:true,reciprocal});
+   }
+   check(await supa.from("gav_memberships").update({active:false})
+     .eq("user_id",originUser.id).eq("company_id",targetCompanyId));
+   if(reciprocal)check(await supa.from("gav_memberships").update({active:false})
+     .eq("user_id",targetUser.id).eq("company_id",companyId));
+   check(await supa.from("gav_audit_events").insert([
+     {actor_user_id:user.id,company_id:targetCompanyId,action:"CLIENT_COMPANY_UNLINKED"},
+     ...(reciprocal?[{actor_user_id:user.id,company_id:companyId,action:"CLIENT_COMPANY_UNLINKED_RECIPROCAL"}]:[])
+   ]));
+   return reply({ok:true,linked:false,reciprocal});
+  }
+  if(["clientAccessStatus","issueClientAccess","disableClientAccess"].includes(action)){
+   adminOnly();
+   const company=check(await supa.from("gav_companies").select("id,cnpj,legal_name,is_active").eq("id",companyId).maybeSingle());
+   if(!company?.is_active)error("Empresa não cadastrada ou inativa.",404);
+   const email="cliente-"+company.cnpj+"@acesso.gavsolucoescontabeis.com.br";
+   const existing=await gavClientUser(email);
+   if(existing?.app_metadata?.gav_test_account)error("Existe login de teste. Desative-o antes de criar o acesso definitivo.",409);
+   if(existing&&(existing.app_metadata?.gav_account_kind!=="client"||existing.app_metadata?.gav_company_id!==companyId))
+     error("Existe uma conta não reconhecida para este CNPJ. Conferência necessária.",409);
+   const membership=existing?check(await supa.from("gav_memberships").select("company_id,active,password_change_required").eq("user_id",existing.id)):[];
+   const active=membership.some((m:any)=>m.company_id===companyId&&m.active);
+   if(action==="clientAccessStatus"){
+     const otherIds=membership.filter((m:any)=>m.company_id!==companyId&&m.active).map((m:any)=>m.company_id);
+     const linkedCompanies=otherIds.length?check(await supa.from("gav_companies")
+       .select("id,cnpj,code,legal_name,office_id,is_active").in("id",otherIds)):[];
+     return reply({exists:!!existing,active,
+       needsPasswordChange:existing?.app_metadata?.gav_password_change_required===true||membership.some((m:any)=>m.password_change_required),
+       cnpj:company.cnpj,linkedCompanies});
+   }
+   if(action==="disableClientAccess"){
+    if(existing)check(await supa.from("gav_memberships").update({active:false}).eq("user_id",existing.id));
+    return reply({ok:true,active:false});
+   }
+   const folder=check(await supa.from("gav_drive_folders").select("id").eq("company_id",companyId).eq("is_active",true).maybeSingle());
+   if(!folder)error("Empresa sem pasta conferida no Drive.",409);
+   if(existing&&b.confirmReset!==true)error("Confirme a substituição da senha anterior para renovar o acesso.",409);
+   const password=gavNewPassword(), metadata={...(existing?.app_metadata||{}),gav_account_kind:"client",gav_company_id:companyId,gav_password_change_required:true,gav_password_issued_at:new Date().toISOString()};
+   let uid:string;
+   if(existing){
+    check(await supa.from("gav_memberships").update({password_change_required:true}).eq("user_id",existing.id));
+    const updated=await supa.auth.admin.updateUserById(existing.id,{password,app_metadata:metadata});
+    if(updated.error)error("Não foi possível renovar a senha.",502);
+    uid=existing.id;
+   }else{
+    const created=await supa.auth.admin.createUser({email,password,email_confirm:true,app_metadata:metadata});
+    if(created.error||!created.data.user)error("Não foi possível criar o usuário do cliente.",502);
+    uid=created.data.user.id;
+   }
+   check(await supa.from("gav_memberships").upsert({user_id:uid,company_id:companyId,active:true,password_change_required:true},{onConflict:"user_id,company_id"}));
+   check(await supa.from("gav_audit_events").insert({actor_user_id:user.id,company_id:companyId,action:existing?"CLIENT_ACCESS_REISSUED":"CLIENT_ACCESS_CREATED"}));
+   return reply({ok:true,cnpj:company.cnpj,password,needsPasswordChange:true,initial:!existing});
+  }
   if(action==="me"){
    const companies=isAdmin?check(await supa.from("gav_companies").select("id,code,cnpj,legal_name,folder_label,office_id,is_active").order("code")):companyIds.length?check(await supa.from("gav_companies").select("id,code,cnpj,legal_name,folder_label,office_id,is_active").in("id",companyIds)):[];
+   const offices=isAdmin?check(await supa.from("gav_offices").select("id,code,display_name").order("code")):[];
    const linked=isAdmin?check(await supa.from("gav_drive_folders").select("company_id,is_active,auto_publish_new,last_synced_at,last_indexed_count").eq("is_active",true)):[];
    const candidate=isAdmin?check(await supa.from("gav_drive_candidates").select("company_id,label,verified_at")):[];
    const sync=isAdmin?check(await supa.from("gav_sync_runs")
     .select("company_id,state,indexed_count,started_at,finished_at,error_safe")
     .order("started_at",{ascending:false}).limit(250)):[];
-   return reply({role:isAdmin?"admin":"client",companies,linked,candidate,sync,driveSecretsConfigured:!!(Deno.env.get("GOOGLE_OAUTH_CLIENT_ID")&&Deno.env.get("GOOGLE_OAUTH_CLIENT_SECRET"))});
+   return reply({role:isAdmin?"admin":"client",primaryCompanyId:!isAdmin?String(user.app_metadata?.gav_company_id||""):"",passwordChangeRequired:changeRequired,clientManaged:!isAdmin&&user.app_metadata?.gav_account_kind==="client",offices,companies,linked,candidate,sync,driveSecretsConfigured:!!(Deno.env.get("GOOGLE_OAUTH_CLIENT_ID")&&Deno.env.get("GOOGLE_OAUTH_CLIENT_SECRET"))});
   }
   if(action==="documents"){
    companyOnly();
+   if(changeRequired)error("Defina a senha definitiva antes de consultar os documentos.",403);
    const page=Number(b.page||0);
    if(!Number.isInteger(page)||page<0||page>40)error("Página inválida.",400);
    let q=supa.from("gav_documents").select("id,company_id,file_name,mime_type,relative_path,category,year,month,review_status,published_at")
