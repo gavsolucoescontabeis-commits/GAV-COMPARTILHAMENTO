@@ -225,3 +225,18 @@ Status Folha **Sem movimento**: o administrador escolhe a competência e registr
 
 ### Refinamento v0.13.11 — histórico
 Em meses históricos cujo período Sem movimento já terminou, conservar o status para consulta, mas ocultar a ação Reativar (backend devolve `inactivityActive`). Somente a competência sob anotação ainda ativa permite encerrar a faixa. Edge Function implantada como v5 e código sincronizado com o repositório. Sem marcação automática de empresas.
+
+
+## Atualização 03/11/2026 — Identidade visual v0.13.12 (implementada)
+
+Substituída a antiga identidade preto/dourado pela nova identidade visual oficial **GAV Compartilhar**, conforme solicitação aprovada:
+
+- Menu lateral `#203B56`; fundo `#F1F4F3`; superfícies `#FFFFFF`.
+- Texto principal `#253542`; secundário `#546775`; bordas `#D4DEE1`.
+- Botões principais `#244B66`; hover `#17364D`; dourado `#B68A3C`.
+- Complemento **vinho `#7A3E52`** exclusivo do GAV Compartilhar.
+- Preto removido das áreas visuais de interface; cores de estado (sucesso, pendente, alerta) mantêm finalidade sem confundir com a cor de outro sistema.
+- SVGs originais da marca GAV e do leão mantidos, com fundo transparente; sem redesenhos.
+- Modificação apenas de estilos, variáveis visuais e cores do PWA. Preservados layouts, regras, autorizações, operações e processamento.
+
+As referências anteriores do tipo "barra preta", "layout preto/dourado" são históricas e **não** reinstalam a paleta antiga.
