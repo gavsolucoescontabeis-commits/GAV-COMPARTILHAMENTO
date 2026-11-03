@@ -194,16 +194,16 @@ input[type=checkbox],input[type=radio]{accent-color:var(--gav-wine)}
 /* Botão primário vinho; botão contrastante dourado; secundário claro */
 .btn-dark,.gav-doc-actions .gav-btn-download{background:var(--gav-wine);color:#FFFFFF;border-color:var(--gav-wine)}
 .btn-dark:hover,.gav-doc-actions .gav-btn-download:hover{background:var(--gav-wine-hover);color:#FFFFFF;border-color:var(--gav-wine-hover)}
-.btn-gold{background:var(--gold);color:#342C31;border-color:var(--gold)}
-.btn-gold:hover{background:#D2AB64;color:#342C31;border-color:#D2AB64}
+.btn-gold{background:var(--gold);color:#2B2529;border-color:var(--gold)}
+.btn-gold:hover{background:#D2AB64;color:#2B2529;border-color:#D2AB64}
 .btn-line,.gav-doc-actions .gav-btn-preview{background:var(--white);border-color:var(--border);color:var(--gav-wine)}
 .btn-line:hover,.gav-doc-actions .gav-btn-preview:hover{background:var(--gav-wine-soft);border-color:var(--gav-wine);color:var(--gav-wine-deep)}
 /* Painéis e categorias: vinho visualmente predominante */
 .hero,.scan-drop{background:linear-gradient(115deg,var(--gav-wine),var(--gav-wine-deep));color:#FFFFFF;border-color:var(--gav-wine)}
 .hero h2,.hero p,.scan-drop h3{color:#FFFFFF}
 .hero small,.scan-drop p{color:#F3DCE5}
-.scan-drop .btn{background:var(--gold);color:#342C31;border-color:var(--gold)}
-.scan-drop .btn:hover{background:#D2AB64;color:#342C31}
+.scan-drop .btn{background:var(--gold);color:#2B2529;border-color:var(--gold)}
+.scan-drop .btn:hover{background:#D2AB64;color:#2B2529}
 .category{background:var(--white);border-color:var(--border);color:var(--ink);box-shadow:0 7px 18px #7A3E520D}
 .category:hover{background:#FFFAFB;border-color:var(--gav-wine);box-shadow:0 10px 24px #7A3E521A}
 .cat-name{color:var(--ink)}
@@ -246,7 +246,7 @@ input[type=checkbox],input[type=radio]{accent-color:var(--gav-wine)}
 .gav-update-bar,.toast,.gav-toast{background:var(--gav-wine-deep);color:#FFFFFF;border-color:var(--gold);box-shadow:0 14px 38px #7A3E5230}
 .gav-update-details strong{color:var(--gold2)}
 .gav-update-details small{color:#F3DDE5}
-.gav-update-button{background:var(--gold);color:#342C31}
+.gav-update-button{background:var(--gold);color:#2B2529}
 .gav-update-button:hover{background:#D2AB64}
 .gav-preview-overlay,.overlay{background:#542837AD}
 .gav-preview-box{background:var(--white);box-shadow:0 24px 65px #7A3E5230}
