@@ -213,3 +213,11 @@ Estado: v0.10.2 foi publicado no GitHub e o endpoint administrativo de escritór
 O usuário já utiliza o GAV Compartilhamento instalado no computador e quer que receba versões novas sem baixar ou reinstalar. Preservar sempre a mesma URL HTTPS, o mesmo id/escopo do manifesto e a estrutura aprovada. A v0.13.9 fortalece a atualização da navegação via rede sem cache, corrige o número de versão exibido na interface e consulta um `version.json` público sem dados sensíveis. Enquanto o aplicativo estiver aberto, uma versão superior apresenta aviso discreto **Atualizar agora**, sem recarregar a tela durante uso, para proteger navegação, formulários e downloads.
 
 Não confundir instalação do PWA/atalho de URL com arquivo `.html` salvo localmente, que não atualiza. Sem mudanças em documentos Drive, Supabase, RLS, CNPJ, permissões ou processamento GPS/DCTFWeb. Testar no Windows com Chrome/Edge e observar se a versão aparece correta antes de considerar a demanda integralmente validada.
+
+
+---
+## Aditivo 03/11/2026 — v0.13.10
+
+Na aba Processamento manter layout aprovado e GPS sob Recibo DCTFWeb. Formatar coluna FGTS **Mensal** e DARF / **Parcelamento** em duas linhas. Mostrar CNPJ da empresa abaixo da razão social e botão Copiar sem criar coluna. Exibir na área restrita do administrador.
+
+Status Folha **Sem movimento**: o administrador escolhe a competência e registra manualmente, persistindo para as competências seguintes até clicar **Reativar** em competência posterior. Guardar o histórico no Supabase isolado; não confundir essa anotação com envio de obrigações, pagamento ou conclusão. Jair Camargo tem serviço FOLHA confirmado, mas não será marcada automaticamente. Preferência do usuário: usar SETEMBRO/2026 para registrar a condição inicial. Preservar demais serviços, regras de autorização e app PWA sem reinstalação.

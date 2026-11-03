@@ -1,5 +1,5 @@
 {
-  "version": "0.13.9",
+  "version": "0.13.10",
   "release": "2026-11-03",
-  "notes": "Atualização do portal instalado sem reinstalar."
+  "notes": "Processamento: CNPJ copiável, Sem movimento persistente e colunas ajustadas."
 }

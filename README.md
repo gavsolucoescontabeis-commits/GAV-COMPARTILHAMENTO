@@ -1,6 +1,6 @@
 # GAV Compartilhar Docs — Portal seguro
 
-**Versão atual: v0.13.9 · atualização do aplicativo instalado**
+**Versão atual: v0.13.10 · processamento ajustado**
 
 **Acesso permanente:** https://gavsolucoescontabeis-commits.github.io/GAV-COMPARTILHAMENTO/
 
@@ -118,3 +118,12 @@ Nesta v0.13.8, as referências a ícones PNG inexistentes no manifesto foram cor
 O GAV Compartilhamento é um PWA e mantém o mesmo endereço HTTPS e identidade de instalação. Ao abrir novamente ele deve carregar a versão atual pela rede, sem precisar baixar arquivos ou reinstalar. O service worker agora usa navegação com `cache: no-store`, sem armazenar PDFs, tokens ou dados do usuário. Os módulos e estilos receberam identificadores de versão para evitar respostas antigas de cache.
 
 O módulo exibe sua **versão real** na barra lateral e no cabeçalho. O arquivo estático `version.json` é consultado ao iniciar, quando o usuário retorna ao aplicativo e a cada 4 minutos. Se uma versão nova estiver disponível enquanto o portal estiver aberto, surge um aviso discreto **Atualização disponível → Atualizar agora**; o portal não recarrega sozinho durante consulta, edição ou download. Essa opção atualiza a página com parâmetro de versão para evitar HTML antigo. Nenhum acesso, documento, banco ou regra de sincronização foi alterado. **Ainda é necessário testar o comportamento no PWA do Windows**, inclusive após a distribuição do GitHub Pages. Se o usuário estiver abrindo um arquivo HTML local e não o site HTTPS, ele não recebe atualizações.
+
+
+## v0.13.10 — Ajustes de Processamento
+
+- CNPJ verdadeiro abaixo do nome da empresa no Processamento, com botão **Copiar**, sem coluna adicional. Copia os 14 dígitos.
+- Cabeçalhos **FGTS Mensal** e **DARF / Parcelamento** em duas linhas. Recibo DCTFWeb continua agrupado com GPS na mesma coluna.
+- Status **Sem movimento** disponível manualmente para folha pendente, desde competência escolhida até reativação. Não conta como concluída nem pendente; os períodos permanecem salvos no Supabase privado e a situação volta a ser acompanhada ao clicar Reativar na competência desejada.
+- **Nenhuma empresa foi marcada sem movimento automaticamente**. Para Jair Camargo, a administração pode selecionar SETEMBRO/2026 e marcar, se desejar; a situação prossegue até reativação. Isto é controle administrativo e não comprova envio de declarações.
+- Atualização disponibilizada via PWA v0.13.10: fechar e abrir o aplicativo instalado, sem reinstalar.

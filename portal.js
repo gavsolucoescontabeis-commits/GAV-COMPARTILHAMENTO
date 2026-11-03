@@ -5,7 +5,7 @@ const sb=createClient(ROOT,PUB,{auth:{autoRefreshToken:true,persistSession:true,
 const logo="assets/logo-gav-sem-fundo.svg",lion="assets/leao-gav-sem-fundo.svg";
 const app=document.getElementById("app");
 
-const GAV_PORTAL_VERSION="0.13.9";
+const GAV_PORTAL_VERSION="0.13.10";
 let gavAvailableVersion="",gavVersionCheckRunning=false;
 const comparePortalVersions=(left,right)=>{
  const a=left.split(".").map(Number),b=right.split(".").map(Number);
@@ -53,6 +53,7 @@ const portalLayoutStyle=document.createElement("style");
 portalLayoutStyle.textContent="@media(min-width:721px){.shell.gav-portal-shell{display:block;padding-left:248px}.shell.gav-portal-shell>.side{position:fixed;inset:0 auto 0 0;width:248px;height:100dvh;max-height:100dvh;overflow-y:auto;overscroll-behavior:contain;z-index:65;box-sizing:border-box}.shell.gav-portal-shell>.app-main{width:100%;min-width:0}}@media(max-width:720px){.shell.gav-portal-shell{display:block;padding-left:0}.shell.gav-portal-shell>.side{display:none}}.gav-client-preview-banner{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;background:#fcf8ee;color:#5b4622;border:1px solid #dfc991;border-radius:10px;padding:13px 15px;margin:0 0 20px}.gav-client-preview-banner p{font-size:12px;margin:4px 0}.gav-client-preview-banner .btn{min-height:42px}";
 portalLayoutStyle.textContent += ".gav-company-toolbar{display:flex;align-items:end;justify-content:space-between;gap:14px;flex-wrap:wrap;margin:16px 0}.gav-company-toolbar>.form-field{min-width:220px}.gav-company-form-grid{display:grid;grid-template-columns:140px minmax(180px,1fr);gap:12px}.gav-company-form-grid .gav-company-name{grid-column:1/-1}.gav-company-actions{display:flex;gap:8px;flex-wrap:wrap}.gav-company-warning{color:#955616;font-size:12px;padding:10px 0}@media(max-width:650px){.gav-company-form-grid{grid-template-columns:1fr}.gav-company-form-grid .gav-company-name{grid-column:auto}.gav-company-toolbar>.form-field{width:100%}}";
 portalLayoutStyle.textContent += ".gav-process-head{display:flex;align-items:end;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:16px 0}.gav-process-filters{display:flex;gap:9px;align-items:end;flex-wrap:wrap}.gav-process-filters label{display:grid;gap:5px;font-size:12px;color:#69717b;font-weight:700}.gav-process-filters select{min-width:118px}.gav-process-cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:18px 0}.gav-process-card{padding:17px}.gav-process-card strong{display:block;font-size:25px}.gav-process-table{overflow-x:auto}.gav-process-row{display:grid;grid-template-columns:minmax(190px,2.3fr) minmax(110px,1fr) minmax(110px,1fr) minmax(185px,1.55fr) minmax(125px,1.1fr) minmax(110px,1.2fr) minmax(70px,.7fr);gap:12px;align-items:center;padding:13px 16px;border-bottom:1px solid #edf0f3;font-size:12px}.gav-process-row.gav-process-header{background:#f7f7f6;color:#666;font-size:11px;font-weight:800}.gav-process-row>div:first-child{min-width:0}.gav-process-row small{display:block;color:#7b838a;line-height:1.4;margin-top:4px}.gav-process-good{color:#137650;font-weight:800}.gav-process-pending{color:#a06921;font-weight:800}.gav-process-status{display:inline-flex;align-items:center;justify-content:center;gap:5px;font-weight:800;font-size:12px;line-height:1.25;padding:8px 10px;border:1px solid transparent;border-radius:8px;white-space:nowrap}.gav-process-status.is-complete{background:#e6f5eb;border-color:#95d5ac;color:#11653c;box-shadow:0 1px 2px rgba(17,101,60,.09)}.gav-process-status.is-pending{background:#fbf5e9;border-color:#ead5ab;color:#895b19}.gav-process-note{font-size:12px;color:#69717b;line-height:1.6;margin-top:16px}@media(max-width:860px){.gav-process-row{grid-template-columns:minmax(170px,2fr) minmax(100px,1fr) minmax(100px,1fr) minmax(170px,1.6fr) minmax(125px,1fr) minmax(100px,1fr) minmax(70px,.7fr);width:965px}.gav-process-cards{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:520px){.gav-process-cards{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.gav-process-card{padding:11px}.gav-process-card strong{font-size:20px}}";
+portalLayoutStyle.textContent += ".gav-process-cards{grid-template-columns:repeat(4,minmax(0,1fr))}.gav-process-company strong{display:block;line-height:1.45}.gav-process-cnpj{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin:5px 0 4px;color:#65717c;font-size:11px}.gav-copy-cnpj{border:1px solid #d8c7a5;background:#fffaf0;color:#88642a;border-radius:7px;padding:4px 8px;font-size:10px;font-weight:800;cursor:pointer}.gav-process-result{display:flex;flex-direction:column;align-items:flex-start;gap:7px}.gav-process-toggle{border:0;background:transparent;color:#7e622c;font-size:11px;font-weight:800;text-decoration:underline;padding:2px 0;cursor:pointer}.gav-process-status.is-without-movement{background:#eef1f5;border-color:#c4cbd4;color:#485463;white-space:normal}@media(max-width:860px){.gav-process-cards{grid-template-columns:repeat(4,minmax(0,1fr))}.gav-process-row{grid-template-columns:minmax(218px,2.3fr) minmax(100px,1fr) minmax(95px,1fr) minmax(170px,1.5fr) minmax(120px,1fr) minmax(118px,1fr) minmax(70px,.7fr);width:1100px}}@media(max-width:520px){.gav-process-cards{grid-template-columns:repeat(2,minmax(0,1fr))}}";
 document.head.appendChild(portalLayoutStyle);
 const M=["JANEIRO","FEVEREIRO","MARÇO","ABRIL","MAIO","JUNHO","JULHO","AGOSTO","SETEMBRO","OUTUBRO","NOVEMBRO","DEZEMBRO","DÉCIMO TERCEIRO"];
 const C=[["ADMISSOES","Admissões"],["RESCISOES","Rescisões"],["FERIAS","Férias"],["FOLHA","Folha de Pagamento"],["GUIAS_IMPOSTOS","Guias e Impostos"],["OUTROS","Outros Documentos"]];
@@ -520,11 +521,11 @@ function processingPage(){
  const mark=(v)=>v?'<span class="gav-process-good">✓ Encontrado</span>':'<span class="gav-process-pending">— Ausente</span>';
  let out=title("Processamento — "+officeLabel(),"Conferência automática de folha e parcelamentos por empresa e competência, exclusiva da administração GAV.");
  out+='<div class="gav-process-head">'+officePicker()+'<div class="gav-process-filters"><label>Competência<select class="input" id="processingMonthSelect">'+M.map((n,i)=>'<option value="'+(i+1)+'" '+(processingMonth===i+1?"selected":"")+'>'+esc(n)+'</option>').join("")+'</select></label><label>Ano<select class="input" id="processingYearSelect">'+years.map(y=>'<option value="'+y+'" '+(processingYear===y?"selected":"")+'>'+y+'</option>').join("")+'</select></label><button class="btn btn-dark btn-small" data-do="processing-refresh">Atualizar conferência</button></div></div>';
- out+='<div class="gav-process-cards"><div class="card gav-process-card"><span class="subtle">Serviços acompanhados</span><strong>'+currentData.total+'</strong></div><div class="card gav-process-card"><span class="subtle">Concluídas</span><strong>'+currentData.concluded+'</strong></div><div class="card gav-process-card"><span class="subtle">Pendentes</span><strong>'+currentData.pending+'</strong></div></div>';
+ out+='<div class="gav-process-cards"><div class="card gav-process-card"><span class="subtle">Serviços acompanhados</span><strong>'+currentData.total+'</strong></div><div class="card gav-process-card"><span class="subtle">Concluídas</span><strong>'+currentData.concluded+'</strong></div><div class="card gav-process-card"><span class="subtle">Pendentes</span><strong>'+currentData.pending+'</strong></div><div class="card gav-process-card"><span class="subtle">Sem movimento</span><strong>'+Number(currentData.withoutMovement||0)+'</strong></div></div>';
  if(!currentData.loaded)return out+'<div class="card card-pad">Atualizando o controle de '+esc(M[processingMonth-1])+'/'+processingYear+'...</div>';
- const columns='<div class="gav-process-row gav-process-header"><span>Empresa</span><span>DARF de INSS</span><span>FGTS mensal</span><span>Recibo DCTFWeb<small>ou GPS</small></span><span>DARF parcelamento</span><span>Situação</span><span>Consultar</span></div>';
+ const columns='<div class="gav-process-row gav-process-header"><span>Empresa</span><span>DARF de INSS</span><span>FGTS Mensal</span><span>Recibo DCTFWeb<small>ou GPS</small></span><span>DARF<small>Parcelamento</small></span><span>Situação</span><span>Consultar</span></div>';
  const rows=currentData.companies.map(c=>{
-  const ev=c.evidence||{},done=c.status==="CONCLUIDA",isParcel=c.serviceKey==="PARCELAMENTOS";
+  const ev=c.evidence||{},done=c.status==="CONCLUIDA",withoutMovement=c.status==="SEM_MOVIMENTO",isParcel=c.serviceKey==="PARCELAMENTOS";
   const label=(key)=>{
    if((isParcel&&key!=="parcelamento")||(!isParcel&&key==="parcelamento"))return '<span class="subtle">—</span>';
    return mark(!!ev[key])+(ev[key]?'<small title="'+esc(ev[key].name)+'">'+esc(ev[key].name)+'</small>':"");
@@ -536,10 +537,19 @@ function processingPage(){
     (dctf?'<small title="'+esc(dctf.name)+'">DCTFWeb: '+esc(dctf.name)+'</small>':"")+
     (gps?'<small title="'+esc(gps.name)+'">GPS: '+esc(gps.name)+'</small>':"");
   };
-  return '<div class="gav-process-row"><div><strong>'+esc((c.code||"")+" · "+c.legalName)+'</strong><small>'+esc(c.serviceLabel||"Folha")+' · '+esc(c.reason)+'</small></div><div>'+label("darf")+'</div><div>'+label("fgts")+'</div><div>'+receiptOrGps()+'</div><div>'+label("parcelamento")+'</div><div><span class="gav-process-status '+(done?"is-complete":"is-pending")+'" aria-label="'+(done?"Concluída":"Pendente")+'">'+(done?"✓ Concluída":"• Pendente")+'</span></div><div><button class="btn btn-line btn-small" data-do="pick" data-val="'+esc(c.id)+'">Abrir</button></div></div>';
+   const digits=String(c.cnpj||"").replace(/\D/g,"");
+   const cnpjField=digits.length===14?
+    '<div class="gav-process-cnpj">CNPJ '+esc(fmt(digits))+' <button class="gav-copy-cnpj" type="button" data-do="copy-process-cnpj" data-val="'+esc(digits)+'" title="Copiar CNPJ">Copiar</button></div>':
+    '<div class="gav-process-cnpj">CNPJ não cadastrado</div>';
+   const state=withoutMovement?"Sem movimento":done?"Concluída":"Pendente";
+   const stateClass=withoutMovement?"is-without-movement":done?"is-complete":"is-pending";
+   const action=isParcel?"":withoutMovement?
+    '<button type="button" class="gav-process-toggle" data-do="processing-resume" data-val="'+esc(c.id)+'">Reativar</button>':
+    !done?'<button type="button" class="gav-process-toggle" data-do="processing-inactive" data-val="'+esc(c.id)+'">Sem movimento</button>':"";
+   return '<div class="gav-process-row"><div class="gav-process-company"><strong>'+esc((c.code||"")+" · "+c.legalName)+'</strong>'+cnpjField+'<small>'+esc(c.serviceLabel||"Folha")+' · '+esc(c.reason)+'</small></div><div>'+label("darf")+'</div><div>'+label("fgts")+'</div><div>'+receiptOrGps()+'</div><div>'+label("parcelamento")+'</div><div class="gav-process-result"><span class="gav-process-status '+stateClass+'" aria-label="'+state+'">'+(withoutMovement?"○ ":done?"✓ ":"• ")+state+'</span>'+action+'</div><div><button class="btn btn-line btn-small" data-do="pick" data-val="'+esc(c.id)+'">Abrir</button></div></div>';
  }).join("");
  out+='<div class="card gav-process-table">'+columns+(rows||'<div class="card-pad">Nenhum serviço de processamento está configurado neste escritório.</div>')+'</div>';
- out+='<p class="gav-process-note"><strong>Regra:</strong> DARF de INSS + guia mensal do FGTS, ou recibo de entrega da DCTFWeb, ou GPS da competência (Folha). Para o serviço Parcelamentos, basta DARF de parcelamento do mês; DARFs em atraso de competências anteriores não são considerados. Relatórios de FGTS, declarações DCTFWeb sem recibo e FGTS rescisório não fecham a folha. O controle usa documentos já indexados no Drive; se acabou de salvar um arquivo, confira a sincronização antes de atualizar. Concluída indica documentação encontrada, não pagamento confirmado.</p>';
+ out+='<p class="gav-process-note"><strong>Regra:</strong> DARF de INSS + guia mensal do FGTS, ou recibo de entrega da DCTFWeb, ou GPS da competência (Folha). Para o serviço Parcelamentos, basta DARF de parcelamento do mês; DARFs em atraso de competências anteriores não são considerados. Relatórios de FGTS, declarações DCTFWeb sem recibo e FGTS rescisório não fecham a folha. A marcação Sem movimento é controle interno e não substitui obrigações enviadas; vale desde a competência escolhida até reativação. O controle usa os documentos já indexados no Drive. Concluída indica documentação encontrada, não pagamento confirmado.</p>';
  return out;
 }
 function drivePage(){
@@ -837,6 +847,45 @@ async function google({renewDrive=false}={}){
 
 async function handle(e){
  const a=e.currentTarget.dataset.do,v=e.currentTarget.dataset.val;
+  if(a==="copy-process-cnpj"){
+   if(!adminView()||view!=="processing")return;
+   const digits=String(v||"").replace(/\D/g,"");
+   if(digits.length!==14)return;
+   try{
+    if(navigator.clipboard?.writeText)await navigator.clipboard.writeText(digits);
+    else{
+     const field=document.createElement("textarea");
+     field.value=digits;field.setAttribute("readonly","");field.style.position="fixed";field.style.opacity="0";
+     document.body.appendChild(field);field.select();
+     const copied=document.execCommand("copy");field.remove();
+     if(!copied)throw Error("Cópia indisponível.");
+    }
+    toastMessage("CNPJ copiado: "+fmt(digits));
+   }catch(_e){toastMessage("Não foi possível copiar automaticamente. Selecione o CNPJ na tela.")}
+   return;
+  }
+  if(a==="processing-inactive"||a==="processing-resume"){
+   if(!adminView()||view!=="processing"||busy)return;
+   const company=processingData.companies.find(c=>c.id===v);
+   if(!company||company.serviceKey!=="FOLHA")return;
+   const marking=a==="processing-inactive";
+   if(marking&&company.status!=="PENDENTE")return;
+   if(!marking&&company.status!=="SEM_MOVIMENTO")return;
+   const comp=M[processingMonth-1]+"/"+processingYear;
+   const message=marking?
+    "Registrar SEM MOVIMENTO na folha de "+company.legalName+" desde "+comp+" e nas competências seguintes até reativar?\n\nÉ só controle administrativo; não transmite obrigações nem altera documentos do Google Drive.":
+    "Reativar o acompanhamento da folha de "+company.legalName+" a partir de "+comp+"?\n\nO histórico de meses anteriores será mantido.";
+   if(!window.confirm(message))return;
+   await run(async()=>{
+    await invoke("gav-processing-summary",marking?"markWithoutMovement":"resumeMovement",{
+     companyId:company.id,officeId,year:processingYear,month:processingMonth
+    });
+    await loadProcessing();
+    notice=marking?"Sem movimento registrado desde "+comp+".":"Folha reativada desde "+comp+".";
+   });
+   return;
+  }
+
  if(a==="view"){
   resetSelection();listPage=0;view=v;cat="";year=new Date().getFullYear();month="ALL";navigationHistory.length=0;
   if(v==="recent")suggestDocumentPeriod();
