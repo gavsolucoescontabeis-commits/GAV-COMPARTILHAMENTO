@@ -195,3 +195,13 @@ Regra contínua: preservar os módulos aprovados, a barra lateral fixa, a marca 
 **Identidade e estabilidade:** manter barra preta fixa, marca/leão GAV, downloads individuais e múltiplos, publicação automática de arquivos novos somente nas pastas previamente aprovadas e Revogar persistente. Não regressar a versões antigas da interface.
 
 Estado: v0.10.2 foi publicado no GitHub e o endpoint administrativo de escritórios atualizado. Sintaxe de JavaScript e testes isolados de nomes ZIP e cartões de escritório aprovados; comportamento em navegador real ainda não foi validado nesta etapa.
+
+
+---
+## Aditivo de continuidade — 03/11/2026 · v0.13.8
+
+**Fonte atual:** repositório `gavsolucoescontabeis-commits/GAV-COMPARTILHAMENTO`, branch `main`. Não recomeçar do zero: o portal real já ultrapassou as demonstrações v0.4 e v0.8.1 mencionadas nas seções históricas acima. Preservar layout aprovado, GAV Soluções Contábeis, leão/logos originais e navegação por escritórios TTM, DS CONTÁBIL, GAV/REL GAV e AVULSOS.
+
+**Últimos ajustes em produção de código:** v0.13.6 ajustou filtros da Folha e Relatórios para ano atual/mês anterior quando disponível, com troca manual, e manteve navegação durante sincronização; não alterar o padrão de pasta do décimo terceiro `132026`. V0.13.7 agrupou GPS com recibo DCTFWeb no processamento e atualizou importação do painel. V0.13.8 corrigiu referências de ícones PWA inexistentes, preservando exatamente a arte do leão em novos SVGs quadrados e PNG original como alternativa, e antecipou registro do service worker, para compatibilidade com Chrome. O teste de instalação genuína no Chrome do usuário ainda precisa ser feito. Não chamar um atalho simples de instalação real.
+
+**Proteção do aprovado:** Não alterar regras ou pastas do Drive, administração do Supabase, isolamento por CNPJ, filtros, relatórios, categorias ou layout sem solicitação. Repositório público: nunca publicar documentos privados, CNPJs, tokens ou IDs de pastas.

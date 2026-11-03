@@ -1,6 +1,6 @@
 # GAV Compartilhar Docs — Portal seguro
 
-**Versão atual: v0.10.2 · ZIP simples e seleção por escritório**
+**Versão atual: v0.13.8 · continuidade e instalação do PWA**
 
 **Acesso permanente:** https://gavsolucoescontabeis-commits.github.io/GAV-COMPARTILHAMENTO/
 
@@ -104,3 +104,10 @@ A barra lateral GAV permanece fixa durante a rolagem no computador. O administra
 - **Não regressão:** o cliente continua enxergando somente sua empresa, sem lista de escritórios; barra lateral preta/dourada, leão GAV, publicação automática das pastas aprovadas, prévia e botão de baixar permanecem iguais.
 
 Validação técnica: sintaxe JS verificada, quatro cartões de escritório renderizados em teste isolado, ZIP plano testado logicamente com nomes repetidos. Navegação e download reais ainda requerem teste em navegador.
+
+
+## Estado de continuidade — 03/11/2026 · v0.13.8
+
+A v0.13.6 implementou preferência de filtros pelo ano atual e mês anterior conforme os documentos presentes, com seleção manual de outras competências, e impediu redesenho da tela durante sincronização. O 13º permanece na pasta `132026`, sem alterar sincronização. A v0.13.7 já havia incluído o agrupamento de GPS com recibos DCTFWeb no processamento.
+
+Nesta v0.13.8, as referências a ícones PNG inexistentes no manifesto foram corrigidas: ícones SVG quadrados 192/512 baseados diretamente na arte original do leão (sem redesenho) mais PNG original de 160 px como alternativa. O registro do service worker ocorre cedo, antes da importação assíncrona do frontend. Links de favicon e Apple icon passaram a apontar para imagens existentes. **O Chrome ainda requer teste prático de instalação real.** Não houve alteração de documentos, permissões, sincronização Drive, dados, interface aprovada ou processamento.

@@ -10,9 +10,7 @@ window.addEventListener("beforeinstallprompt",event=>{
  event.preventDefault();gavInstallPrompt=event;window.__gavInstallPrompt=event;
 });
 window.addEventListener("appinstalled",()=>{gavInstallPrompt=null;window.__gavInstallPrompt=null;document.querySelector(".gav-install-modal")?.remove();});
-if("serviceWorker" in navigator)window.addEventListener("load",()=>{
- navigator.serviceWorker.register("./sw.js",{scope:"./"}).catch(()=>{});
-});
+/* Service worker registrado antes do import() no index.html. */
 const portalLayoutStyle=document.createElement("style");
 portalLayoutStyle.textContent="@media(min-width:721px){.shell.gav-portal-shell{display:block;padding-left:248px}.shell.gav-portal-shell>.side{position:fixed;inset:0 auto 0 0;width:248px;height:100dvh;max-height:100dvh;overflow-y:auto;overscroll-behavior:contain;z-index:65;box-sizing:border-box}.shell.gav-portal-shell>.app-main{width:100%;min-width:0}}@media(max-width:720px){.shell.gav-portal-shell{display:block;padding-left:0}.shell.gav-portal-shell>.side{display:none}}.gav-client-preview-banner{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;background:#fcf8ee;color:#5b4622;border:1px solid #dfc991;border-radius:10px;padding:13px 15px;margin:0 0 20px}.gav-client-preview-banner p{font-size:12px;margin:4px 0}.gav-client-preview-banner .btn{min-height:42px}";
 portalLayoutStyle.textContent += ".gav-company-toolbar{display:flex;align-items:end;justify-content:space-between;gap:14px;flex-wrap:wrap;margin:16px 0}.gav-company-toolbar>.form-field{min-width:220px}.gav-company-form-grid{display:grid;grid-template-columns:140px minmax(180px,1fr);gap:12px}.gav-company-form-grid .gav-company-name{grid-column:1/-1}.gav-company-actions{display:flex;gap:8px;flex-wrap:wrap}.gav-company-warning{color:#955616;font-size:12px;padding:10px 0}@media(max-width:650px){.gav-company-form-grid{grid-template-columns:1fr}.gav-company-form-grid .gav-company-name{grid-column:auto}.gav-company-toolbar>.form-field{width:100%}}";
