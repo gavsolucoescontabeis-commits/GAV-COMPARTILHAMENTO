@@ -227,21 +227,8 @@ Status Folha **Sem movimento**: o administrador escolhe a competência e registr
 Em meses históricos cujo período Sem movimento já terminou, conservar o status para consulta, mas ocultar a ação Reativar (backend devolve `inactivityActive`). Somente a competência sob anotação ainda ativa permite encerrar a faixa. Edge Function implantada como v5 e código sincronizado com o repositório. Sem marcação automática de empresas.
 
 
-## Atualização 03/11/2026 — Identidade visual v0.13.12 (implementada)
+## Retorno visual — 03/11/2026 · v0.13.15
 
-Substituída a antiga identidade preto/dourado pela nova identidade visual oficial **GAV Compartilhar**, conforme solicitação aprovada:
+Por solicitação expressa do usuário, o **GAV Compartilhar** retorna ao visual original anterior às atualizações de identidade v0.13.12, v0.13.13 e v0.13.14. Restaurar a aparência preto/dourado da v0.13.11, preservando logotipos originais (GAV e leão), todos os componentes aprovados, autenticação, Drive, processamento, permissões, persistência e PWA.
 
-- Menu lateral `#203B56`; fundo `#F1F4F3`; superfícies `#FFFFFF`.
-- Texto principal `#253542`; secundário `#546775`; bordas `#D4DEE1`.
-- Botões principais `#244B66`; hover `#17364D`; dourado `#B68A3C`.
-- Complemento **vinho `#7A3E52`** exclusivo do GAV Compartilhar.
-- Preto removido das áreas visuais de interface; cores de estado (sucesso, pendente, alerta) mantêm finalidade sem confundir com a cor de outro sistema.
-- SVGs originais da marca GAV e do leão mantidos, com fundo transparente; sem redesenhos.
-- Modificação apenas de estilos, variáveis visuais e cores do PWA. Preservados layouts, regras, autorizações, operações e processamento.
-
-As referências anteriores do tipo "barra preta", "layout preto/dourado" são históricas e **não** reinstalam a paleta antiga.
-
-
-### Ajuste visual 03/11/2026 — v0.13.14 (retorno ao aspecto anterior)
-
-Por solicitação expressa do responsável, a experiência visual foi restaurada ao estado **v0.13.12**, anterior ao vinho predominante da v0.13.13. A restauração é estritamente visual e preserva código funcional, integração Google Drive, cadastros, processamento e permissões. A numeração avança para v0.13.14 para o PWA detectar e oferecer a atualização. Eventual nova proposta visual exige autorização específica.
+A versão pública do aplicativo passa a **0.13.15 somente para garantir que o mecanismo de atualização carregue o visual restaurado**. Não reproduzir mudanças de paleta futuras sem nova autorização.

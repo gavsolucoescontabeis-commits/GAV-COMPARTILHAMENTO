@@ -1,5 +1,5 @@
 {
-  "version": "0.13.14",
+  "version": "0.13.15",
   "release": "2026-11-03",
-  "notes": "Restauração do visual aprovado na v0.13.12, mantendo integralmente funcionalidades e integrações."
+  "notes": "Retorno ao visual original preto e dourado anterior a qualquer mudança visual; recursos e funções da v0.13.11 preservados."
 }
