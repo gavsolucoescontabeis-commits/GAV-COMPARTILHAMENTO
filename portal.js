@@ -4,6 +4,44 @@ const PUB="sb_publishable_QpDD6nZEdRPtvOeJCSOZ9A_FMaA2Za7";
 const sb=createClient(ROOT,PUB,{auth:{autoRefreshToken:true,persistSession:true,detectSessionInUrl:true}});
 const logo="assets/logo-gav-sem-fundo.svg",lion="assets/leao-gav-sem-fundo.svg";
 const app=document.getElementById("app");
+
+const GAV_PORTAL_VERSION="0.13.9";
+let gavAvailableVersion="",gavVersionCheckRunning=false;
+const comparePortalVersions=(left,right)=>{
+ const a=left.split(".").map(Number),b=right.split(".").map(Number);
+ for(let i=0;i<3;i++){if(a[i]!==b[i])return a[i]-b[i]}
+ return 0;
+};
+function showPortalUpdate(){
+ if(!gavAvailableVersion||document.getElementById("gav-update-bar"))return;
+ const box=document.createElement("div");
+ box.id="gav-update-bar";box.className="gav-update-bar";box.setAttribute("role","status");
+ const details=document.createElement("div");details.className="gav-update-details";
+ const heading=document.createElement("strong");heading.textContent="Atualização disponível";
+ const description=document.createElement("small");description.textContent="GAV Docs v"+gavAvailableVersion+" · sem reinstalar";
+ details.append(heading,description);
+ const button=document.createElement("button");button.type="button";button.className="gav-update-button";button.textContent="Atualizar agora";
+ button.addEventListener("click",()=>{
+  const url=new URL(location.href);url.searchParams.set("gav-update",gavAvailableVersion);
+  location.assign(url.toString());
+ });
+ box.append(details,button);document.body.appendChild(box);
+}
+async function checkPortalUpdate(){
+ if(gavVersionCheckRunning||document.hidden)return;
+ gavVersionCheckRunning=true;
+ try{
+  const url=new URL("./version.json",location.href);url.searchParams.set("check",String(Date.now()));
+  const response=await fetch(url,{cache:"no-store",credentials:"omit"});
+  if(!response.ok)return;
+  const result=await response.json(),available=String(result?.version||"");
+  if(/^\d+\.\d+\.\d+$/.test(available)&&comparePortalVersions(available,GAV_PORTAL_VERSION)>0){
+   gavAvailableVersion=available;showPortalUpdate();
+  }
+ }catch(_error){/* Falha de rede nunca interrompe documentos e navegação. */}
+ finally{gavVersionCheckRunning=false}
+}
+
 let gavInstallPrompt=window.__gavInstallPrompt||null;
 const gavInstalled=()=>window.matchMedia("(display-mode: standalone)").matches||navigator.standalone===true;
 window.addEventListener("beforeinstallprompt",event=>{
@@ -221,7 +259,7 @@ function login(){
 const nav=()=>adminView()?[["offices","Escritórios"],["home","Início"],["processing","Processamento"],["drive","Google Drive"],["companies","Empresas"]]:clientManaged?[["home","Início"],["security","Minha senha"]]:[["home","Início"]];
 function shell(){
  const firm=current(),navLinks=nav();
- return `<div class="shell gav-portal-shell"><aside class="side"><div class="side-top"><div class="side-logo">${brand()}</div></div><div class="side-caption">NAVEGAÇÃO</div>${navLinks.map(([id,name])=>`<button class="nav ${view===id?"active":""}" data-do="view" data-val="${id}">${esc(name)}</button>`).join("")}<div class="gav-lion-sidebar" aria-label="Símbolo da GAV Soluções Contábeis"><img src="${lion}" alt="Leão GAV"></div><div class="side-bottom"><div style="font-weight:800;margin-bottom:9px">${adminView()?"Administrador GAV":"Portal do cliente"}</div><div class="subtle" style="margin-bottom:14px">Conexão segura · v0.13.6</div><button class="nav" data-do="${previewAsClient?"exit-preview":"logout"}">${previewAsClient?"Voltar à GAV":"Sair da conta"}</button></div></aside><main class="app-main"><header class="topbar"><div><span class="mobile-brand">GAV <small>SOLUÇÕES CONTÁBEIS</small></span><div class="header-title">${adminView()?"Painel administrativo":"Portal de documentos"}</div><div class="header-desc">${esc(adminView()?(officeLabel()+(firm?" · "+firm.legal_name:"")):(firm?.legal_name||"GAV Soluções Contábeis"))}</div></div><div class="top-actions">${!gavInstalled()?`<button class="btn btn-line btn-small" data-do="install-app">Instalar app</button>`:""}<div class="avatar">${adminView()?"AD":"CL"}</div><button class="btn btn-line btn-small" data-do="${previewAsClient?"exit-preview":"logout"}">${previewAsClient?"Voltar à GAV":"Sair"}</button></div></header><div class="content">${previewAsClient?`<div class="gav-client-preview-banner"><div><strong>Prévia do cliente — ${esc(firm?.legal_name||"empresa")}</strong><p>Mostra somente arquivos liberados. Não é login real e não concede acesso a ninguém.</p></div><button class="btn btn-dark btn-small" data-do="exit-preview">Voltar à administração</button></div>`:""}${notice?`<div class="error" style="display:block;margin-bottom:18px">${esc(notice)}</div>`:""}${busy?`<div class="card card-pad" style="margin-bottom:18px">Processando sua solicitação…</div>`:""}${content()}</div></main><nav class="bottom-bar" aria-label="Navegação">${navLinks.map(([id,name])=>`<button class="bottom-nav ${view===id?"active":""}" data-do="view" data-val="${id}">${esc(name)}</button>`).join("")}</nav></div>`;
+ return `<div class="shell gav-portal-shell"><aside class="side"><div class="side-top"><div class="side-logo">${brand()}</div></div><div class="side-caption">NAVEGAÇÃO</div>${navLinks.map(([id,name])=>`<button class="nav ${view===id?"active":""}" data-do="view" data-val="${id}">${esc(name)}</button>`).join("")}<div class="gav-lion-sidebar" aria-label="Símbolo da GAV Soluções Contábeis"><img src="${lion}" alt="Leão GAV"></div><div class="side-bottom"><div style="font-weight:800;margin-bottom:9px">${adminView()?"Administrador GAV":"Portal do cliente"}</div><div class="subtle" style="margin-bottom:14px">Conexão segura · v${GAV_PORTAL_VERSION}</div><button class="nav" data-do="${previewAsClient?"exit-preview":"logout"}">${previewAsClient?"Voltar à GAV":"Sair da conta"}</button></div></aside><main class="app-main"><header class="topbar"><div><span class="mobile-brand">GAV <small>SOLUÇÕES CONTÁBEIS</small></span><div class="header-title">${adminView()?"Painel administrativo":"Portal de documentos"}</div><div class="header-desc">${esc(adminView()?(officeLabel()+(firm?" · "+firm.legal_name:"")):(firm?.legal_name||"GAV Soluções Contábeis"))}</div></div><div class="top-actions"><span class="gav-version-chip" title="Versão atual">v${GAV_PORTAL_VERSION}</span>${!gavInstalled()?`<button class="btn btn-line btn-small" data-do="install-app">Instalar app</button>`:""}<div class="avatar">${adminView()?"AD":"CL"}</div><button class="btn btn-line btn-small" data-do="${previewAsClient?"exit-preview":"logout"}">${previewAsClient?"Voltar à GAV":"Sair"}</button></div></header><div class="content">${previewAsClient?`<div class="gav-client-preview-banner"><div><strong>Prévia do cliente — ${esc(firm?.legal_name||"empresa")}</strong><p>Mostra somente arquivos liberados. Não é login real e não concede acesso a ninguém.</p></div><button class="btn btn-dark btn-small" data-do="exit-preview">Voltar à administração</button></div>`:""}${notice?`<div class="error" style="display:block;margin-bottom:18px">${esc(notice)}</div>`:""}${busy?`<div class="card card-pad" style="margin-bottom:18px">Processando sua solicitação…</div>`:""}${content()}</div></main><nav class="bottom-bar" aria-label="Navegação">${navLinks.map(([id,name])=>`<button class="bottom-nav ${view===id?"active":""}" data-do="view" data-val="${id}">${esc(name)}</button>`).join("")}</nav></div>`;
 }
 const title=(name,sub)=>`<div class="page-head"><div><div class="eyebrow">CENTRAL DE DOCUMENTOS</div><h1>${esc(name)}</h1><p>${esc(sub)}</p></div></div>`;
 const officePicker=()=>adminView()?`<div class="form-field"><label for="officeSelect">Escritório</label><select id="officeSelect" class="input">${offices.map(o=>`<option value="${esc(o.id)}" ${o.id===officeId?"selected":""}>${esc(officeName(o))}</option>`).join("")}</select></div>`:"";
@@ -977,7 +1015,10 @@ async function handle(e){
  }
  if(a==="index"){await syncPilot({interactive:true});render();return}
 }
-document.addEventListener("visibilitychange",()=>{if(!document.hidden)void syncPilot()});
+document.addEventListener("visibilitychange",()=>{if(!document.hidden){void syncPilot();void checkPortalUpdate()}});
+window.addEventListener("focus",()=>{void checkPortalUpdate()});
+setInterval(()=>{void checkPortalUpdate()},4*60*1000);
 setInterval(()=>{if(!document.hidden)void syncPilot()},15*60*1000);
 sb.auth.onAuthStateChange((event,s)=>{if(event==="TOKEN_REFRESHED"&&s)session=s;if(event==="SIGNED_OUT"){resetSelection();pilotTestCredential=null;previewAsClient=false;clientDocs=[];clearPdfCache();role="";session=null;render()}});
+void checkPortalUpdate();
 await bootstrap();

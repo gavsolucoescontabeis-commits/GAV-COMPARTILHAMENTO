@@ -205,3 +205,11 @@ Estado: v0.10.2 foi publicado no GitHub e o endpoint administrativo de escritór
 **Últimos ajustes em produção de código:** v0.13.6 ajustou filtros da Folha e Relatórios para ano atual/mês anterior quando disponível, com troca manual, e manteve navegação durante sincronização; não alterar o padrão de pasta do décimo terceiro `132026`. V0.13.7 agrupou GPS com recibo DCTFWeb no processamento e atualizou importação do painel. V0.13.8 corrigiu referências de ícones PWA inexistentes, preservando exatamente a arte do leão em novos SVGs quadrados e PNG original como alternativa, e antecipou registro do service worker, para compatibilidade com Chrome. O teste de instalação genuína no Chrome do usuário ainda precisa ser feito. Não chamar um atalho simples de instalação real.
 
 **Proteção do aprovado:** Não alterar regras ou pastas do Drive, administração do Supabase, isolamento por CNPJ, filtros, relatórios, categorias ou layout sem solicitação. Repositório público: nunca publicar documentos privados, CNPJs, tokens ou IDs de pastas.
+
+
+---
+## Continuidade 03/11/2026 — v0.13.9 / atualizações no Windows
+
+O usuário já utiliza o GAV Compartilhamento instalado no computador e quer que receba versões novas sem baixar ou reinstalar. Preservar sempre a mesma URL HTTPS, o mesmo id/escopo do manifesto e a estrutura aprovada. A v0.13.9 fortalece a atualização da navegação via rede sem cache, corrige o número de versão exibido na interface e consulta um `version.json` público sem dados sensíveis. Enquanto o aplicativo estiver aberto, uma versão superior apresenta aviso discreto **Atualizar agora**, sem recarregar a tela durante uso, para proteger navegação, formulários e downloads.
+
+Não confundir instalação do PWA/atalho de URL com arquivo `.html` salvo localmente, que não atualiza. Sem mudanças em documentos Drive, Supabase, RLS, CNPJ, permissões ou processamento GPS/DCTFWeb. Testar no Windows com Chrome/Edge e observar se a versão aparece correta antes de considerar a demanda integralmente validada.

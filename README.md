@@ -1,6 +1,6 @@
 # GAV Compartilhar Docs — Portal seguro
 
-**Versão atual: v0.13.8 · continuidade e instalação do PWA**
+**Versão atual: v0.13.9 · atualização do aplicativo instalado**
 
 **Acesso permanente:** https://gavsolucoescontabeis-commits.github.io/GAV-COMPARTILHAMENTO/
 
@@ -111,3 +111,10 @@ Validação técnica: sintaxe JS verificada, quatro cartões de escritório rend
 A v0.13.6 implementou preferência de filtros pelo ano atual e mês anterior conforme os documentos presentes, com seleção manual de outras competências, e impediu redesenho da tela durante sincronização. O 13º permanece na pasta `132026`, sem alterar sincronização. A v0.13.7 já havia incluído o agrupamento de GPS com recibos DCTFWeb no processamento.
 
 Nesta v0.13.8, as referências a ícones PNG inexistentes no manifesto foram corrigidas: ícones SVG quadrados 192/512 baseados diretamente na arte original do leão (sem redesenho) mais PNG original de 160 px como alternativa. O registro do service worker ocorre cedo, antes da importação assíncrona do frontend. Links de favicon e Apple icon passaram a apontar para imagens existentes. **O Chrome ainda requer teste prático de instalação real.** Não houve alteração de documentos, permissões, sincronização Drive, dados, interface aprovada ou processamento.
+
+
+## v0.13.9 — Atualização do aplicativo instalado sem reinstalar
+
+O GAV Compartilhamento é um PWA e mantém o mesmo endereço HTTPS e identidade de instalação. Ao abrir novamente ele deve carregar a versão atual pela rede, sem precisar baixar arquivos ou reinstalar. O service worker agora usa navegação com `cache: no-store`, sem armazenar PDFs, tokens ou dados do usuário. Os módulos e estilos receberam identificadores de versão para evitar respostas antigas de cache.
+
+O módulo exibe sua **versão real** na barra lateral e no cabeçalho. O arquivo estático `version.json` é consultado ao iniciar, quando o usuário retorna ao aplicativo e a cada 4 minutos. Se uma versão nova estiver disponível enquanto o portal estiver aberto, surge um aviso discreto **Atualização disponível → Atualizar agora**; o portal não recarrega sozinho durante consulta, edição ou download. Essa opção atualiza a página com parâmetro de versão para evitar HTML antigo. Nenhum acesso, documento, banco ou regra de sincronização foi alterado. **Ainda é necessário testar o comportamento no PWA do Windows**, inclusive após a distribuição do GitHub Pages. Se o usuário estiver abrindo um arquivo HTML local e não o site HTTPS, ele não recebe atualizações.

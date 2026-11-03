@@ -119,3 +119,14 @@
 .gav-office-card{padding:15px;min-height:145px}
 .gav-office-card-title{font-size:14px}
 }
+
+/* v0.13.9 — atualizações discretas sem interromper consultas ou formulários */
+.gav-version-chip{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;padding:5px 8px;border-radius:99px;background:#f7f2e8;border:1px solid #e8d9ba;color:#6f572d;font-size:10px;font-weight:800;letter-spacing:.03em}
+.gav-update-bar{position:fixed;bottom:20px;right:20px;z-index:140;display:flex;align-items:center;gap:18px;max-width:min(460px,calc(100vw - 32px));padding:15px 17px;border-radius:14px;background:#202328;color:#fff;border:1px solid #bd9852;box-shadow:0 15px 45px #14161835}
+.gav-update-details{display:grid;gap:3px;min-width:0;line-height:1.4}
+.gav-update-details strong{font-size:13px;color:#f4db9e}
+.gav-update-details small{font-size:11px;color:#d6d8da}
+.gav-update-button{flex-shrink:0;border:0;border-radius:8px;background:#e9c77f;color:#29261e;padding:11px 13px;font-size:12px;font-weight:800;cursor:pointer;min-height:42px}
+.gav-update-button:hover{background:#f4d99b}
+.gav-update-button:focus-visible{outline:3px solid #fff;outline-offset:2px}
+@media(max-width:720px){.gav-version-chip{font-size:9px;padding:5px 7px}.gav-update-bar{right:12px;left:12px;bottom:72px;max-width:none;gap:12px}.gav-update-details{flex:1}.gav-update-button{padding:10px}}
