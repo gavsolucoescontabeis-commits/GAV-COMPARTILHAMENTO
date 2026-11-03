@@ -5,7 +5,7 @@ const sb=createClient(ROOT,PUB,{auth:{autoRefreshToken:true,persistSession:true,
 const logo="assets/logo-gav-sem-fundo.svg",lion="assets/leao-gav-sem-fundo.svg";
 const app=document.getElementById("app");
 
-const GAV_PORTAL_VERSION="0.13.15";
+const GAV_PORTAL_VERSION="0.13.16";
 let gavAvailableVersion="",gavVersionCheckRunning=false;
 const comparePortalVersions=(left,right)=>{
  const a=left.split(".").map(Number),b=right.split(".").map(Number);
@@ -192,7 +192,11 @@ async function bootstrap(){
    }
   }else{
    officeId="";
-   if(!selected||!companies.some(c=>c.id===selected))selected=companies[0]?.id||"";
+   let rememberedCompany="";
+   try{rememberedCompany=sessionStorage.getItem("gav-client-company")||""}catch(_e){}
+   if(!selected||!companies.some(c=>c.id===selected))
+     selected=companies.find(c=>c.id===rememberedCompany)?.id||
+       companies.find(c=>c.id===me.primaryCompanyId)?.id||companies[0]?.id||"";
   }
   if(role==="admin"&&session.provider_refresh_token){
    try{await api("connectDrive",{refreshToken:session.provider_refresh_token})}catch(e){notice="Autenticação concluída, mas não foi possível guardar o acesso offline do Drive: "+e.message}
@@ -260,7 +264,11 @@ function login(){
 const nav=()=>adminView()?[["offices","Escritórios"],["home","Início"],["processing","Processamento"],["drive","Google Drive"],["companies","Empresas"]]:clientManaged?[["home","Início"],["security","Minha senha"]]:[["home","Início"]];
 function shell(){
  const firm=current(),navLinks=nav();
- return `<div class="shell gav-portal-shell"><aside class="side"><div class="side-top"><div class="side-logo">${brand()}</div></div><div class="side-caption">NAVEGAÇÃO</div>${navLinks.map(([id,name])=>`<button class="nav ${view===id?"active":""}" data-do="view" data-val="${id}">${esc(name)}</button>`).join("")}<div class="gav-lion-sidebar" aria-label="Símbolo da GAV Soluções Contábeis"><img src="${lion}" alt="Leão GAV"></div><div class="side-bottom"><div style="font-weight:800;margin-bottom:9px">${adminView()?"Administrador GAV":"Portal do cliente"}</div><div class="subtle" style="margin-bottom:14px">Conexão segura · v${GAV_PORTAL_VERSION}</div><button class="nav" data-do="${previewAsClient?"exit-preview":"logout"}">${previewAsClient?"Voltar à GAV":"Sair da conta"}</button></div></aside><main class="app-main"><header class="topbar"><div><span class="mobile-brand">GAV <small>SOLUÇÕES CONTÁBEIS</small></span><div class="header-title">${adminView()?"Painel administrativo":"Portal de documentos"}</div><div class="header-desc">${esc(adminView()?(officeLabel()+(firm?" · "+firm.legal_name:"")):(firm?.legal_name||"GAV Soluções Contábeis"))}</div></div><div class="top-actions"><span class="gav-version-chip" title="Versão atual">v${GAV_PORTAL_VERSION}</span>${!gavInstalled()?`<button class="btn btn-line btn-small" data-do="install-app">Instalar app</button>`:""}<div class="avatar">${adminView()?"AD":"CL"}</div><button class="btn btn-line btn-small" data-do="${previewAsClient?"exit-preview":"logout"}">${previewAsClient?"Voltar à GAV":"Sair"}</button></div></header><div class="content">${previewAsClient?`<div class="gav-client-preview-banner"><div><strong>Prévia do cliente — ${esc(firm?.legal_name||"empresa")}</strong><p>Mostra somente arquivos liberados. Não é login real e não concede acesso a ninguém.</p></div><button class="btn btn-dark btn-small" data-do="exit-preview">Voltar à administração</button></div>`:""}${notice?`<div class="error" style="display:block;margin-bottom:18px">${esc(notice)}</div>`:""}${busy?`<div class="card card-pad" style="margin-bottom:18px">Processando sua solicitação…</div>`:""}${content()}</div></main><nav class="bottom-bar" aria-label="Navegação">${navLinks.map(([id,name])=>`<button class="bottom-nav ${view===id?"active":""}" data-do="view" data-val="${id}">${esc(name)}</button>`).join("")}</nav></div>`;
+ const clientSwitch=role==="client"&&!previewAsClient&&companies.length>1&&!passwordChangeRequired?
+   '<div class="gav-client-switch"><label for="clientCompanySelect">Empresa para consultar</label><select id="clientCompanySelect" class="input">'+
+   companies.filter(c=>c.is_active).map(c=>'<option value="'+esc(c.id)+'" '+(selected===c.id?'selected':'')+'>'+esc(c.legal_name)+' · '+esc(fmt(c.cnpj))+'</option>').join('')+
+   '</select><small>Um acesso para todas as empresas autorizadas pela GAV.</small></div>':"";
+ return `<div class="shell gav-portal-shell"><aside class="side"><div class="side-top"><div class="side-logo">${brand()}</div></div><div class="side-caption">NAVEGAÇÃO</div>${navLinks.map(([id,name])=>`<button class="nav ${view===id?"active":""}" data-do="view" data-val="${id}">${esc(name)}</button>`).join("")}<div class="gav-lion-sidebar" aria-label="Símbolo da GAV Soluções Contábeis"><img src="${lion}" alt="Leão GAV"></div><div class="side-bottom"><div style="font-weight:800;margin-bottom:9px">${adminView()?"Administrador GAV":"Portal do cliente"}</div><div class="subtle" style="margin-bottom:14px">Conexão segura · v${GAV_PORTAL_VERSION}</div><button class="nav" data-do="${previewAsClient?"exit-preview":"logout"}">${previewAsClient?"Voltar à GAV":"Sair da conta"}</button></div></aside><main class="app-main"><header class="topbar"><div><span class="mobile-brand">GAV <small>SOLUÇÕES CONTÁBEIS</small></span><div class="header-title">${adminView()?"Painel administrativo":"Portal de documentos"}</div><div class="header-desc">${esc(adminView()?(officeLabel()+(firm?" · "+firm.legal_name:"")):(firm?.legal_name||"GAV Soluções Contábeis"))}</div></div><div class="top-actions"><span class="gav-version-chip" title="Versão atual">v${GAV_PORTAL_VERSION}</span>${!gavInstalled()?`<button class="btn btn-line btn-small" data-do="install-app">Instalar app</button>`:""}<div class="avatar">${adminView()?"AD":"CL"}</div><button class="btn btn-line btn-small" data-do="${previewAsClient?"exit-preview":"logout"}">${previewAsClient?"Voltar à GAV":"Sair"}</button></div></header><div class="content">${previewAsClient?`<div class="gav-client-preview-banner"><div><strong>Prévia do cliente — ${esc(firm?.legal_name||"empresa")}</strong><p>Mostra somente arquivos liberados. Não é login real e não concede acesso a ninguém.</p></div><button class="btn btn-dark btn-small" data-do="exit-preview">Voltar à administração</button></div>`:""}${notice?`<div class="error" style="display:block;margin-bottom:18px">${esc(notice)}</div>`:""}${busy?`<div class="card card-pad" style="margin-bottom:18px">Processando sua solicitação…</div>`:""}${clientSwitch}${content()}</div></main><nav class="bottom-bar" aria-label="Navegação">${navLinks.map(([id,name])=>`<button class="bottom-nav ${view===id?"active":""}" data-do="view" data-val="${id}">${esc(name)}</button>`).join("")}</nav></div>`;
 }
 const title=(name,sub)=>`<div class="page-head"><div><div class="eyebrow">CENTRAL DE DOCUMENTOS</div><h1>${esc(name)}</h1><p>${esc(sub)}</p></div></div>`;
 const officePicker=()=>adminView()?`<div class="form-field"><label for="officeSelect">Escritório</label><select id="officeSelect" class="input">${offices.map(o=>`<option value="${esc(o.id)}" ${o.id===officeId?"selected":""}>${esc(officeName(o))}</option>`).join("")}</select></div>`:"";
@@ -409,6 +417,26 @@ function clientAccessHtml(){
  out+='<button class="btn btn-line" data-do="issue-client-access">'+(info.exists?"Renovar senha provisória":"Senha provisória (alternativa)")+'</button>';
  if(info.active)out+='<button class="btn btn-line" data-do="disable-client-access">Suspender acesso</button>';
  out+='<button class="btn btn-line" data-do="close-client-access">Fechar</button></div>';
+ if(info.exists&&info.active&&!info.needsPasswordChange){
+   const otherIds=new Set((info.linkedCompanies||[]).map(c=>c.id));
+   const available=companies.filter(c=>c.is_active&&c.id!==selected&&!otherIds.has(c.id))
+     .sort((a,b)=>a.legal_name.localeCompare(b.legal_name,"pt-BR"));
+   out+='<div class="gav-company-links"><h4>Empresas vinculadas a este acesso</h4>'+
+     '<p class="subtle">O responsável utiliza este CNPJ e a mesma senha para consultar as empresas autorizadas. O vínculo é deste login, não de qualquer pessoa que use o mesmo sobrenome.</p>';
+   if(info.linkedCompanies?.length){
+     out+='<div class="gav-linked-list">'+info.linkedCompanies.map(c=>
+       '<div class="gav-linked-row"><div><strong>'+esc(c.legal_name)+'</strong><small>CNPJ '+esc(fmt(c.cnpj))+'</small></div>'+
+       '<button class="btn btn-line btn-small" data-do="unlink-client-company" data-val="'+esc(c.id)+'">Retirar vínculo</button></div>').join('')+'</div>';
+   }else out+='<p class="subtle">Nenhuma outra empresa vinculada.</p>';
+   if(available.length){
+     out+='<div class="form-field"><label for="linkCompanySelect">Adicionar empresa autorizada</label><select id="linkCompanySelect" class="input">'+
+       '<option value="">Selecione a outra empresa</option>'+
+       available.map(c=>'<option value="'+esc(c.id)+'">'+esc(c.legal_name)+' · '+esc(fmt(c.cnpj))+'</option>').join('')+'</select></div>'+
+       '<label class="gav-link-reciprocal"><input type="checkbox" id="linkBothLogins"> Permitir entrar também pelo CNPJ da outra empresa (caso o segundo login já esteja ativo)</label>'+
+       '<button class="btn btn-dark btn-small" data-do="link-client-company">Vincular empresa</button>';
+   }
+   out+='<p class="subtle gav-link-warning">Confirme a identidade e a autorização do responsável pelas duas empresas. Nenhuma pasta será alterada e nenhum documento será publicado por essa operação.</p></div>';
+ }
  if(clientInvite?.companyId===selected){
   out+='<div class="notice" style="margin-top:14px"><strong>Convite pronto para enviar por WhatsApp</strong><p>CNPJ: <strong>'+esc(fmt(clientInvite.cnpj))+'</strong></p><p><code style="user-select:all;overflow-wrap:anywhere">'+esc(clientInvite.inviteUrl)+'</code></p><p class="subtle">Link individual de uso único, válido por 7 dias. Compartilhe somente com o responsável pela empresa.</p><div class="admin-actions" style="margin-top:12px"><button class="btn btn-dark btn-small" data-do="send-client-invite-whatsapp">Enviar pelo WhatsApp</button><button class="btn btn-line btn-small" data-do="copy-client-invite">Copiar convite</button></div><p class="subtle" style="margin-top:10px">O WhatsApp abrirá com a mensagem e o link individual preenchidos. Escolha o contato e confirme o envio. O WhatsApp comum exibe o endereço; botão dentro da mensagem exige integração oficial.</p></div>';
  }
@@ -496,7 +524,8 @@ function companiesPage(){
   return '<div class="file-row"><div class="file-expand"><b>'+esc((c.code?c.code+" · ":"")+c.legal_name)+'</b>'+
    '<small class="file-meta">CNPJ '+esc(fmt(c.cnpj))+' · '+(link?"Pasta vinculada":"Sem pasta vinculada")+(c.is_active?"":" · Inativa")+'</small></div>'+
    '<div class="gav-company-actions"><button class="btn btn-line btn-small" data-do="company-edit" data-val="'+esc(c.id)+'">Editar</button>'+
-   '<button class="btn btn-line btn-small" data-do="pick" data-val="'+esc(c.id)+'">Documentos</button></div></div>';
+   '<button class="btn btn-line btn-small" data-do="pick" data-val="'+esc(c.id)+'">Documentos</button>'+
+    '<button class="btn btn-line btn-small" data-do="open-company-access" data-val="'+esc(c.id)+'">Acessos</button></div></div>';
  }).join("")+'</div>':'<div class="empty">Nenhuma empresa cadastrada neste escritório.</div>';
  out+='</div>';
  if(folder.rootAvailable&&unmatched.length){
@@ -711,6 +740,7 @@ function render(){
  app.querySelector("#processingMonthSelect")?.addEventListener("change",e=>{processingMonth=Number(e.target.value);void run(loadProcessing)});
  app.querySelector("#processingYearSelect")?.addEventListener("change",e=>{processingYear=Number(e.target.value);void run(loadProcessing)});
  app.querySelector("#companySelect")?.addEventListener("change",e=>changeCompany(e.target.value));
+ app.querySelector("#clientCompanySelect")?.addEventListener("change",e=>changeCompany(e.target.value));
  app.querySelector("#yearSelect")?.addEventListener("change",e=>{resetSelection();listPage=0;year=e.target.value;render()});
  app.querySelector("#monthSelect")?.addEventListener("change",e=>{resetSelection();listPage=0;month=e.target.value;render()});
  if(previewId)paintPreview();
@@ -784,6 +814,7 @@ async function changeCompany(id){
  if(!companies.some(c=>c.id===id))return;
  resetSelection();listPage=0;pilotTestCredential=null;previewAsClient=false;clientDocs=[];accessPanelOpen=false;accessStatus=null;clientCredential=null;clearPdfCache();
  selected=id;view="home";cat="";year="ALL";month="ALL";
+ if(role==="client")try{sessionStorage.setItem("gav-client-company",id)}catch(_e){}
  await run(async()=>{await loadDocs()});
 }
 async function saveClientPassword(e){
@@ -834,7 +865,7 @@ async function completeActivation(e){
   await bootstrap();
  });
 }
-async function loginClient(e){e.preventDefault();const id=cn(app.querySelector("#cnpj")?.value),password=app.querySelector("#pwd")?.value;if(id.length!==14){notice="Informe um CNPJ com 14 números.";render();return}await run(async()=>{const {error}=await sb.auth.signInWithPassword({email:"cliente-"+id+"@acesso.gavsolucoescontabeis.com.br",password});if(error)throw Error("CNPJ ou senha inválidos.");await bootstrap()})}
+async function loginClient(e){e.preventDefault();const id=cn(app.querySelector("#cnpj")?.value),password=app.querySelector("#pwd")?.value;if(id.length!==14){notice="Informe um CNPJ com 14 números.";render();return}await run(async()=>{const {error}=await sb.auth.signInWithPassword({email:"cliente-"+id+"@acesso.gavsolucoescontabeis.com.br",password});if(error)throw Error("CNPJ ou senha inválidos.");selected="";try{sessionStorage.removeItem("gav-client-company")}catch(_e){}await bootstrap()})}
 async function google({renewDrive=false}={}){
  const options={redirectTo:location.origin+location.pathname};
  if(renewDrive){
@@ -902,7 +933,7 @@ async function handle(e){
  if(a==="cat"){resetSelection();listPage=0;navigationHistory.push({view,cat,year,month});cat=v;view="category";suggestDocumentPeriod(cat);render();return}
  if(a==="google"){await google();return}
  if(a==="google-drive"){if(adminView())await google({renewDrive:true});return}
- if(a==="logout"){try{sessionStorage.removeItem("gav-selected-office")}catch(_e){}resetSelection();pilotTestCredential=null;previewAsClient=false;clientDocs=[];clearPdfCache();await sb.auth.signOut();session=null;role="";googleToken="";notice="";render();return}
+ if(a==="logout"){try{sessionStorage.removeItem("gav-selected-office");sessionStorage.removeItem("gav-client-company")}catch(_e){}resetSelection();pilotTestCredential=null;previewAsClient=false;clientDocs=[];clearPdfCache();await sb.auth.signOut();session=null;role="";googleToken="";notice="";render();return}
  if(a==="office-select"){await changeOffice(v);return}
  if(a==="catalog-refresh"){if(role==="admin"&&!previewAsClient)await run(loadOfficeFolders);return}
  if(a==="processing-refresh"){if(adminView())await run(loadProcessing);return}
@@ -927,6 +958,34 @@ async function handle(e){
  }
  if(a==="activation-help"){notice="Para criar sua senha, abra o convite individual enviado pela GAV ao WhatsApp do responsável da empresa.";render();return}
  if(a==="client-access"){await openClientAccess();return}
+ if(a==="open-company-access"){
+   if(!adminView()||!companies.some(c=>c.id===v&&c.is_active))return;
+   selected=v;view="home";resetSelection();clearPdfCache();
+   await run(async()=>{await loadDocs()});
+   await openClientAccess();
+   return;
+ }
+ if(a==="link-client-company"||a==="unlink-client-company"){
+   if(!adminView()||!accessStatus?.exists||!accessStatus.active||accessPanelCompany!==selected||busy)return;
+   const link=a==="link-client-company";
+   const targetId=link?app.querySelector("#linkCompanySelect")?.value:v;
+   const other=companies.find(c=>c.id===targetId&&c.is_active);
+   if(!other||other.id===selected){toastMessage("Selecione uma empresa válida.");return}
+   const reciprocal=link?!!app.querySelector("#linkBothLogins")?.checked:false;
+   const message=link?
+     "Autorizar o acesso do CNPJ "+fmt(current()?.cnpj)+" aos documentos de "+other.legal_name+"?"+
+     (reciprocal?"\\n\\nOs dois CNPJs terão acesso às duas empresas.":"\\n\\nSomente o CNPJ de origem receberá o vínculo.")+
+     "\\n\\nConfirma que é o mesmo responsável autorizado?":
+     "Retirar o acesso do CNPJ "+fmt(current()?.cnpj)+" aos documentos de "+other.legal_name+"?"+
+     "\\n\\nCaso o outro CNPJ tenha vínculo recíproco, ele pode ser revogado separadamente no cadastro daquele acesso.";
+   if(!window.confirm(message))return;
+   await run(async()=>{
+     await api(link?"linkClientCompany":"unlinkClientCompany",{companyId:selected,targetCompanyId:other.id,reciprocal});
+     accessStatus=await api("clientAccessStatus",{companyId:selected});
+     notice=link?"Empresa vinculada ao acesso de "+fmt(current()?.cnpj)+".":"Vínculo retirado com sucesso.";
+   });
+   return;
+ }
  if(a==="issue-client-invite"){
   if(!adminView()||accessPanelCompany!==selected||!accessStatus)return;
   if(!window.confirm("Gerar link individual de ativação para "+(current()?.legal_name||"empresa")+"?\n\nO convite anterior, se existir, será cancelado. Envie o novo link somente ao responsável pelo WhatsApp."))return;

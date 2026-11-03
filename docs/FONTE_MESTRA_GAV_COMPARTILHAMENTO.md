@@ -232,3 +232,10 @@ Em meses históricos cujo período Sem movimento já terminou, conservar o statu
 Por solicitação expressa do usuário, o **GAV Compartilhar** retorna ao visual original anterior às atualizações de identidade v0.13.12, v0.13.13 e v0.13.14. Restaurar a aparência preto/dourado da v0.13.11, preservando logotipos originais (GAV e leão), todos os componentes aprovados, autenticação, Drive, processamento, permissões, persistência e PWA.
 
 A versão pública do aplicativo passa a **0.13.15 somente para garantir que o mecanismo de atualização carregue o visual restaurado**. Não reproduzir mudanças de paleta futuras sem nova autorização.
+
+
+## v0.13.16 — Acesso a várias empresas sob um login (03/11/2026)
+
+O responsável consulta várias empresas numa sessão, alternando o seletor **Empresa para consultar**, preservando o visual original preto/dourado. O administrador gerencia no botão **Acessos** no cadastro ou em **Gerenciar login do cliente → Empresas vinculadas**, podendo adicionar ou retirar autorizações individuais. Com as duas contas de CNPJ ativas e com senhas definitivas, pode conceder reciprocidade (login por ambos os CNPJs).
+
+**Segurança:** autorização expressa e individual da GAV por usuário e empresa persistida em `gav_memberships`; jamais inferida de sócios, nomes ou escritório. Pastas verificadas de ambas as empresas. Não alterar arquivos nem publicação no Drive; API e download de PDF continuam verificando autorização do usuário e empresa. Suspender um login desativa todas as permissões daquela conta, mas não altera logins independentes. Não ativar os pares citados pelo usuário sem confirmação dos cadastros; não expor relações privadas entre clientes no repositório público.
