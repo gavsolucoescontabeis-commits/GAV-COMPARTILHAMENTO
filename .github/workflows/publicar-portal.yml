@@ -30,20 +30,25 @@ jobs:
       - name: Preparar somente arquivos públicos
         run: |
           mkdir -p _site
-          cp index.html portal.js portal-ui.css manifest.webmanifest sw.js _site/
+          cp index.html portal.js portal-ui.css manifest.webmanifest sw.js version.json _site/
           cp -R assets _site/assets
           python scripts/build_gav_icons.py _site
           touch _site/.nojekyll
           printf '%s\n' "$GITHUB_SHA" > _site/revision.txt
           python3 - <<'PY'
           from pathlib import Path
+          import json
           import re
           html = Path("_site/index.html").read_text(encoding="utf-8")
           js = Path("_site/portal.js").read_text(encoding="utf-8")
-          m = re.search(r'portal\.js\?v=(\d+\.\d+\.\d+)', html)
-          if not m or "v" + m.group(1) not in js:
-              raise SystemExit("Versões do index.html e portal.js diferentes")
-          print("GAV Compartilhamento v" + m.group(1))
+          release = json.loads(Path("_site/version.json").read_text(encoding="utf-8"))
+          html_version = re.search(r'portal\.js\?v=(\d+\.\d+\.\d+)', html)
+          js_version = re.search(r'GAV_PORTAL_VERSION\s*=\s*"(\d+\.\d+\.\d+)"', js)
+          if not html_version or not js_version or not (
+              html_version.group(1) == js_version.group(1) == release.get("version")
+          ):
+              raise SystemExit("Versões diferentes entre index.html, portal.js e version.json")
+          print("GAV Compartilhamento v" + html_version.group(1))
           PY
       - name: Enviar arquivos do site
         uses: actions/upload-pages-artifact@v4
