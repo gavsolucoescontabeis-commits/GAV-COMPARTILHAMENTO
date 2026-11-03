@@ -151,7 +151,9 @@ Deno.serve(async(req:Request)=>{
      "Faltam documentos para o fechamento documental";
    return {id:c.id,code:c.code,legalName:c.legal_name,cnpj:c.cnpj,serviceKey:c.serviceKey,
      serviceLabel:parcelService?"Parcelamentos":"Folha",
-     status:withoutMovement?"SEM_MOVIMENTO":concluded?"CONCLUIDA":"PENDENTE",reason,evidence:records};
+     status:withoutMovement?"SEM_MOVIMENTO":concluded?"CONCLUIDA":"PENDENTE",
+     inactivityActive:!!withoutMovement&&withoutMovement.end_year===null,
+     reason,evidence:records};
   });
   return respond({officeId,year,month,companies,total:companies.length,
     concluded:companies.filter((c:any)=>c.status==="CONCLUIDA").length,

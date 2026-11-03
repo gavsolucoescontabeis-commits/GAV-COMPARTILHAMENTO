@@ -221,3 +221,7 @@ Não confundir instalação do PWA/atalho de URL com arquivo `.html` salvo local
 Na aba Processamento manter layout aprovado e GPS sob Recibo DCTFWeb. Formatar coluna FGTS **Mensal** e DARF / **Parcelamento** em duas linhas. Mostrar CNPJ da empresa abaixo da razão social e botão Copiar sem criar coluna. Exibir na área restrita do administrador.
 
 Status Folha **Sem movimento**: o administrador escolhe a competência e registra manualmente, persistindo para as competências seguintes até clicar **Reativar** em competência posterior. Guardar o histórico no Supabase isolado; não confundir essa anotação com envio de obrigações, pagamento ou conclusão. Jair Camargo tem serviço FOLHA confirmado, mas não será marcada automaticamente. Preferência do usuário: usar SETEMBRO/2026 para registrar a condição inicial. Preservar demais serviços, regras de autorização e app PWA sem reinstalação.
+
+
+### Refinamento v0.13.11 — histórico
+Em meses históricos cujo período Sem movimento já terminou, conservar o status para consulta, mas ocultar a ação Reativar (backend devolve `inactivityActive`). Somente a competência sob anotação ainda ativa permite encerrar a faixa. Edge Function implantada como v5 e código sincronizado com o repositório. Sem marcação automática de empresas.

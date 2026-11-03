@@ -1,6 +1,6 @@
 # GAV Compartilhar Docs — Portal seguro
 
-**Versão atual: v0.13.10 · processamento ajustado**
+**Versão atual: v0.13.11 · Processamento com histórico de sem movimento**
 
 **Acesso permanente:** https://gavsolucoescontabeis-commits.github.io/GAV-COMPARTILHAMENTO/
 
@@ -127,3 +127,7 @@ O módulo exibe sua **versão real** na barra lateral e no cabeçalho. O arquivo
 - Status **Sem movimento** disponível manualmente para folha pendente, desde competência escolhida até reativação. Não conta como concluída nem pendente; os períodos permanecem salvos no Supabase privado e a situação volta a ser acompanhada ao clicar Reativar na competência desejada.
 - **Nenhuma empresa foi marcada sem movimento automaticamente**. Para Jair Camargo, a administração pode selecionar SETEMBRO/2026 e marcar, se desejar; a situação prossegue até reativação. Isto é controle administrativo e não comprova envio de declarações.
 - Atualização disponibilizada via PWA v0.13.10: fechar e abrir o aplicativo instalado, sem reinstalar.
+
+
+### Refinamento v0.13.11
+O histórico de competências sem movimento permanece visível após uma reativação. O botão Reativar somente é exibido para a faixa ainda ativa, evitando reativar novamente períodos já encerrados. O serviço do Supabase `gav-processing-summary` foi atualizado para a versão 5, sem mexer nos documentos ou permissões.
