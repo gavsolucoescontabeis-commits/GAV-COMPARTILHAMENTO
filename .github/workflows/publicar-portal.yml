@@ -27,6 +27,8 @@ jobs:
           python-version: "3.11"
       - name: Preparar conversão do ícone GAV
         run: python -m pip install --disable-pip-version-check "Pillow==11.3.0"
+      - name: Verificar sintaxe do portal
+        run: node --check --input-type=module < portal.js
       - name: Preparar somente arquivos públicos
         run: |
           mkdir -p _site
