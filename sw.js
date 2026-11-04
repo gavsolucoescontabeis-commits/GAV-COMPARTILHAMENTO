@@ -7,3 +7,23 @@ self.addEventListener("fetch",event=>{
   event.respondWith(fetch(event.request,{cache:"no-store"}));
  }
 });
+
+/* Web Push opt-in: o aviso nunca contém nomes, CNPJ ou dados dos documentos. */
+self.addEventListener("push",event=>{
+ let data={};
+ try{data=event.data?event.data.json():{}}catch(_error){}
+ const tag=typeof data.tag==="string"&&data.tag.length<120?data.tag:"gav-documentos";
+ event.waitUntil(self.registration.showNotification("GAV Compartilhar",{
+  body:"A GAV disponibilizou novos documentos. Abra o aplicativo para consultar.",
+  icon:"./assets/gav-leao-master.png",tag,renotify:false
+ }));
+});
+self.addEventListener("notificationclick",event=>{
+ event.notification.close();
+ const url=new URL("./",self.registration.scope).href;
+ event.waitUntil(self.clients.matchAll({type:"window",includeUncontrolled:true}).then(async windows=>{
+  const existing=windows.find(w=>w.url.startsWith(self.registration.scope));
+  if(existing){await existing.focus();return}
+  if(self.clients.openWindow)await self.clients.openWindow(url);
+ }));
+});

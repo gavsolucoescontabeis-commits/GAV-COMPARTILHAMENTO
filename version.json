@@ -1,5 +1,5 @@
 {
-  "version": "0.13.16",
+  "version": "0.13.17",
   "release": "2026-11-03",
-  "notes": "Acessos vinculados: um login pode consultar empresas autorizadas, com seletor e gestão exclusiva da GAV."
+  "notes": "Notificações opcionais para novos documentos liberados no aplicativo; sem WhatsApp e sem instalação extra."
 }

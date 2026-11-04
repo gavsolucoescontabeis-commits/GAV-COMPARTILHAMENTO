@@ -148,3 +148,10 @@
 .gav-link-reciprocal input{width:18px;height:18px;flex-shrink:0;accent-color:var(--gold)}
 .gav-link-warning{font-size:11px}
 @media(max-width:720px){.gav-client-switch{max-width:none}.gav-linked-row{flex-wrap:wrap}.gav-linked-row button{width:100%}}
+
+/* v0.13.17 — preferência opt-in de notificações, identidade original preservada */
+.gav-push-card{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;padding:13px 16px;margin:5px 0 19px;background:#fff;border:1px solid var(--border);border-left:4px solid var(--gold);border-radius:11px}
+.gav-push-card strong{font-size:13px;color:var(--ink);display:block}
+.gav-push-card small{display:block;margin-top:5px;font-size:11px;color:var(--muted);line-height:1.5;max-width:600px}
+.gav-push-card .btn{flex-shrink:0}
+@media(max-width:720px){.gav-push-card .btn{width:100%;min-height:42px}}

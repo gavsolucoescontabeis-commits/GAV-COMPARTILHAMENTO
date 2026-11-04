@@ -28,11 +28,14 @@ jobs:
       - name: Preparar conversão do ícone GAV
         run: python -m pip install --disable-pip-version-check "Pillow==11.3.0"
       - name: Verificar sintaxe do portal
-        run: node --check --input-type=module < portal.js
+        run: |
+          node --check --input-type=module < portal.js
+          node --check --input-type=module < portal-push.js
+          node --check sw.js
       - name: Preparar somente arquivos públicos
         run: |
           mkdir -p _site
-          cp index.html portal.js portal-ui.css manifest.webmanifest sw.js version.json _site/
+          cp index.html portal.js portal-push.js portal-ui.css manifest.webmanifest sw.js version.json _site/
           cp -R assets _site/assets
           python scripts/build_gav_icons.py _site
           touch _site/.nojekyll
