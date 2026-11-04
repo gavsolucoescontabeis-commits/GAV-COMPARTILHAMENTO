@@ -35,11 +35,11 @@ async function vapid(){
  return loaded[0];
 }
 async function dispatch(){
+ const settings=await vapid();
  const pending=val(await db.from("gav_push_outbox").select("id,company_id,document_id").is("processed_at",null).order("id").limit(900));
  if(!pending.length)return {ok:true,events:0,notifications:0};
  const grouped=new Map<string,typeof pending>();
  for(const item of pending){if(!grouped.has(item.company_id))grouped.set(item.company_id,[]);grouped.get(item.company_id)!.push(item);}
- const settings=await vapid();
  webpush.setVapidDetails("mailto:gavsolucoescontabeis@gmail.com",settings.public_key,settings.private_key);
  let sent=0,completed=0;
  for(const [companyId,events] of grouped){
@@ -99,9 +99,13 @@ Deno.serve(async(req:Request)=>{
   if(action==="config"){
    const keys=await vapid();
    const endpoint=String(body.endpoint||"");
-   const own=endpoint&&validEndpoint(endpoint)?val(await db.from("gav_push_subscriptions")
-    .select("enabled").eq("user_id",user.id).eq("endpoint",endpoint).maybeSingle()):null;
-   return reply({publicKey:keys.public_key,enabled:!!own?.enabled});
+   const found=endpoint&&validEndpoint(endpoint)?val(await db.from("gav_push_subscriptions")
+    .select("user_id,enabled").eq("endpoint",endpoint).maybeSingle()):null;
+   if(found&&found.user_id!==user.id){
+    // Navegador compartilhado: não receber notificações da conta anterior.
+    val(await db.from("gav_push_subscriptions").delete().eq("endpoint",endpoint));
+   }
+   return reply({publicKey:keys.public_key,enabled:!!(found?.user_id===user.id&&found.enabled)});
   }
   if(action==="subscribe"){
    const sub=body.subscription||{},endpoint=sub.endpoint,keys=sub.keys||{};
