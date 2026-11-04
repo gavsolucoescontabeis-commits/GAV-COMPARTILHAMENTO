@@ -155,3 +155,8 @@
 .gav-push-card small{display:block;margin-top:5px;font-size:11px;color:var(--muted);line-height:1.5;max-width:600px}
 .gav-push-card .btn{flex-shrink:0}
 @media(max-width:720px){.gav-push-card .btn{width:100%;min-height:42px}}
+
+/* v0.13.18: abrir o cadastro visivelmente a partir da relação de pastas. */
+#gavCompanyEditor{scroll-margin-top:24px}
+#gavCompanyEditor:focus{outline:none}
+#gavCompanyEditor .block-title{color:var(--ink)}

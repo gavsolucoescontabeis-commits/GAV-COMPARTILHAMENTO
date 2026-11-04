@@ -1,5 +1,5 @@
 {
-  "version": "0.13.17",
+  "version": "0.13.18",
   "release": "2026-11-03",
-  "notes": "Notificações opcionais para novos documentos liberados no aplicativo; sem WhatsApp e sem instalação extra."
+  "notes": "Corrigir cadastro de pastas sem código: ao clicar em Cadastrar esta pasta, abrir formulário visível, focar CNPJ e preservar pasta selecionada."
 }

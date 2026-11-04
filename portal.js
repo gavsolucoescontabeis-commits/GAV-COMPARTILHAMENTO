@@ -6,7 +6,7 @@ const sb=createClient(ROOT,PUB,{auth:{autoRefreshToken:true,persistSession:true,
 const logo="assets/logo-gav-sem-fundo.svg",lion="assets/leao-gav-sem-fundo.svg";
 const app=document.getElementById("app");
 
-const GAV_PORTAL_VERSION="0.13.17";
+const GAV_PORTAL_VERSION="0.13.18";
 let gavAvailableVersion="",gavVersionCheckRunning=false;
 const comparePortalVersions=(left,right)=>{
  const a=left.split(".").map(Number),b=right.split(".").map(Number);
@@ -490,8 +490,8 @@ function companyEditorHtml(){
  const options='<option value="">'+(companyEditId?"Manter pasta vinculada / Sem pasta":"Selecione uma pasta (ou cadastre sem pasta)")+'</option>'+
   used.map(x=>'<option value="'+esc(x.id)+'" '+(x.id===companyDraft.folderId?"selected":"")+'>'+esc(x.name)+(x.linkedCompanyId===companyEditId?" · já vinculada":"")+'</option>').join("");
  const current=companyEditId?companies.find(c=>c.id===companyEditId):null;
- return '<div class="card card-pad gav-company-editor" style="margin:16px 0">'+
-  '<h3 class="block-title">'+(current?"Editar empresa":"Cadastrar nova empresa")+'</h3>'+
+ return '<div id="gavCompanyEditor" class="card card-pad gav-company-editor" role="region" aria-label="Cadastro de empresa" style="margin:16px 0" tabindex="-1">'+
+  '<h3 class="block-title">'+(current?"Editar empresa":folder?"Cadastrar empresa da pasta "+esc(folder.name):"Cadastrar nova empresa")+'</h3>'+
   '<p class="subtle">Informe os dados corretos e selecione a pasta que você criou dentro do diretório deste escritório. O CNPJ é validado antes de salvar.</p>'+
   '<form id="companyEditorForm"><div class="gav-company-form-grid">'+
   '<div class="form-field"><label for="companyCode">Código (opcional)</label><input class="input" id="companyCode" maxlength="4" inputmode="numeric" placeholder="Ex.: 080" value="'+esc(companyDraft.code)+'"></div>'+
@@ -760,6 +760,17 @@ function beginCompanyEditor(id="",folderId=""){
   code:company?.code||codeFromFolder,folderId:folderId||existing?.id||""};
  companyEditorOpen=true;view="companies";
  render();
+ // O formulário fica antes da relação de empresas; sem rolagem, clicar em
+ // "Cadastrar esta pasta" no final da página parece não fazer nada.
+ const editor=document.getElementById("gavCompanyEditor");
+ if(editor){
+  editor.scrollIntoView({behavior:"auto",block:"start"});
+  window.requestAnimationFrame(()=>{
+   if(document.getElementById("gavCompanyEditor")!==editor)return;
+   const field=document.getElementById(company?"companyLegalName":"companyCnpj");
+   field?.focus({preventScroll:true});
+  });
+ }else toastMessage("Não foi possível mostrar o formulário de cadastro.");
 }
 async function saveCompanyEditor(e){
  e.preventDefault();
@@ -928,7 +939,16 @@ async function handle(e){
  }
  if(a==="company-new"){beginCompanyEditor();if(!companyFolders.loaded)await run(loadCompanyFolders);return}
  if(a==="company-edit"){beginCompanyEditor(v);if(!companyFolders.loaded)await run(loadCompanyFolders);return}
- if(a==="company-from-folder"){beginCompanyEditor("",v);return}
+ if(a==="company-from-folder"){
+  if(!adminView())return;
+  const picked=companyFolders.items.find(f=>f.id===v&&!f.linkedCompanyId);
+  if(!picked){
+   toastMessage("Pasta não encontrada ou já vinculada. Atualize as pastas do Drive.");
+   return;
+  }
+  beginCompanyEditor("",picked.id);
+  return;
+ }
  if(a==="company-cancel"){companyEditorOpen=false;companyEditId="";render();return}
  if(a==="company-reload-folders"){if(adminView())await run(loadCompanyFolders);return}
  if(a==="back"){resetSelection();listPage=0;view="home";cat="";year="ALL";month="ALL";navigationHistory.length=0;render();return}
