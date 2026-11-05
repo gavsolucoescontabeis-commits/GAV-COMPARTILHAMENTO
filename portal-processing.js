@@ -1,4 +1,4 @@
-/* GAV Compartilhar v0.13.19 — exclusivamente a tela Processamento. */
+/* GAV Compartilhar v0.13.20 — indicadores padronizados só na tela Processamento. */
 export function buildProcessingPage({data,officeLabel,officePicker,processingYear,processingMonth,filter,M,esc,fmt,title}){
  const info=data||{loaded:false,companies:[],total:0,concluded:0,pending:0,withoutMovement:0};
  const entries=info.companies||[];
@@ -11,7 +11,7 @@ export function buildProcessingPage({data,officeLabel,officePicker,processingYea
  const obligationsPending=active.filter(c=>c.status==="PENDENTE").length;
  const filters=[
   {id:"all",name:"Todas as folhas",count:payroll.length},
-  {id:"ready",name:"Recibos + relatório",count:prepared},
+  {id:"ready",name:"Recibos / Relatório Folha",count:prepared},
   {id:"receipt",name:"Falta recibo",count:missingReceipt},
   {id:"report",name:"Falta relatório",count:missingReport},
   {id:"pending",name:"Obrigações pendentes",count:obligationsPending}
@@ -25,9 +25,14 @@ export function buildProcessingPage({data,officeLabel,officePicker,processingYea
   if(selected==="report")return !c.evidence?.payrollReport;
   return c.status==="PENDENTE";
  });
- const mark=(doc,caption="")=>'<span class="'+(doc?'gav-process-good':'gav-process-pending')+'">'+
-  (doc?'✓ Encontrado':'— Pendente')+'</span>'+
-  (doc?'<small title="'+esc(doc.name)+'">'+esc((caption?caption+': ':'')+doc.name)+'</small>':'');
+ // O mesmo componente visual para todos os indicadores desta tela.
+ const indicator=(state,message,detail="",hint="")=>
+  '<div class="gav-process-indicator is-'+state+'"'+(hint?' title="'+esc(hint)+'"':"")+'>'+
+   '<strong class="gav-process-indicator-state">'+esc(message)+'</strong>'+
+   '<small class="gav-process-indicator-detail">'+esc(detail)+'</small></div>';
+ const mark=(doc,caption="")=>doc?
+  indicator("found","✓ Encontrado",caption?caption+": "+doc.name:doc.name,doc.name):
+  indicator("pending","— Pendente","Não localizado");
  const companyCell=c=>{
   const digits=String(c.cnpj||"").replace(/[^0-9]/g,"");
   const cnpj=digits.length===14?
@@ -40,25 +45,31 @@ export function buildProcessingPage({data,officeLabel,officePicker,processingYea
  const statusCell=c=>{
   const done=c.status==="CONCLUIDA",inactive=c.status==="SEM_MOVIMENTO";
   const name=inactive?"Sem movimento":done?"Concluída":"Pendente";
-  const cls=inactive?"is-without-movement":done?"is-complete":"is-pending";
   const action=c.serviceKey==="PARCELAMENTOS"?"":inactive?
    (c.inactivityActive?'<button type="button" class="gav-process-toggle" data-do="processing-resume" data-val="'+esc(c.id)+'">Reativar</button>':""):
    !done?'<button type="button" class="gav-process-toggle" data-do="processing-inactive" data-val="'+esc(c.id)+'">Sem movimento</button>':"";
-  return '<div class="gav-process-result"><span class="gav-process-status '+cls+'">'+
-   (inactive?'○ ':done?'✓ ':'• ')+name+'</span>'+action+'</div>';
+  const state=inactive?"neutral":done?"found":"pending";
+  const description=inactive?"Controle interno":done?"Documentação localizada":"Falta concluir obrigações";
+  return '<div class="gav-process-result">'+indicator(state,(inactive?'○ ':done?'✓ ':'• ')+name,description)+
+   action+'</div>';
  };
  const payrollCell=c=>{
-  const ev=c.evidence||{};
-  const entry=(doc,label)=>
-   '<div class="gav-payroll-check '+(doc?'is-found':'is-missing')+'"><div class="gav-payroll-check-label">'+
-   (doc?'✓ ':'— ')+label+'</div><small'+(doc?' title="'+esc(doc.name)+'"':'')+'>'+
-   (doc?esc(doc.name):"Ainda não encontrado")+'</small></div>';
-  return '<div class="gav-payroll-status">'+entry(ev.payrollReceipt,"Recibos")+entry(ev.payrollReport,"Relatório Folha")+'</div>';
+  const ev=c.evidence||{},receipt=ev.payrollReceipt,report=ev.payrollReport;
+  const detailHint=[
+   "Recibos: "+(receipt?.name||"Não localizado"),
+   "Relatório Folha: "+(report?.name||"Não localizado")
+  ].join(" | ");
+  if(receipt&&report)return indicator("found","✓ Encontrados","Recibos + Relatório Folha",detailHint);
+  if(receipt)return indicator("pending","◐ Incompleto","Falta relatório",detailHint);
+  if(report)return indicator("pending","◐ Incompleto","Faltam recibos",detailHint);
+  return indicator("pending","— Pendente","Faltam recibos e relatório",detailHint);
  };
  const receiptGps=c=>{
   const ev=c.evidence||{};
   if(!ev.dctf&&!ev.gps)return mark(null);
-  return (ev.dctf?mark(ev.dctf,"DCTFWeb"):'')+(ev.gps?mark(ev.gps,"GPS"):'');
+  if(ev.dctf&&ev.gps)return indicator("found","✓ Encontrados","DCTFWeb + GPS",
+    "DCTFWeb: "+ev.dctf.name+" | GPS: "+ev.gps.name);
+  return mark(ev.dctf||ev.gps,ev.dctf?"DCTFWeb":"GPS");
  };
  const open=c=>'<div><button type="button" class="btn btn-line btn-small" data-do="pick" data-val="'+esc(c.id)+'">Abrir</button></div>';
  const folharow=c=>{
@@ -82,7 +93,7 @@ export function buildProcessingPage({data,officeLabel,officePicker,processingYea
   '</select></label><button type="button" class="btn btn-dark btn-small" data-do="processing-refresh">Atualizar conferência</button></div></div>';
  html+='<div class="gav-process-cards gav-process-metrics">'+
   '<div class="card gav-process-card"><span class="subtle">Serviços acompanhados</span><strong>'+Number(info.total||0)+'</strong></div>'+
-  '<div class="card gav-process-card is-ready"><span class="subtle">Recibos + relatório encontrados</span><strong>'+prepared+
+  '<div class="card gav-process-card is-ready"><span class="subtle">Recibos / Relatório Folha</span><strong>'+prepared+
   '<small> de '+active.length+' folhas</small></strong></div>'+
   '<div class="card gav-process-card"><span class="subtle">Obrigações concluídas</span><strong>'+Number(info.concluded||0)+'</strong></div>'+
   '<div class="card gav-process-card"><span class="subtle">Obrigações pendentes</span><strong>'+Number(info.pending||0)+'</strong></div>'+
@@ -97,7 +108,7 @@ export function buildProcessingPage({data,officeLabel,officePicker,processingYea
    (selected===f.id?' is-active':'')+'" aria-pressed="'+(selected===f.id)+'">'+
    esc(f.name)+' <strong>'+f.count+'</strong></button>').join("")+'</div>';
  html+='<div class="card gav-process-table gav-process-table-scroll"><div class="gav-process-row gav-process-header gav-process-payroll-row">'+
-  '<span>Empresa</span><span>Recibos e relatórios<small>Controle independente</small></span>'+
+  '<span>Empresa</span><span>Recibos / Relatório Folha<small>Ambos necessários</small></span>'+
   '<span>DARF de INSS</span><span>FGTS mensal</span><span>Recibo DCTFWeb<small>ou GPS</small></span>'+
   '<span>Situação das obrigações</span><span>Abrir</span></div>'+
   (visible.length?visible.map(folharow).join(""):'<div class="gav-process-empty">Nenhuma folha nesta seleção. Escolha outro filtro ou competência.</div>')+'</div></section>';

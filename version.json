@@ -1,5 +1,5 @@
 {
-  "version": "0.13.19",
+  "version": "0.13.20",
   "release": "2026-11-05",
-  "notes": "Processamento em tela ampla, Folha e Parcelamentos separados, coluna Recibos e Relatório Folha com indicadores verdes e filtros, sem alterar obrigações."
+  "notes": "Padronizar retângulos de conferência no Processamento: Recibos / Relatório Folha em um item; DARF, FGTS, DCTFWeb/GPS e parcelamento com o mesmo visual."
 }
