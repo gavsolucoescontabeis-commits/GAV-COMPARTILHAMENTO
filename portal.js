@@ -1,12 +1,13 @@
 import {createClient} from "https://esm.sh/@supabase/supabase-js@2.76.1";
 import {pushCard,pushInit,pushToggle,pushLogout} from "./portal-push.js?v=0.13.17";
+import {buildProcessingPage} from "./portal-processing.js?v=0.13.19";
 const ROOT="https://kiunegfjbfhvvlkxqvos.supabase.co";
 const PUB="sb_publishable_QpDD6nZEdRPtvOeJCSOZ9A_FMaA2Za7";
 const sb=createClient(ROOT,PUB,{auth:{autoRefreshToken:true,persistSession:true,detectSessionInUrl:true}});
 const logo="assets/logo-gav-sem-fundo.svg",lion="assets/leao-gav-sem-fundo.svg";
 const app=document.getElementById("app");
 
-const GAV_PORTAL_VERSION="0.13.18";
+const GAV_PORTAL_VERSION="0.13.19";
 let gavAvailableVersion="",gavVersionCheckRunning=false;
 const comparePortalVersions=(left,right)=>{
  const a=left.split(".").map(Number),b=right.split(".").map(Number);
@@ -76,7 +77,7 @@ let folderLookup={officeId:"",loaded:false,items:[],error:""};
 let companyFolders={officeId:"",loaded:false,rootAvailable:false,items:[],notice:"",error:""};
 let companyEditorOpen=false,companyEditId="",companyDraft={cnpj:"",legalName:"",code:"",folderId:""};
 const initialCompetence=new Date();initialCompetence.setDate(1);initialCompetence.setMonth(initialCompetence.getMonth()-1);
-let processingYear=initialCompetence.getFullYear(),processingMonth=initialCompetence.getMonth()+1;
+let processingYear=initialCompetence.getFullYear(),processingMonth=initialCompetence.getMonth()+1,processingViewFilter="all";
 let processingData={officeId:"",year:0,month:0,loaded:false,companies:[],total:0,concluded:0,pending:0};
 try{officeId=sessionStorage.getItem("gav-selected-office")||""}catch(_e){}
 const adminView=()=>role==="admin"&&!previewAsClient;
@@ -265,12 +266,12 @@ function login(){
 }
 const nav=()=>adminView()?[["offices","Escritórios"],["home","Início"],["processing","Processamento"],["drive","Google Drive"],["companies","Empresas"]]:clientManaged?[["home","Início"],["security","Minha senha"]]:[["home","Início"]];
 function shell(){
- const firm=current(),navLinks=nav();
+ const firm=current(),navLinks=nav(),processingWide=adminView()&&view==="processing";
  const clientSwitch=role==="client"&&!previewAsClient&&companies.length>1&&!passwordChangeRequired?
    '<div class="gav-client-switch"><label for="clientCompanySelect">Empresa para consultar</label><select id="clientCompanySelect" class="input">'+
    companies.filter(c=>c.is_active).map(c=>'<option value="'+esc(c.id)+'" '+(selected===c.id?'selected':'')+'>'+esc(c.legal_name)+' · '+esc(fmt(c.cnpj))+'</option>').join('')+
    '</select><small>Um acesso para todas as empresas autorizadas pela GAV.</small></div>':"";
- return `<div class="shell gav-portal-shell"><aside class="side"><div class="side-top"><div class="side-logo">${brand()}</div></div><div class="side-caption">NAVEGAÇÃO</div>${navLinks.map(([id,name])=>`<button class="nav ${view===id?"active":""}" data-do="view" data-val="${id}">${esc(name)}</button>`).join("")}<div class="gav-lion-sidebar" aria-label="Símbolo da GAV Soluções Contábeis"><img src="${lion}" alt="Leão GAV"></div><div class="side-bottom"><div style="font-weight:800;margin-bottom:9px">${adminView()?"Administrador GAV":"Portal do cliente"}</div><div class="subtle" style="margin-bottom:14px">Conexão segura · v${GAV_PORTAL_VERSION}</div><button class="nav" data-do="${previewAsClient?"exit-preview":"logout"}">${previewAsClient?"Voltar à GAV":"Sair da conta"}</button></div></aside><main class="app-main"><header class="topbar"><div><span class="mobile-brand">GAV <small>SOLUÇÕES CONTÁBEIS</small></span><div class="header-title">${adminView()?"Painel administrativo":"Portal de documentos"}</div><div class="header-desc">${esc(adminView()?(officeLabel()+(firm?" · "+firm.legal_name:"")):(firm?.legal_name||"GAV Soluções Contábeis"))}</div></div><div class="top-actions"><span class="gav-version-chip" title="Versão atual">v${GAV_PORTAL_VERSION}</span>${!gavInstalled()?`<button class="btn btn-line btn-small" data-do="install-app">Instalar app</button>`:""}<div class="avatar">${adminView()?"AD":"CL"}</div><button class="btn btn-line btn-small" data-do="${previewAsClient?"exit-preview":"logout"}">${previewAsClient?"Voltar à GAV":"Sair"}</button></div></header><div class="content">${previewAsClient?`<div class="gav-client-preview-banner"><div><strong>Prévia do cliente — ${esc(firm?.legal_name||"empresa")}</strong><p>Mostra somente arquivos liberados. Não é login real e não concede acesso a ninguém.</p></div><button class="btn btn-dark btn-small" data-do="exit-preview">Voltar à administração</button></div>`:""}${notice?`<div class="error" style="display:block;margin-bottom:18px">${esc(notice)}</div>`:""}${busy?`<div class="card card-pad" style="margin-bottom:18px">Processando sua solicitação…</div>`:""}${clientSwitch}${content()}</div></main><nav class="bottom-bar" aria-label="Navegação">${navLinks.map(([id,name])=>`<button class="bottom-nav ${view===id?"active":""}" data-do="view" data-val="${id}">${esc(name)}</button>`).join("")}</nav></div>`;
+ return `<div class="shell gav-portal-shell${processingWide?" gav-processing-fullscreen":""}"><aside class="side"><div class="side-top"><div class="side-logo">${brand()}</div></div><div class="side-caption">NAVEGAÇÃO</div>${navLinks.map(([id,name])=>`<button class="nav ${view===id?"active":""}" data-do="view" data-val="${id}">${esc(name)}</button>`).join("")}<div class="gav-lion-sidebar" aria-label="Símbolo da GAV Soluções Contábeis"><img src="${lion}" alt="Leão GAV"></div><div class="side-bottom"><div style="font-weight:800;margin-bottom:9px">${adminView()?"Administrador GAV":"Portal do cliente"}</div><div class="subtle" style="margin-bottom:14px">Conexão segura · v${GAV_PORTAL_VERSION}</div><button class="nav" data-do="${previewAsClient?"exit-preview":"logout"}">${previewAsClient?"Voltar à GAV":"Sair da conta"}</button></div></aside><main class="app-main"><header class="topbar"><div><span class="mobile-brand">GAV <small>SOLUÇÕES CONTÁBEIS</small></span><div class="header-title">${adminView()?"Painel administrativo":"Portal de documentos"}</div><div class="header-desc">${esc(adminView()?(officeLabel()+(firm?" · "+firm.legal_name:"")):(firm?.legal_name||"GAV Soluções Contábeis"))}</div></div><div class="top-actions"><span class="gav-version-chip" title="Versão atual">v${GAV_PORTAL_VERSION}</span>${!gavInstalled()?`<button class="btn btn-line btn-small" data-do="install-app">Instalar app</button>`:""}<div class="avatar">${adminView()?"AD":"CL"}</div><button class="btn btn-line btn-small" data-do="${previewAsClient?"exit-preview":"logout"}">${previewAsClient?"Voltar à GAV":"Sair"}</button></div></header><div class="content">${previewAsClient?`<div class="gav-client-preview-banner"><div><strong>Prévia do cliente — ${esc(firm?.legal_name||"empresa")}</strong><p>Mostra somente arquivos liberados. Não é login real e não concede acesso a ninguém.</p></div><button class="btn btn-dark btn-small" data-do="exit-preview">Voltar à administração</button></div>`:""}${notice?`<div class="error" style="display:block;margin-bottom:18px">${esc(notice)}</div>`:""}${busy?`<div class="card card-pad" style="margin-bottom:18px">Processando sua solicitação…</div>`:""}${clientSwitch}${content()}</div></main><nav class="bottom-bar" aria-label="Navegação">${navLinks.map(([id,name])=>`<button class="bottom-nav ${view===id?"active":""}" data-do="view" data-val="${id}">${esc(name)}</button>`).join("")}</nav></div>`;
 }
 const title=(name,sub)=>`<div class="page-head"><div><div class="eyebrow">CENTRAL DE DOCUMENTOS</div><h1>${esc(name)}</h1><p>${esc(sub)}</p></div></div>`;
 const officePicker=()=>adminView()?`<div class="form-field"><label for="officeSelect">Escritório</label><select id="officeSelect" class="input">${offices.map(o=>`<option value="${esc(o.id)}" ${o.id===officeId?"selected":""}>${esc(officeName(o))}</option>`).join("")}</select></div>`:"";
@@ -546,42 +547,10 @@ async function loadProcessing(){
  if(office===officeId&&y===processingYear&&m===processingMonth)processingData={...result,loaded:true};
 }
 function processingPage(){
- const all=officeCompanies().filter(x=>x.is_active);
- const currentData=processingData.officeId===officeId&&processingData.year===processingYear&&processingData.month===processingMonth?processingData:{loaded:false,companies:[],total:0,concluded:0,pending:0};
- const years=Array.from({length:8},(_,i)=>new Date().getFullYear()+1-i);
- const mark=(v)=>v?'<span class="gav-process-good">✓ Encontrado</span>':'<span class="gav-process-pending">— Ausente</span>';
- let out=title("Processamento — "+officeLabel(),"Conferência automática de folha e parcelamentos por empresa e competência, exclusiva da administração GAV.");
- out+='<div class="gav-process-head">'+officePicker()+'<div class="gav-process-filters"><label>Competência<select class="input" id="processingMonthSelect">'+M.map((n,i)=>'<option value="'+(i+1)+'" '+(processingMonth===i+1?"selected":"")+'>'+esc(n)+'</option>').join("")+'</select></label><label>Ano<select class="input" id="processingYearSelect">'+years.map(y=>'<option value="'+y+'" '+(processingYear===y?"selected":"")+'>'+y+'</option>').join("")+'</select></label><button class="btn btn-dark btn-small" data-do="processing-refresh">Atualizar conferência</button></div></div>';
- out+='<div class="gav-process-cards"><div class="card gav-process-card"><span class="subtle">Serviços acompanhados</span><strong>'+currentData.total+'</strong></div><div class="card gav-process-card"><span class="subtle">Concluídas</span><strong>'+currentData.concluded+'</strong></div><div class="card gav-process-card"><span class="subtle">Pendentes</span><strong>'+currentData.pending+'</strong></div><div class="card gav-process-card"><span class="subtle">Sem movimento</span><strong>'+Number(currentData.withoutMovement||0)+'</strong></div></div>';
- if(!currentData.loaded)return out+'<div class="card card-pad">Atualizando o controle de '+esc(M[processingMonth-1])+'/'+processingYear+'...</div>';
- const columns='<div class="gav-process-row gav-process-header"><span>Empresa</span><span>DARF de INSS</span><span>FGTS Mensal</span><span>Recibo DCTFWeb<small>ou GPS</small></span><span>DARF<small>Parcelamento</small></span><span>Situação</span><span>Consultar</span></div>';
- const rows=currentData.companies.map(c=>{
-  const ev=c.evidence||{},done=c.status==="CONCLUIDA",withoutMovement=c.status==="SEM_MOVIMENTO",isParcel=c.serviceKey==="PARCELAMENTOS";
-  const label=(key)=>{
-   if((isParcel&&key!=="parcelamento")||(!isParcel&&key==="parcelamento"))return '<span class="subtle">—</span>';
-   return mark(!!ev[key])+(ev[key]?'<small title="'+esc(ev[key].name)+'">'+esc(ev[key].name)+'</small>':"");
-  };
-  const receiptOrGps=()=>{
-   if(isParcel)return '<span class="subtle">—</span>';
-   const dctf=ev.dctf,gps=ev.gps;
-   return mark(!!(dctf||gps))+
-    (dctf?'<small title="'+esc(dctf.name)+'">DCTFWeb: '+esc(dctf.name)+'</small>':"")+
-    (gps?'<small title="'+esc(gps.name)+'">GPS: '+esc(gps.name)+'</small>':"");
-  };
-   const digits=String(c.cnpj||"").replace(/\D/g,"");
-   const cnpjField=digits.length===14?
-    '<div class="gav-process-cnpj">CNPJ '+esc(fmt(digits))+' <button class="gav-copy-cnpj" type="button" data-do="copy-process-cnpj" data-val="'+esc(digits)+'" title="Copiar CNPJ">Copiar</button></div>':
-    '<div class="gav-process-cnpj">CNPJ não cadastrado</div>';
-   const state=withoutMovement?"Sem movimento":done?"Concluída":"Pendente";
-   const stateClass=withoutMovement?"is-without-movement":done?"is-complete":"is-pending";
-   const action=isParcel?"":withoutMovement?
-    (c.inactivityActive?'<button type="button" class="gav-process-toggle" data-do="processing-resume" data-val="'+esc(c.id)+'">Reativar</button>':""):
-    !done?'<button type="button" class="gav-process-toggle" data-do="processing-inactive" data-val="'+esc(c.id)+'">Sem movimento</button>':"";
-   return '<div class="gav-process-row"><div class="gav-process-company"><strong>'+esc((c.code||"")+" · "+c.legalName)+'</strong>'+cnpjField+'<small>'+esc(c.serviceLabel||"Folha")+' · '+esc(c.reason)+'</small></div><div>'+label("darf")+'</div><div>'+label("fgts")+'</div><div>'+receiptOrGps()+'</div><div>'+label("parcelamento")+'</div><div class="gav-process-result"><span class="gav-process-status '+stateClass+'" aria-label="'+state+'">'+(withoutMovement?"○ ":done?"✓ ":"• ")+state+'</span>'+action+'</div><div><button class="btn btn-line btn-small" data-do="pick" data-val="'+esc(c.id)+'">Abrir</button></div></div>';
- }).join("");
- out+='<div class="card gav-process-table">'+columns+(rows||'<div class="card-pad">Nenhum serviço de processamento está configurado neste escritório.</div>')+'</div>';
- out+='<p class="gav-process-note"><strong>Regra:</strong> DARF de INSS + guia mensal do FGTS, ou recibo de entrega da DCTFWeb, ou GPS da competência (Folha). Para o serviço Parcelamentos, basta DARF de parcelamento do mês; DARFs em atraso de competências anteriores não são considerados. Relatórios de FGTS, declarações DCTFWeb sem recibo e FGTS rescisório não fecham a folha. A marcação Sem movimento é controle interno e não substitui obrigações enviadas; vale desde a competência escolhida até reativação. O controle usa os documentos já indexados no Drive. Concluída indica documentação encontrada, não pagamento confirmado.</p>';
- return out;
+ const data=processingData.officeId===officeId&&processingData.year===processingYear&&processingData.month===processingMonth?
+  processingData:{loaded:false,companies:[],total:0,concluded:0,pending:0,withoutMovement:0};
+ return buildProcessingPage({data,officeLabel,officePicker,processingYear,processingMonth,
+  filter:processingViewFilter,M,esc,fmt,title});
 }
 function drivePage(){
  const all=officeCompanies().filter(c=>c.is_active),linked=all.filter(c=>links.some(l=>l.company_id===c.id&&l.is_active));
@@ -739,8 +708,8 @@ function render(){
  app.querySelector("#clientActivationPassword")?.addEventListener("submit",completeActivation);
  app.querySelector("#clientPasswordForm")?.addEventListener("submit",saveClientPassword);
  app.querySelector("#officeSelect")?.addEventListener("change",e=>changeOffice(e.target.value));
- app.querySelector("#processingMonthSelect")?.addEventListener("change",e=>{processingMonth=Number(e.target.value);void run(loadProcessing)});
- app.querySelector("#processingYearSelect")?.addEventListener("change",e=>{processingYear=Number(e.target.value);void run(loadProcessing)});
+ app.querySelector("#processingMonthSelect")?.addEventListener("change",e=>{processingMonth=Number(e.target.value);processingViewFilter="all";void run(loadProcessing)});
+ app.querySelector("#processingYearSelect")?.addEventListener("change",e=>{processingYear=Number(e.target.value);processingViewFilter="all";void run(loadProcessing)});
  app.querySelector("#companySelect")?.addEventListener("change",e=>changeCompany(e.target.value));
  app.querySelector("#clientCompanySelect")?.addEventListener("change",e=>changeCompany(e.target.value));
  app.querySelector("#yearSelect")?.addEventListener("change",e=>{resetSelection();listPage=0;year=e.target.value;render()});
@@ -804,6 +773,7 @@ async function saveCompanyEditor(e){
 async function changeOffice(id){
  if(role!=="admin"||!offices.some(o=>o.id===id))return;
  const keepProcessing=view==="processing"&&adminView();
+ if(keepProcessing)processingViewFilter="all";
  const keepCompanies=view==="companies"&&adminView();
  companyEditorOpen=false;companyEditId="";companyDraft={cnpj:"",legalName:"",code:"",folderId:""};
  companyFolders={officeId:id,loaded:false,rootAvailable:false,items:[],notice:"",error:""};
@@ -908,7 +878,16 @@ async function handle(e){
    }catch(_e){toastMessage("Não foi possível copiar automaticamente. Selecione o CNPJ na tela.")}
    return;
   }
-  if(a==="processing-inactive"||a==="processing-resume"){
+  if(a==="processing-back"){
+  if(!adminView()||view!=="processing")return;
+  processingViewFilter="all";view="home";resetSelection();listPage=0;cat="";year="ALL";month="ALL";
+  render();return;
+ }
+ if(a==="processing-filter"){
+  if(!adminView()||view!=="processing"||!["all","ready","receipt","report","pending"].includes(v))return;
+  processingViewFilter=v;render();return;
+ }
+ if(a==="processing-inactive"||a==="processing-resume"){
    if(!adminView()||view!=="processing"||busy)return;
    const company=processingData.companies.find(c=>c.id===v);
    if(!company||company.serviceKey!=="FOLHA")return;
@@ -931,6 +910,7 @@ async function handle(e){
   }
 
  if(a==="view"){
+  if(v==="processing")processingViewFilter="all";
   resetSelection();listPage=0;view=v;cat="";year=new Date().getFullYear();month="ALL";navigationHistory.length=0;
   if(v==="recent")suggestDocumentPeriod();
   if(v==="processing"&&adminView())await run(loadProcessing);

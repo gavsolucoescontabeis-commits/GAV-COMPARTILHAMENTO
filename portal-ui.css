@@ -160,3 +160,78 @@
 #gavCompanyEditor{scroll-margin-top:24px}
 #gavCompanyEditor:focus{outline:none}
 #gavCompanyEditor .block-title{color:var(--ink)}
+
+
+/* v0.13.19 — apenas Processamento: tela ampliada, recibos e relatórios */
+@media(min-width:721px){
+ .shell.gav-portal-shell.gav-processing-fullscreen{padding-left:0!important}
+ .shell.gav-portal-shell.gav-processing-fullscreen>.side{display:none!important}
+}
+.shell.gav-portal-shell.gav-processing-fullscreen .content{max-width:none;width:100%;padding:20px clamp(14px,2.2vw,40px) 35px}
+.shell.gav-portal-shell.gav-processing-fullscreen .app-main{min-width:0;width:100%}
+.shell.gav-portal-shell.gav-processing-fullscreen .bottom-bar{display:none!important}
+.gav-processing-workspace{width:100%;min-width:0}
+.gav-processing-return{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:0 0 17px}
+.gav-processing-return span{color:#6f7881;font-size:12px;font-weight:700}
+.gav-processing-workspace .page-head{margin-bottom:14px}
+.gav-processing-workspace .page-head h1{font-size:clamp(23px,2.3vw,32px)}
+.gav-processing-fullscreen .gav-process-head{align-items:end;background:#fff;border:1px solid #e3e7ea;padding:14px 18px;border-radius:12px;gap:15px;margin:10px 0 15px}
+.gav-processing-fullscreen .gav-process-filters{gap:12px}
+.gav-processing-fullscreen .gav-process-filters label{color:#3d4853}
+.gav-processing-fullscreen .gav-process-filters select{min-width:110px;max-width:170px}
+.gav-processing-fullscreen .gav-process-cards.gav-process-metrics{grid-template-columns:repeat(5,minmax(0,1fr));gap:11px;margin:14px 0 23px}
+.gav-processing-fullscreen .gav-process-metrics .gav-process-card{padding:15px 16px;box-shadow:none;min-width:0}
+.gav-processing-fullscreen .gav-process-metrics .gav-process-card .subtle{display:block;font-size:12px;font-weight:700;line-height:1.35;min-height:34px;color:#4b5965}
+.gav-processing-fullscreen .gav-process-metrics .gav-process-card strong{font-size:28px;color:#2b3338}
+.gav-processing-fullscreen .gav-process-metrics .gav-process-card strong small{font-size:12px;color:#65736c;font-weight:700}
+.gav-processing-fullscreen .gav-process-metrics .gav-process-card.is-ready{border-color:#94c5a9;background:#f5fbf7}
+.gav-processing-fullscreen .gav-process-metrics .gav-process-card.is-ready strong{color:#116b41}
+.gav-process-section{margin:20px 0 26px}
+.gav-process-section-head{display:flex;align-items:end;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.gav-process-section-head h2{margin:3px 0 5px;font-size:19px;letter-spacing:-.02em;color:#2b343a}
+.gav-process-section-head p{margin:0;font-size:12px;line-height:1.5;color:#586673}
+.gav-process-kicker{color:#916b2b;font-weight:850;font-size:10px;letter-spacing:.095em}
+.gav-process-section-count{font-size:12px;font-weight:800;color:#5f6c76;border:1px solid #dde2e5;border-radius:40px;background:#fff;padding:7px 11px}
+.gav-process-quickfilters{display:flex;flex-wrap:wrap;gap:7px;margin:11px 0}
+.gav-process-filter{display:inline-flex;gap:7px;align-items:center;border:1px solid #dfe4e8;border-radius:9px;background:white;color:#485663;font-size:12px;font-weight:700;min-height:36px;padding:7px 10px;cursor:pointer}
+.gav-process-filter strong{font-size:11px;padding:2px 6px;background:#f0f2f4;border-radius:6px;color:#384650}
+.gav-process-filter.is-active{border-color:#b99555;color:#67501e;background:#fff7e6}
+.gav-process-filter.is-active strong{background:#f3dfb4;color:#765823}
+.gav-processing-fullscreen .gav-process-table{width:100%;overflow-x:auto;border:1px solid #e0e5e8;box-shadow:none;border-radius:12px}
+.gav-processing-fullscreen .gav-process-row{gap:10px;align-items:stretch;padding:12px 15px;line-height:1.4;min-width:1080px}
+.gav-processing-fullscreen .gav-process-row.gav-process-payroll-row{grid-template-columns:minmax(205px,2fr) minmax(235px,1.75fr) minmax(100px,.85fr) minmax(105px,.9fr) minmax(145px,1.25fr) minmax(135px,1fr) minmax(70px,.6fr);width:100%;min-width:1160px}
+.gav-processing-fullscreen .gav-process-row.gav-process-installment-row{grid-template-columns:minmax(225px,2.2fr) minmax(190px,1.4fr) minmax(150px,1.1fr) 92px;width:100%;min-width:700px}
+.gav-processing-fullscreen .gav-process-row.gav-process-header{background:#f0f3f5;font-size:11px;color:#35434f;border-bottom:2px solid #ccd5dc;align-items:center}
+.gav-processing-fullscreen .gav-process-row.gav-process-header span{font-weight:850}
+.gav-processing-fullscreen .gav-process-row.gav-process-header small{font-weight:650;color:#63727e}
+.gav-processing-fullscreen .gav-process-row:not(.gav-process-header):nth-child(odd){background:#fafbfc}
+.gav-processing-fullscreen .gav-process-row:not(.gav-process-header):hover{background:#fdf9ef}
+.gav-processing-fullscreen .gav-process-row:last-child{border-bottom:0}
+.gav-processing-fullscreen .gav-process-company strong{font-size:13px;color:#29333b;line-height:1.4}
+.gav-processing-fullscreen .gav-process-company>small{font-size:10.5px;color:#64717a}
+.gav-processing-fullscreen .gav-process-row small{overflow-wrap:anywhere}
+.gav-payroll-status{display:grid;grid-template-columns:1fr;gap:7px}
+.gav-payroll-check{border:1px solid #e1e4e6;background:#fafbfc;border-radius:8px;padding:7px 9px;min-width:0}
+.gav-payroll-check.is-found{background:#e9f6ee;border-color:#a2d0b1}
+.gav-payroll-check.is-missing{background:#fcf8ee;border-color:#e8d9b7}
+.gav-payroll-check-label{font-size:11px;font-weight:850;color:#8a651f}
+.gav-payroll-check.is-found .gav-payroll-check-label{color:#116b3e}
+.gav-payroll-check small{font-size:10px;white-space:normal;color:#63727b;word-break:break-word}
+.gav-process-empty{padding:20px;color:#57616b;font-size:13px}
+.gav-processing-fullscreen .gav-process-note{background:white;border-left:4px solid #c7ac76;padding:14px 18px;border-radius:8px}
+@media(max-width:1150px){
+ .gav-processing-fullscreen .gav-process-cards.gav-process-metrics{grid-template-columns:repeat(3,minmax(0,1fr))}
+ .gav-processing-fullscreen .gav-process-row.gav-process-payroll-row{width:1160px}
+}
+@media(max-width:720px){
+ .shell.gav-portal-shell.gav-processing-fullscreen .content{padding:15px 11px 28px}
+ .gav-processing-fullscreen .gav-process-cards.gav-process-metrics{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+ .gav-processing-fullscreen .gav-process-metrics .gav-process-card{padding:12px}
+ .gav-processing-fullscreen .gav-process-metrics .gav-process-card .subtle{font-size:10px;min-height:32px}
+ .gav-processing-fullscreen .gav-process-metrics .gav-process-card strong{font-size:22px}
+ .gav-processing-fullscreen .gav-process-head{padding:12px}
+ .gav-processing-fullscreen .gav-process-head>.form-field,.gav-processing-fullscreen .gav-process-head>.gav-process-filters{width:100%}
+ .gav-processing-fullscreen .gav-process-filters select{min-width:0}
+ .gav-processing-fullscreen .gav-process-filters label{flex:1;min-width:90px}
+ .gav-process-filter{font-size:11px}
+}

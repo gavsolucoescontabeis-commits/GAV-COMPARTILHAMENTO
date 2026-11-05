@@ -1,5 +1,5 @@
 {
-  "version": "0.13.18",
-  "release": "2026-11-03",
-  "notes": "Corrigir cadastro de pastas sem código: ao clicar em Cadastrar esta pasta, abrir formulário visível, focar CNPJ e preservar pasta selecionada."
+  "version": "0.13.19",
+  "release": "2026-11-05",
+  "notes": "Processamento em tela ampla, Folha e Parcelamentos separados, coluna Recibos e Relatório Folha com indicadores verdes e filtros, sem alterar obrigações."
 }
