@@ -36,6 +36,24 @@ function evidence(doc:any,year:number,month:number):"darf"|"fgts"|"dctf"|"gps"|n
  return null;
 }
 
+
+/** Recibos salariais e relatório de folha: controlados independentemente das obrigações. */
+function payrollArtifactEvidence(doc:any,year:number,month:number):"payrollReceipt"|"payrollReport"|null{
+ if(doc.mime_type&&!["application/pdf","image/jpeg","image/png","image/webp"].includes(doc.mime_type))return null;
+ const name=normalized(doc.file_name),path=normalized(doc.relative_path);
+ if(path.split(" ").some((x:string)=>["RES","RESCISAO","RESCISOES","FER","FERIAS","ADM","ADMISSAO","ADMISSOES"].includes(x)))return null;
+ // Exclui recibos de DCTFWeb, vales, tributos, certificados, rescisões e relatórios FGTS.
+ if(/\b(DCTF|WEB|ESOCIAL|E SOCIAL|FGTS|INSS|GPS|DARF|GRF|CERTIFICADO|CERTIFICADOS|VT|VA|VALE|TRANSPORTE|ALIMENTACAO|RESCISAO|RESCISORIO|FERIAS|ADMISSAO|ADMISSOES|PARCELAMENTO|PARCELA|ATRASO|MULTA|MAED|IMPOSTO|TRIBUTO|CONSIGNADO)\b/.test(name))return null;
+ if(month!==13&&/\b(13|DECIMO TERCEIRO)\b/.test(name))return null;
+ const six=name.match(/(?:^|\s)(0[1-9]|1[0-3])(20\d{2})(?=\s|$)/);
+ const four=!six&&name.match(/(?:^|\s)(0[1-9]|1[0-3])(\d{2})(?=\s|$)/);
+ const identified=six?{month:Number(six[1]),year:Number(six[2])}:four?{month:Number(four[1]),year:2000+Number(four[2])}:null;
+ if(identified&&(identified.month!==month||identified.year!==year))return null;
+ if(/^RECIBOS?\b/.test(name))return "payrollReceipt";
+ if(/^(?:RELATORIOS?|RESUMO)\b.*\bFOLHA\b/.test(name)||/^FOLHA\s+(?:DE\s+)?PAGAMENTO\b/.test(name))return "payrollReport";
+ return null;
+}
+
 // DARF mensal de parcelamento: aceita arquivo sem competência no nome somente quando
 // indexado na pasta da competência. Documento atrasado/de outro mês não fecha o período.
 function installmentEvidence(doc:any,year:number,month:number):boolean{
@@ -129,14 +147,16 @@ Deno.serve(async(req:Request)=>{
   for(const d of found){
    const kind=evidence(d,year,month);
    const installment=installmentEvidence(d,year,month);
-   if(!kind&&!installment)continue;
-   if(!evidenceByCompany.has(d.company_id))evidenceByCompany.set(d.company_id,{darf:null,fgts:null,dctf:null,gps:null,parcelamento:null});
+   const payroll=payrollArtifactEvidence(d,year,month);
+   if(!kind&&!installment&&!payroll)continue;
+   if(!evidenceByCompany.has(d.company_id))evidenceByCompany.set(d.company_id,{darf:null,fgts:null,dctf:null,gps:null,parcelamento:null,payrollReceipt:null,payrollReport:null});
    const flags=evidenceByCompany.get(d.company_id);
    if(kind&&!flags[kind])flags[kind]={id:d.id,name:d.file_name};
    if(installment&&!flags.parcelamento)flags.parcelamento={id:d.id,name:d.file_name};
+   if(payroll&&!flags[payroll])flags[payroll]={id:d.id,name:d.file_name};
   }
   const companies=selectedCompanies.map((c:any)=>{
-   const records=evidenceByCompany.get(c.id)||{darf:null,fgts:null,dctf:null,gps:null,parcelamento:null};
+   const records=evidenceByCompany.get(c.id)||{darf:null,fgts:null,dctf:null,gps:null,parcelamento:null,payrollReceipt:null,payrollReport:null};
    const parcelService=c.serviceKey==="PARCELAMENTOS";
    const concluded=parcelService?!!records.parcelamento:
      !!records.gps||!!records.dctf||!!(records.darf&&records.fgts);
@@ -153,12 +173,14 @@ Deno.serve(async(req:Request)=>{
      serviceLabel:parcelService?"Parcelamentos":"Folha",
      status:withoutMovement?"SEM_MOVIMENTO":concluded?"CONCLUIDA":"PENDENTE",
      inactivityActive:!!withoutMovement&&withoutMovement.end_year===null,
-     reason,evidence:records};
+     reason,evidence:records,payrollPrepared:!parcelService&&!!records.payrollReceipt&&!!records.payrollReport};
   });
   return respond({officeId,year,month,companies,total:companies.length,
     concluded:companies.filter((c:any)=>c.status==="CONCLUIDA").length,
     pending:companies.filter((c:any)=>c.status==="PENDENTE").length,
     withoutMovement:companies.filter((c:any)=>c.status==="SEM_MOVIMENTO").length,
+    payrollPrepared:companies.filter((c:any)=>c.serviceKey==="FOLHA"&&c.status!=="SEM_MOVIMENTO"&&c.payrollPrepared).length,
+    payrollTotal:companies.filter((c:any)=>c.serviceKey==="FOLHA"&&c.status!=="SEM_MOVIMENTO").length,
     checkedDocuments:found.length});
  }catch(e:any){return respond({error:String(e?.message||"Falha ao conferir o processamento.")},e?.status||500)}
 });
