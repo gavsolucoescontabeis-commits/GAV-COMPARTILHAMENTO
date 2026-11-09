@@ -1,5 +1,5 @@
 {
-  "version": "0.13.20",
-  "release": "2026-11-05",
-  "notes": "Padronizar retângulos de conferência no Processamento: Recibos / Relatório Folha em um item; DARF, FGTS, DCTFWeb/GPS e parcelamento com o mesmo visual."
+  "version": "0.13.21",
+  "release": "2026-11-09",
+  "notes": "Desativar e reativar empresas da carteira; retirar de Processamento e da sincronização Drive preservando documentos e acesso histórico."
 }

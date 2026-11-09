@@ -286,3 +286,13 @@
 @media(max-width:1150px){
  .gav-processing-fullscreen .gav-process-row.gav-process-payroll-row{width:1210px}
 }
+
+/* v0.13.21 — desativação reversível da carteira de empresas */
+.gav-company-deactivate{color:#8d512a;border-color:#dfc7b3;background:#fffaf6}
+.gav-company-deactivate:hover{background:#fff0e3}
+.gav-company-archive{border-style:dashed;background:#fafbfc}
+.gav-company-archive-head{display:flex;align-items:center;justify-content:space-between;gap:13px;flex-wrap:wrap}
+.gav-company-archive-head strong{color:#42505d;font-size:14px}
+.gav-company-archive-head p{margin:5px 0 0;font-size:12px}
+.gav-company-archive-list{margin-top:13px;border-top:1px solid #dce2e6}
+@media(max-width:720px){.gav-company-archive-head .btn{width:100%}}

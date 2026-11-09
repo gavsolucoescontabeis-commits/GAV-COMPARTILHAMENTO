@@ -7,7 +7,7 @@ const sb=createClient(ROOT,PUB,{auth:{autoRefreshToken:true,persistSession:true,
 const logo="assets/logo-gav-sem-fundo.svg",lion="assets/leao-gav-sem-fundo.svg";
 const app=document.getElementById("app");
 
-const GAV_PORTAL_VERSION="0.13.20";
+const GAV_PORTAL_VERSION="0.13.21";
 let gavAvailableVersion="",gavVersionCheckRunning=false;
 const comparePortalVersions=(left,right)=>{
  const a=left.split(".").map(Number),b=right.split(".").map(Number);
@@ -76,6 +76,7 @@ let syncRuns=[],mappingReport=null,offices=[],officeId="";
 let folderLookup={officeId:"",loaded:false,items:[],error:""};
 let companyFolders={officeId:"",loaded:false,rootAvailable:false,items:[],notice:"",error:""};
 let companyEditorOpen=false,companyEditId="",companyDraft={cnpj:"",legalName:"",code:"",folderId:""};
+let showInactiveCompanies=false;
 const initialCompetence=new Date();initialCompetence.setDate(1);initialCompetence.setMonth(initialCompetence.getMonth()-1);
 let processingYear=initialCompetence.getFullYear(),processingMonth=initialCompetence.getMonth()+1,processingViewFilter="all";
 let processingData={officeId:"",year:0,month:0,loaded:false,companies:[],total:0,concluded:0,pending:0};
@@ -93,7 +94,7 @@ const cn=v=>String(v||"").replace(/\D/g,"");
 const showError=e=>{notice=e?.message||String(e);busy=false;render()};
 const current=()=>companies.find(c=>c.id===selected);
 const currentOffice=()=>offices.find(o=>o.id===officeId);
-const officeCompanies=()=>role==="admin"?companies.filter(c=>c.office_id===officeId):companies;
+const officeCompanies=()=>role==="admin"?companies.filter(c=>c.office_id===officeId&&c.is_active):companies.filter(c=>c.is_active);
 const officeName=o=>o?.code==="REL GAV"?"GAV":o?.display_name||"Selecione o escritório";
 const officeLabel=()=>officeName(currentOffice());
 const officeSort={TTM:0,"DS CONTÁBIL":1,"REL GAV":2,AVULSOS:3};
@@ -189,14 +190,14 @@ async function bootstrap(){
    if(!offices.some(o=>o.id===officeId)){
     officeId=offices.find(o=>o.code==="TTM")?.id||offices[0]?.id||"";
    }
-   if(!companies.some(c=>c.id===selected&&c.office_id===officeId)){
+   if(!companies.some(c=>c.id===selected&&c.office_id===officeId&&c.is_active)){
     selected=officeCompanies()[0]?.id||"";
    }
   }else{
    officeId="";
    let rememberedCompany="";
    try{rememberedCompany=sessionStorage.getItem("gav-client-company")||""}catch(_e){}
-   if(!selected||!companies.some(c=>c.id===selected))
+   if(!selected||!companies.some(c=>c.id===selected&&c.is_active))
      selected=companies.find(c=>c.id===rememberedCompany)?.id||
        companies.find(c=>c.id===me.primaryCompanyId)?.id||companies[0]?.id||"";
   }
@@ -487,7 +488,7 @@ function companyEditorHtml(){
  if(!companyEditorOpen||!adminView())return "";
  const f=companyFolders.officeId===officeId?companyFolders:{loaded:false,items:[],rootAvailable:false,notice:"",error:""};
  const folder=f.items.find(x=>x.id===companyDraft.folderId);
- const used=f.items.filter(x=>!x.linkedCompanyId||x.linkedCompanyId===companyEditId);
+ const used=f.items.filter(x=>!x.retired&&(!x.linkedCompanyId||x.linkedCompanyId===companyEditId));
  const options='<option value="">'+(companyEditId?"Manter pasta vinculada / Sem pasta":"Selecione uma pasta (ou cadastre sem pasta)")+'</option>'+
   used.map(x=>'<option value="'+esc(x.id)+'" '+(x.id===companyDraft.folderId?"selected":"")+'>'+esc(x.name)+(x.linkedCompanyId===companyEditId?" · já vinculada":"")+'</option>').join("");
  const current=companyEditId?companies.find(c=>c.id===companyEditId):null;
@@ -509,33 +510,49 @@ function companyEditorHtml(){
   '<button class="btn btn-line" type="button" data-do="company-cancel">Cancelar</button></div></form></div>';
 }
 function companiesPage(){
- const list=officeCompanies().slice().sort((a,b)=>(a.code||"").localeCompare(b.code||"","pt-BR",{numeric:true})||a.legal_name.localeCompare(b.legal_name,"pt-BR"));
+ const sorter=(a,b)=>(a.code||"").localeCompare(b.code||"","pt-BR",{numeric:true})||a.legal_name.localeCompare(b.legal_name,"pt-BR");
+ const list=officeCompanies().slice().sort(sorter);
+ const inactive=companies.filter(c=>c.office_id===officeId&&!c.is_active).slice().sort(sorter);
  const folder=companyFolders.officeId===officeId?companyFolders:{loaded:false,items:[],rootAvailable:false,notice:"",error:""};
- const unmatched=folder.items.filter(f=>!f.linkedCompanyId);
- let out=title("Cadastro de empresas — "+officeLabel(),"Inclua ou edite clientes e vincule cada empresa à pasta correta do Google Drive.");
+ const unmatched=folder.items.filter(x=>!x.linkedCompanyId&&!x.retired);
+ let out=title("Cadastro de empresas — "+officeLabel(),"Cadastre e organize as empresas que fazem parte da carteira ativa.");
  out+='<div class="gav-company-toolbar">'+officePicker()+'<div class="admin-actions"><button class="btn btn-dark" data-do="company-new">+ Nova empresa</button>'+
   '<button class="btn btn-line" data-do="company-reload-folders">Atualizar pastas do Drive</button></div></div>';
- out+='<div class="card card-pad"><strong>'+list.length+' empresa(s) cadastrada(s)</strong>'+
-  '<p class="subtle">Criar a pasta no Drive não cria automaticamente um CNPJ no sistema. Você confirma os dados da empresa e escolhe a pasta localizada aqui.</p>'+
+ out+='<div class="card card-pad"><strong>'+list.length+' empresa(s) ativa(s)</strong>'+
+  '<p class="subtle">Desativar retira a empresa da carteira, do Processamento e da sincronização, preservando documentos e pasta no Google Drive.</p>'+
   (folder.error?'<p class="gav-company-warning">'+esc(folder.error)+'</p>':"")+
   (folder.notice?'<p class="subtle">'+esc(folder.notice)+'</p>':"")+
-  (folder.loaded&&folder.rootAvailable?'<p class="subtle">'+folder.items.length+' pasta(s) encontradas no diretório do escritório · '+unmatched.length+' sem vínculo de empresa.</p>':"")+'</div>';
+  (folder.loaded&&folder.rootAvailable?'<p class="subtle">'+unmatched.length+' pasta(s) disponíveis para cadastro.</p>':"")+'</div>';
  out+=companyEditorHtml();
- out+='<div class="card card-pad" style="margin-top:16px"><div class="section-title">Empresas deste escritório</div>';
+ out+='<div class="card card-pad" style="margin-top:16px"><div class="section-title">Empresas ativas deste escritório</div>';
  out+=list.length?'<div class="file-list">'+list.map(c=>{
-  const link=links.some(l=>l.company_id===c.id&&l.is_active);
+  const linked=links.some(l=>l.company_id===c.id&&l.is_active);
   return '<div class="file-row"><div class="file-expand"><b>'+esc((c.code?c.code+" · ":"")+c.legal_name)+'</b>'+
-   '<small class="file-meta">CNPJ '+esc(fmt(c.cnpj))+' · '+(link?"Pasta vinculada":"Sem pasta vinculada")+(c.is_active?"":" · Inativa")+'</small></div>'+
+   '<small class="file-meta">CNPJ '+esc(fmt(c.cnpj))+' · '+(linked?"Pasta vinculada":"Sem pasta vinculada")+'</small></div>'+
    '<div class="gav-company-actions"><button class="btn btn-line btn-small" data-do="company-edit" data-val="'+esc(c.id)+'">Editar</button>'+
-   '<button class="btn btn-line btn-small" data-do="pick" data-val="'+esc(c.id)+'">Documentos</button>'+
-    '<button class="btn btn-line btn-small" data-do="open-company-access" data-val="'+esc(c.id)+'">Acessos</button></div></div>';
- }).join("")+'</div>':'<div class="empty">Nenhuma empresa cadastrada neste escritório.</div>';
+    '<button class="btn btn-line btn-small" data-do="pick" data-val="'+esc(c.id)+'">Documentos</button>'+
+    '<button class="btn btn-line btn-small" data-do="open-company-access" data-val="'+esc(c.id)+'">Acessos</button>'+
+    '<button class="btn btn-line btn-small gav-company-deactivate" data-do="company-deactivate" data-val="'+esc(c.id)+'">Desativar</button></div></div>';
+ }).join("")+'</div>':'<div class="empty">Nenhuma empresa ativa neste escritório.</div>';
  out+='</div>';
+ if(inactive.length){
+  out+='<div class="card card-pad gav-company-archive" style="margin-top:16px"><div class="gav-company-archive-head"><div>'+
+   '<strong>Empresas desativadas</strong><p class="subtle">Fora da carteira ativa e do Processamento. Documentos históricos preservados.</p></div>'+
+   '<button type="button" class="btn btn-line btn-small" data-do="company-toggle-inactive">'+
+   (showInactiveCompanies?"Ocultar":"Mostrar")+' desativadas ('+inactive.length+')</button></div>';
+  if(showInactiveCompanies){
+   out+='<div class="file-list gav-company-archive-list">'+inactive.map(c=>
+    '<div class="file-row"><div class="file-expand"><b>'+esc((c.code?c.code+" · ":"")+c.legal_name)+'</b>'+
+    '<small class="file-meta">CNPJ '+esc(fmt(c.cnpj))+' · Desativada</small></div>'+
+    '<div class="gav-company-actions"><button class="btn btn-line btn-small" data-do="company-reactivate" data-val="'+esc(c.id)+'">Reativar empresa</button></div></div>').join("")+'</div>';
+  }
+  out+='</div>';
+ }
  if(folder.rootAvailable&&unmatched.length){
   out+='<div class="card card-pad" style="margin-top:16px"><div class="section-title">Pastas ainda sem empresa vinculada</div>'+
-  '<p class="subtle">Ao selecionar uma pasta, você ainda precisará confirmar a razão social e o CNPJ.</p>'+
-  unmatched.map(f=>'<div class="gav-drive-row"><div class="gav-drive-firm"><strong>'+esc(f.name)+'</strong><small>Aguardando cadastro e conferência</small></div>'+
-   '<button class="btn btn-line btn-small" data-do="company-from-folder" data-val="'+esc(f.id)+'">Cadastrar esta pasta</button></div>').join("")+'</div>';
+   '<p class="subtle">Ao selecionar uma pasta, você precisará confirmar a razão social e o CNPJ.</p>'+
+   unmatched.map(folder=>'<div class="gav-drive-row"><div class="gav-drive-firm"><strong>'+esc(folder.name)+'</strong><small>Aguardando cadastro e conferência</small></div>'+
+    '<button class="btn btn-line btn-small" data-do="company-from-folder" data-val="'+esc(folder.id)+'">Cadastrar esta pasta</button></div>').join("")+'</div>';
  }
  return out;
 }
@@ -775,6 +792,7 @@ async function changeOffice(id){
  const keepProcessing=view==="processing"&&adminView();
  if(keepProcessing)processingViewFilter="all";
  const keepCompanies=view==="companies"&&adminView();
+ showInactiveCompanies=false;
  companyEditorOpen=false;companyEditId="";companyDraft={cnpj:"",legalName:"",code:"",folderId:""};
  companyFolders={officeId:id,loaded:false,rootAvailable:false,items:[],notice:"",error:""};
  resetSelection();listPage=0;pilotTestCredential=null;previewAsClient=false;clientDocs=[];mappingReport=null;accessPanelOpen=false;accessStatus=null;clientCredential=null;
@@ -917,11 +935,35 @@ async function handle(e){
   else if(v==="companies"&&adminView()){if(companyFolders.officeId!==officeId||!companyFolders.loaded)await run(loadCompanyFolders);else render()}
   else render();return;
  }
+ if(a==="company-toggle-inactive"){
+  if(!adminView()||view!=="companies")return;
+  showInactiveCompanies=!showInactiveCompanies;render();return;
+ }
+ if(a==="company-deactivate"||a==="company-reactivate"){
+  if(!adminView()||view!=="companies"||busy)return;
+  const company=companies.find(c=>c.id===v&&c.office_id===officeId);
+  if(!company)return;
+  const activate=a==="company-reactivate";
+  if(company.is_active===activate){toastMessage("A empresa já está na situação escolhida.");return}
+  const message=activate?
+   "Reativar "+company.legal_name+" na carteira "+officeLabel()+"?\\n\\nA pasta original será conferida no Google Drive. Os logins de clientes não serão reativados automaticamente.":
+   "RETIRAR "+company.legal_name+" da carteira "+officeLabel()+"?\\n\\nA empresa sairá da relação ativa e do Processamento. A sincronização da pasta será interrompida e acessos a esta empresa serão suspensos.\\n\\nNenhum documento histórico ou pasta do Google Drive será apagado.";
+  if(!window.confirm(message))return;
+  await run(async()=>{
+   const result=await invoke("gav-company-admin",activate?"reactivate":"deactivate",{officeId,companyId:company.id});
+   if(!activate&&selected===company.id)selected=officeCompanies().find(c=>c.id!==company.id)?.id||"";
+   await bootstrap();
+   view="companies";
+   await loadCompanyFolders();
+   notice=result.notice||"Situação da empresa atualizada.";
+  });
+  return;
+ }
  if(a==="company-new"){beginCompanyEditor();if(!companyFolders.loaded)await run(loadCompanyFolders);return}
  if(a==="company-edit"){beginCompanyEditor(v);if(!companyFolders.loaded)await run(loadCompanyFolders);return}
  if(a==="company-from-folder"){
   if(!adminView())return;
-  const picked=companyFolders.items.find(f=>f.id===v&&!f.linkedCompanyId);
+  const picked=companyFolders.items.find(f=>f.id===v&&!f.linkedCompanyId&&!f.retired);
   if(!picked){
    toastMessage("Pasta não encontrada ou já vinculada. Atualize as pastas do Drive.");
    return;
