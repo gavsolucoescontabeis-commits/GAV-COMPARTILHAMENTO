@@ -296,3 +296,43 @@
 .gav-company-archive-head p{margin:5px 0 0;font-size:12px}
 .gav-company-archive-list{margin-top:13px;border-top:1px solid #dce2e6}
 @media(max-width:720px){.gav-company-archive-head .btn{width:100%}}
+
+
+/* v0.13.22 — Alocações TTM: somente estilos, sem mudanças no restante da navegação */
+.gav-alloc-toolbar{display:flex;align-items:end;justify-content:flex-start;gap:13px;flex-wrap:wrap;margin-bottom:15px}
+.gav-alloc-toolbar .gav-alloc-top-label{display:grid;gap:5px;font-size:11px;font-weight:800;color:#546775;min-width:135px}
+.gav-alloc-toolbar .gav-alloc-top-label:first-child{flex:1;min-width:240px}
+.gav-alloc-toolbar .input{min-height:39px;padding:9px 11px}
+.gav-alloc-client-name{align-self:center;flex:1;color:#253542}
+.gav-alloc-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:12px 0}
+.gav-alloc-metrics .card{padding:15px 18px}
+.gav-alloc-metrics span{display:block;font-size:11px;color:#546775;font-weight:700}
+.gav-alloc-metrics strong{display:block;font-size:25px;color:#203B56;margin-top:6px}
+.gav-alloc-note{font-size:12px;line-height:1.55;color:#546775;margin:12px 0 18px}
+.gav-alloc-find{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:14px 0}
+.gav-alloc-find label{font-size:12px;color:#253542;font-weight:800}
+.gav-alloc-find .input{max-width:340px}
+.gav-allocation-table{overflow-x:auto;max-width:100%;margin-bottom:16px}
+.gav-allocation-row{display:grid;grid-template-columns:minmax(205px,1.5fr) minmax(85px,.56fr) minmax(75px,.50fr) minmax(290px,1.6fr) minmax(180px,1.1fr) minmax(92px,.62fr);align-items:center;gap:10px;min-width:1120px;padding:11px 13px;border-bottom:1px solid #D4DEE1;background:#FFFFFF}
+.gav-allocation-row:nth-of-type(2n+1):not(.gav-allocation-header){background:#F9FBFB}
+.gav-allocation-row.gav-allocation-header{font-size:11px;font-weight:800;color:#546775;background:#F1F4F3;padding:14px 13px}
+.gav-alloc-worker{min-width:0}
+.gav-alloc-worker strong{display:block;line-height:1.35;overflow-wrap:anywhere;color:#253542;font-size:12px}
+.gav-alloc-worker small{display:block;margin-top:4px;font-size:10px;line-height:1.45;color:#546775}
+.gav-alloc-worker .gav-alloc-suggestion{color:#7A3E52;font-weight:750}
+.gav-alloc-worker .gav-alloc-another{font-weight:700;color:#7A3E52}
+.gav-alloc-label{display:none;font-size:10px;font-weight:800;color:#546775;margin-bottom:4px}
+.gav-allocation-row .input{min-height:38px;border-color:#D4DEE1;font-size:12px;padding:8px 10px}
+.gav-alloc-number{max-width:88px}
+.gav-alloc-no-abs{font-size:13px;color:#546775}
+.gav-alloc-cno-wrap{display:flex;gap:6px;align-items:center;min-width:0}
+.gav-alloc-cno-wrap .gav-alloc-cno{width:55%;min-width:126px}
+.gav-alloc-cno-wrap .gav-alloc-cno-select{width:45%;min-width:116px;color:#244B66;border-color:#B68A3C}
+.gav-alloc-workname[readonly]{background:#F1F4F3;color:#253542;font-weight:650}
+.gav-alloc-row-actions{display:flex;gap:5px;flex-wrap:wrap}
+.gav-alloc-row-actions .btn{min-height:34px;padding:6px 9px;font-size:11px}
+.gav-alloc-employee-footer{padding:7px 13px 12px 222px;border-bottom:1px solid #D4DEE1;background:#FFFFFF;min-width:1120px}
+.gav-alloc-add{background:transparent;border:0;color:#7A3E52;font-size:11px;font-weight:800;text-decoration:underline;padding:3px 0;cursor:pointer}
+.gav-alloc-add:hover{color:#203B56}
+.gav-allocation-row:focus-within{outline:1px solid #B68A3C;outline-offset:-2px}
+@media(max-width:720px){.gav-alloc-toolbar .gav-alloc-top-label:first-child{flex-basis:100%}.gav-alloc-metrics{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.gav-alloc-metrics .card{padding:10px}.gav-alloc-metrics strong{font-size:19px}.gav-alloc-metrics span{font-size:10px}.gav-alloc-find .input{max-width:100%}}

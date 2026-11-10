@@ -32,11 +32,12 @@ jobs:
           node --check --input-type=module < portal.js
           node --check --input-type=module < portal-push.js
           node --check --input-type=module < portal-processing.js
+          node --check allocations.js
           node --check sw.js
       - name: Preparar somente arquivos públicos
         run: |
           mkdir -p _site
-          cp index.html portal.js portal-push.js portal-processing.js portal-ui.css manifest.webmanifest sw.js version.json _site/
+          cp index.html portal.js portal-push.js portal-processing.js allocations.js portal-ui.css manifest.webmanifest sw.js version.json _site/
           cp -R assets _site/assets
           python scripts/build_gav_icons.py _site
           touch _site/.nojekyll

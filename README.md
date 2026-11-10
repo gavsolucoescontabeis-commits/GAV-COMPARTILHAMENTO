@@ -1,6 +1,6 @@
 # GAV Compartilhar Docs — Portal seguro
 
-**Versão atual: v0.13.11 · Processamento com histórico de sem movimento**
+**Versão atual: v0.13.22 · Alocações TTM**
 
 **Acesso permanente:** https://gavsolucoescontabeis-commits.github.io/GAV-COMPARTILHAMENTO/
 
@@ -131,3 +131,14 @@ O módulo exibe sua **versão real** na barra lateral e no cabeçalho. O arquivo
 
 ### Refinamento v0.13.11
 O histórico de competências sem movimento permanece visível após uma reativação. O botão Reativar somente é exibido para a faixa ainda ativa, evitando reativar novamente períodos já encerrados. O serviço do Supabase `gav-processing-summary` foi atualizado para a versão 5, sem mexer nos documentos ou permissões.
+
+
+## v0.13.22 — Alocações TTM (10/11/2026)
+
+- Aba **Alocações** para as empresas TTM, por empresa e competência. Admin GAV visualiza todas as empresas da TTM; cliente autenticado acessa apenas as empresas a que está vinculado.
+- Importação inicial dos relatórios de **outubro/2026**: 75 empregados em 12 empresas, preservando código e nome. Dez CNOs identificados na Folha cadastrados no catálogo, que pode ser ampliado manualmente.
+- Dias trabalhados, faltas, CNO e obra: o usuário preenche e salva, sem deduzir números a partir da folha. É possível dividir um empregado entre várias obras no mês, sem duplicar faltas.
+- Buscar CNO por parte do número ou selecionar na lista; nome da obra preenchido automaticamente para CNO cadastrado. CNO novo de 12 dígitos e nome são registrados ao salvar.
+- Empresa/competência sem relatório importado fica sem empregados; não preencher com outras folhas. Importações futuras devem ser revisadas ao disponibilizar novos relatórios.
+- Banco Supabase isolado com tabelas `gav_allocation_employees`, `gav_allocation_worksites`, `gav_allocation_lines`, RLS e acesso exclusivo pela função protegida `gav-allocations`.
+- Nenhum CPF, salário, valor ou base da Folha foi importado. PDFs originais continuam intactos no Drive. Preservar identidade visual GAV (azul-marinho, vinho e dourado) e todos os módulos aprovados.

@@ -1,5 +1,5 @@
 {
-  "version": "0.13.21",
-  "release": "2026-11-09",
-  "notes": "Desativar e reativar empresas da carteira; retirar de Processamento e da sincronização Drive preservando documentos e acesso histórico."
+  "version": "0.13.22",
+  "release": "2026-11-10",
+  "notes": "Alocações TTM: empregados por empresa e competência, dias, faltas, obras e pesquisa de CNO."
 }

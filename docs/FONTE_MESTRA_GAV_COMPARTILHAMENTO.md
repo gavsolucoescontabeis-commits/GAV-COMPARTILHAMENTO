@@ -266,3 +266,13 @@ Somente a visualização da aba **Processamento** foi alterada. A coluna **Recib
 ## 09/11/2026 — v0.13.21: empresas desligadas da carteira
 
 A 010 — LICITAR ENGENHARIA LTDA, TTM, foi desativada no banco; sincronização Drive suspensa, 72 documentos históricos preservados, nenhum acesso de cliente ativo. No cadastro administrativo **Empresas** existe botão **Desativar** com confirmação, que retira empresa da carteira ativa, menus e Processamento, interrompe o Drive sem excluir documentos e suspende acessos vinculados à empresa. Em **Mostrar desativadas** é possível reativar com validação da pasta antiga, mantendo os clientes suspensos até nova autorização. Pastas de empresas desativadas não reaparecem na lista de pastas sem vínculo. A operação usa RPC transacional privada, auditoria e checagem de administrador, sem alterar outras empresas e sem excluir arquivos do Drive.
+
+
+---
+## GAV Compartilhar v0.13.22 — Alocações da TTM (10/11/2026)
+
+Aba nova **Alocações** exclusiva das empresas TTM: importar código e nome dos empregados por empresa e competência, inicialmente a partir de **Relatório Folha 102026.pdf**, sem CPF ou valores. Primeira importação: 75 empregados em 12 empresas e catálogo inicial de 10 CNOs identificados nos departamentos, sempre no Supabase isolado. Não criar funcionários fictícios para relatórios faltantes; não reutilizar empregados de outra competência/empresa.
+
+Campos: dias trabalhados, faltas, CNO da obra e nome da obra. Permitir múltiplas obras por empregado, faltas na linha 1; não predefinir dias/faltas. CNO cadastrado buscável por número parcial e lista completa; nome da obra automático. CNO ainda não cadastrado pode ser informado com 12 dígitos e nome da obra, salvo no catálogo comum de obras da TTM. Sem CNO, permitir nome manual quando necessário; jamais inventar número.
+
+Autorização em `gav-allocations`: JWT válido, empresa ativa, office=TTM, admin GAV ou membership do cliente ativo sem pendência de troca obrigatória de senha. Nenhum acesso cruzado de empregados/alocações entre CNPJs. Três tabelas com RLS e sem concessões `anon`/`authenticated`: `gav_allocation_employees`, `gav_allocation_worksites`, `gav_allocation_lines`. Não alterar PDFs originais nem outras funcionalidades. Importações de folhas posteriores ou que faltavam exigem novo processamento, sem sobrescrever lançamentos dos usuários.
