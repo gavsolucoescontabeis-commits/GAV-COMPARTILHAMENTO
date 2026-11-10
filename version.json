@@ -1,5 +1,5 @@
 {
-  "version": "0.13.22",
+  "version": "0.13.23",
   "release": "2026-11-10",
-  "notes": "Alocações TTM: empregados por empresa e competência, dias, faltas, obras e pesquisa de CNO."
+  "notes": "Cadastro TTM: liberar Alocações Sim/Não; relatório por obra, empregados, dias e faltas em PDF/CSV."
 }

@@ -1,6 +1,6 @@
 # GAV Compartilhar Docs — Portal seguro
 
-**Versão atual: v0.13.22 · Alocações TTM**
+**Versão atual: v0.13.23 · Alocações por empresa e relatório mensal**
 
 **Acesso permanente:** https://gavsolucoescontabeis-commits.github.io/GAV-COMPARTILHAMENTO/
 
@@ -142,3 +142,12 @@ O histórico de competências sem movimento permanece visível após uma reativa
 - Empresa/competência sem relatório importado fica sem empregados; não preencher com outras folhas. Importações futuras devem ser revisadas ao disponibilizar novos relatórios.
 - Banco Supabase isolado com tabelas `gav_allocation_employees`, `gav_allocation_worksites`, `gav_allocation_lines`, RLS e acesso exclusivo pela função protegida `gav-allocations`.
 - Nenhum CPF, salário, valor ou base da Folha foi importado. PDFs originais continuam intactos no Drive. Preservar identidade visual GAV (azul-marinho, vinho e dourado) e todos os módulos aprovados.
+
+
+## v0.13.23 — Alocações opcionais e relatório mensal por obra (10/11/2026)
+
+- Campo **Disponibilizar Alocações — Sim/Não** no cadastro da empresa TTM, com padrão Não. O administrador ativa somente as empresas que precisam. A desativação preserva o histórico e bloqueia acesso no servidor.
+- O cliente salva dias, faltas, CNO e obra no mesmo banco que o administrador consulta. O administrador atualiza a aba para trazer os dados mais recentes; não há atualização em tempo real sem reconsulta.
+- Relatório **por obra, empresa e competência**, com código e nome do empregado, dias trabalhados e faltas, subtotais por obra, total geral e empregados sem lançamentos.
+- **Relatório / PDF** permite impressão ou salvar como PDF pelo navegador; **Exportar para Excel (CSV)** baixa as informações salvas em formato com separador ponto e vírgula, UTF-8 e proteção contra fórmulas.
+- Somente registros salvos entram no relatório, sem somar faltas duas vezes quando o mesmo empregado está em obras diferentes. Documentos originais, permissões de outros módulos e identidade GAV são preservados.

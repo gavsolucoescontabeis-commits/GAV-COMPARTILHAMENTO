@@ -336,3 +336,10 @@
 .gav-alloc-add:hover{color:#203B56}
 .gav-allocation-row:focus-within{outline:1px solid #B68A3C;outline-offset:-2px}
 @media(max-width:720px){.gav-alloc-toolbar .gav-alloc-top-label:first-child{flex-basis:100%}.gav-alloc-metrics{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.gav-alloc-metrics .card{padding:10px}.gav-alloc-metrics strong{font-size:19px}.gav-alloc-metrics span{font-size:10px}.gav-alloc-find .input{max-width:100%}}
+
+/* v0.13.23: relatórios da aba Alocações, identidade oficial GAV */
+.gav-alloc-report-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 16px;margin:12px 0;border:1px solid #D4DEE1;border-radius:10px;background:#FFFFFF}
+.gav-alloc-report-actions span{margin-right:auto;color:#546775;font-weight:700;font-size:12px}
+.gav-alloc-report-actions .btn:disabled{cursor:not-allowed;opacity:.50}
+.gav-company-form-grid #companyAllocationsEnabled{font-weight:700;color:#253542}
+@media(max-width:720px){.gav-alloc-report-actions{align-items:stretch}.gav-alloc-report-actions span{flex-basis:100%}}

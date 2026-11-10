@@ -276,3 +276,13 @@ Aba nova **Alocações** exclusiva das empresas TTM: importar código e nome dos
 Campos: dias trabalhados, faltas, CNO da obra e nome da obra. Permitir múltiplas obras por empregado, faltas na linha 1; não predefinir dias/faltas. CNO cadastrado buscável por número parcial e lista completa; nome da obra automático. CNO ainda não cadastrado pode ser informado com 12 dígitos e nome da obra, salvo no catálogo comum de obras da TTM. Sem CNO, permitir nome manual quando necessário; jamais inventar número.
 
 Autorização em `gav-allocations`: JWT válido, empresa ativa, office=TTM, admin GAV ou membership do cliente ativo sem pendência de troca obrigatória de senha. Nenhum acesso cruzado de empregados/alocações entre CNPJs. Três tabelas com RLS e sem concessões `anon`/`authenticated`: `gav_allocation_employees`, `gav_allocation_worksites`, `gav_allocation_lines`. Não alterar PDFs originais nem outras funcionalidades. Importações de folhas posteriores ou que faltavam exigem novo processamento, sem sobrescrever lançamentos dos usuários.
+
+
+---
+## Aditivo v0.13.23 — 10/11/2026: liberação e relatórios da TTM
+
+No cadastro/edição de empresa TTM, selecionar **Disponibilizar Alocações: Sim/Não**, com padrão Não. Não habilitar automaticamente construtoras nem empresas do outro escritório.
+O banco armazena gav_companies.allocations_enabled (boolean, NOT NULL, DEFAULT false); somente administrador GAV pode alterá-lo no cadastro. A função gav-allocations verifica a flag no servidor antes de qualquer leitura/gravação e a ação enabledCompanies só expõe IDs autorizados ao usuário logado.
+Quando empresa fica Não, o histórico dos empregados, obras, lançamentos e períodos permanece intacto. O menu é exibido apenas quando existe empresa autorizada. Clientes vinculados à empresa e sem bloqueio de senha podem editar, sempre com isolamento por empresa.
+Relatório mensal por obra: CNO, nome obra, código/nome empregado, dias trabalhados, faltas, totais por obra e geral, empregados sem lançamento, empresa e competência. Abrir impressão/Salvar em PDF e exportar CSV para Excel com proteção contra fórmulas. O relatório só considera alocações já salvas no banco, atualizadas pelo botão Atualizar ou por nova abertura da aba.
+Manter segurança, layout aprovado, Drive, PDFs de origem e identidade azul-marinho + vinho + dourado.

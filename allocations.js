@@ -10,7 +10,7 @@ window.GavAllocations=function createAllocations({invoke,esc,notify,context,refr
  const key=(c,n)=>c+"|"+n;
  const company=()=>{
   const c=context();
-  const allowed=c.companies.filter(x=>x.is_active&&x.office_id===c.ttmOfficeId);
+  const allowed=c.companies.filter(x=>x.is_active&&x.office_id===c.ttmOfficeId&&x.allocations_enabled===true);
   if(!allowed.length)return "";
   if(c.admin)return allowed.some(x=>x.id===companyId)?companyId:allowed[0].id;
   return allowed.some(x=>x.id===c.selected)?c.selected:"";
@@ -53,7 +53,7 @@ window.GavAllocations=function createAllocations({invoke,esc,notify,context,refr
    '</div>';
  }
  function page(){
-  const ctx=context(),cid=company(),allowed=ctx.companies.filter(x=>x.is_active&&x.office_id===ctx.ttmOfficeId);
+  const ctx=context(),cid=company(),allowed=ctx.companies.filter(x=>x.is_active&&x.office_id===ctx.ttmOfficeId&&x.allocations_enabled===true);
   if(!ctx.allowed||!cid)return '<div class="card card-pad">Alocações disponíveis somente para as empresas da TTM.</div>';
   const current=allowed.find(x=>x.id===cid);
   const picker=ctx.admin?'<label class="gav-alloc-top-label">Empresa<select class="input" data-alloc-company>'+
@@ -71,6 +71,9 @@ window.GavAllocations=function createAllocations({invoke,esc,notify,context,refr
   if(!ready)return html+'<div class="card card-pad">Abra esta aba para consultar o mês selecionado.</div>';
   const workers=state.workers||[],sites=state.sites||[],lines=state.lines||[],names=namesMap();
   html+='<div class="gav-alloc-metrics"><div class="card"><span>Empregados na Folha</span><strong>'+workers.length+'</strong></div><div class="card"><span>CNOs cadastrados (TTM)</span><strong>'+sites.length+'</strong></div><div class="card"><span>Alocações salvas</span><strong>'+lines.length+'</strong></div></div>';
+  html+='<div class="gav-alloc-report-actions"><span>Relatório por obra · somente lançamentos salvos</span>'+
+   '<button class="btn btn-dark btn-small" type="button" data-alloc-action="report-print" '+(!lines.length?"disabled":"")+'>Relatório / PDF</button>'+
+   '<button class="btn btn-line btn-small" type="button" data-alloc-action="report-csv" '+(!lines.length?"disabled":"")+'>Exportar para Excel (CSV)</button></div>';
   html+='<p class="gav-alloc-note">Os códigos e nomes vêm dos relatórios Folha da competência. CNOs dos departamentos são sugestões; dias e faltas só são registrados por quem preencher e salvar. Uma pessoa pode ter várias obras.</p>';
   if(!workers.length)return html+'<div class="card card-pad"><strong>Folha ainda não importada para esta empresa e competência.</strong><p class="subtle">Quando o relatório estiver disponível e for conferido, a lista de empregados poderá ser importada. Não serão usados nomes de outro mês.</p></div>';
   html+='<div class="gav-alloc-find"><label for="gav-allocation-search">Pesquisar empregado</label><input id="gav-allocation-search" class="input" data-alloc-search-input value="'+esc(search)+'" placeholder="Nome ou código do empregado"></div>';
@@ -85,6 +88,78 @@ window.GavAllocations=function createAllocations({invoke,esc,notify,context,refr
   html+='</div><p class="gav-alloc-note">Se o CNO já existe, selecione-o pela lista “Obras” ou digite parte do número. O nome será preenchido automaticamente. Para CNO novo, digite os 12 números e o nome da obra na mesma linha; o cadastro será criado ao salvar. As faltas são informadas somente na primeira linha de cada empregado.</p>';
   return html;
  }
+
+ function reportData(){
+  const ctx=context(),cid=company(),firm=ctx.companies.find(c=>c.id===cid);
+  if(!state||state.companyId!==cid||state.year!==year||state.month!==month)return null;
+  const workers=new Map((state.workers||[]).map(w=>[w.employee_code,w]));
+  const siteNames=namesMap();
+  const groups=new Map(),employeesWithSaved=new Set();
+  for(const item of state.lines||[]){
+   const worker=workers.get(item.employee_code);
+   if(!worker)continue;
+   employeesWithSaved.add(item.employee_code);
+   const cno=codeDigits(item.cno);
+   const name=(cno?siteNames.get(cno):"")||String(item.manual_work_name||"").trim()||
+    (cno?"Obra sem nome cadastrado":"Sem obra informada");
+   const key=cno||"MANUAL:"+name.toLocaleLowerCase("pt-BR");
+   if(!groups.has(key))groups.set(key,{cno,name,employees:new Map(),days:0,absences:0});
+   const group=groups.get(key);
+   if(!group.employees.has(item.employee_code))group.employees.set(item.employee_code,{
+    code:item.employee_code,name:worker.employee_name,days:0,absences:0
+   });
+   const row=group.employees.get(item.employee_code);
+   const days=Number(item.days_worked||0),abs=Number(item.absences||0);
+   row.days+=days;row.absences+=abs;
+   group.days+=days;group.absences+=abs;
+  }
+  const sorted=[...groups.values()].map(g=>({...g,employees:[...g.employees.values()].sort((a,b)=>a.name.localeCompare(b.name,"pt-BR"))}))
+   .sort((a,b)=>a.name.localeCompare(b.name,"pt-BR")||(a.cno||"").localeCompare(b.cno||""));
+  return {
+   company:firm,competence:months[month-1]+"/"+year,year,month,groups:sorted,
+   totalDays:sorted.reduce((n,g)=>n+g.days,0),
+   totalAbsences:sorted.reduce((n,g)=>n+g.absences,0),
+   savedEmployees:employeesWithSaved.size,
+   unfilled:(state.workers||[]).length-employeesWithSaved.size,
+   updatedAt:(state.lines||[]).reduce((v,line)=>line.updated_at&&line.updated_at>v?line.updated_at:v,"")
+  };
+ }
+ function reportHtml(report){
+  const companyName=esc(report.company?.legal_name||"Empresa"),when=new Date().toLocaleString("pt-BR");
+  const latest=report.updatedAt?new Date(report.updatedAt).toLocaleString("pt-BR"):"—";
+  const groups=report.groups.map(g=>'<section class="group"><h2>'+esc(g.name)+'</h2><div class="cno">CNO: '+esc(g.cno||"Não informado")+'</div>'+
+   '<table><thead><tr><th>Código</th><th>Empregado</th><th>Dias trabalhados</th><th>Faltas</th></tr></thead><tbody>'+
+   g.employees.map(w=>'<tr><td>'+esc(w.code)+'</td><td>'+esc(w.name)+'</td><td class="num">'+w.days+'</td><td class="num">'+w.absences+'</td></tr>').join("")+
+   '</tbody><tfoot><tr><td colspan="2">Total da obra · '+g.employees.length+' empregado(s)</td><td class="num">'+g.days+'</td><td class="num">'+g.absences+'</td></tr></tfoot></table></section>').join("");
+  return '<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>GAV · Alocações '+esc(report.competence)+' · '+companyName+'</title><style>'+
+   '@page{size:A4 portrait;margin:13mm}body{font:12px Arial,sans-serif;color:#253542;margin:20px auto;max-width:890px}header{border-bottom:3px solid #B68A3C;padding-bottom:12px;margin-bottom:18px}header h1{margin:0 0 5px;font-size:21px;color:#203B56}header p{margin:4px 0}h2{margin:0;font-size:16px;color:#203B56}.group{margin:18px 0;break-inside:avoid}.cno{font-size:11px;color:#546775;margin:4px 0 8px}table{border-collapse:collapse;width:100%}th,td{text-align:left;border-bottom:1px solid #D4DEE1;padding:7px 8px}thead th{background:#F1F4F3;font-size:10px}tfoot td{font-weight:bold;background:#F1F4F3;border-top:2px solid #203B56}.num{text-align:right;width:75px}small{color:#546775}.totals{display:flex;gap:14px;padding:12px;background:#F1F4F3;border:1px solid #D4DEE1}.totals strong{color:#203B56}.print-button{border:0;background:#244B66;color:white;padding:10px 18px;border-radius:7px;cursor:pointer;margin-bottom:18px}@media print{.print-button{display:none}body{margin:0;max-width:none}header{margin-bottom:12px}}'+
+   '</style></head><body><button class="print-button" onclick="window.print()">Imprimir / Salvar em PDF</button>'+
+   '<header><h1>GAV Soluções Contábeis · TTM</h1><p><strong>Relatório de Alocações por Obra</strong></p><p>Empresa: '+companyName+' · Código '+esc(report.company?.code||"—")+'</p>'+
+   '<p>Competência: <strong>'+esc(report.competence)+'</strong> · Emitido em '+esc(when)+'</p><small>Base: lançamentos salvos no GAV Compartilhar · Última atualização: '+esc(latest)+'</small></header>'+
+   '<div class="totals"><span>Empregados informados: <strong>'+report.savedEmployees+'</strong></span><span>Sem lançamento: <strong>'+report.unfilled+'</strong></span><span>Dias: <strong>'+report.totalDays+'</strong></span><span>Faltas: <strong>'+report.totalAbsences+'</strong></span></div>'+
+   groups+'<p><small>Faltas apresentadas uma única vez por empregado, na primeira alocação salva. Os dias de um empregado podem ser distribuídos entre obras. Não incluir lançamentos ainda não salvos.</small></p>'+
+   '</body></html>';
+ }
+ function exportCsv(report){
+  const q=s=>{
+   let v=String(s??"");
+   if(/^[\s]*[=+\-@\t\r]/.test(v))v="'"+v;
+   return '"'+v.replace(/"/g,'""')+'"';
+  };
+  const rows=[["Empresa","Competência","CNO","Obra","Código empregado","Empregado","Dias trabalhados","Faltas"]];
+  for(const g of report.groups){
+   for(const w of g.employees)rows.push([report.company?.legal_name||"",report.competence,g.cno||"",g.name,w.code,w.name,w.days,w.absences]);
+   rows.push(["TOTAL OBRA",report.competence,g.cno||"",g.name,"","",g.days,g.absences]);
+  }
+  rows.push(["TOTAL GERAL",report.competence,"","","","",report.totalDays,report.totalAbsences]);
+  const csv="\ufeff"+rows.map(r=>r.map(q).join(";")).join("\r\n")+"\r\n";
+  const file=new Blob([csv],{type:"text/csv;charset=utf-8"}),url=URL.createObjectURL(file);
+  const a=document.createElement("a");a.href=url;
+  a.download="GAV-ALOCACOES-"+(report.company?.code||"TTM").replace(/[^A-Za-z0-9_-]/g,"_")+"-"+String(report.month).padStart(2,"0")+"-"+report.year+".csv";
+  document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),10000);
+ }
+
  function saveVisibleDrafts(root){
   root.querySelectorAll(".gav-allocation-row[data-alloc-employee]").forEach(row=>{
    const c=row.dataset.allocEmployee,n=Number(row.dataset.allocLine);
@@ -102,6 +177,22 @@ window.GavAllocations=function createAllocations({invoke,esc,notify,context,refr
   else{if(out.readOnly)out.value="";out.readOnly=false}
  }
  async function onAction(action,val,row,root){
+  if(action==="report-print"||action==="report-csv"){
+   saveVisibleDrafts(root);
+   const popup=action==="report-print"?window.open("","_blank"):null;
+   if(action==="report-print"&&!popup){notify("Permita a abertura da nova janela para imprimir o relatório.");return}
+   try{
+    if(popup){popup.document.write('<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Relatório GAV</title></head><body>Atualizando lançamentos salvos...</body></html>');popup.document.close()}
+    await load();
+    if(error)throw new Error(error);
+    const report=reportData();
+    if(!report||!report.groups.length){popup?.close();notify("Ainda não existem alocações salvas para gerar este relatório.");return}
+    if(popup){popup.document.open();popup.document.write(reportHtml(report));popup.document.close();popup.focus()}
+    else{exportCsv(report);notify("Relatório de alocações exportado para Excel (CSV).")}
+   }catch(e){if(popup&&!popup.closed){popup.document.open();popup.document.write('<!doctype html><html lang="pt-BR"><body><p>Não foi possível gerar o relatório. Volte ao GAV Compartilhar e tente novamente.</p></body></html>');popup.document.close()}
+    notify(e.message||"Não foi possível gerar o relatório.")}
+   return;
+  }
   if(action==="refresh"){saveVisibleDrafts(root);await load();return}
   if(action==="add"){
    saveVisibleDrafts(root);

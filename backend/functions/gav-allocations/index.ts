@@ -28,14 +28,31 @@ Deno.serve(async(req:Request)=>{
     .eq("user_id",user.id).eq("active",true).maybeSingle());
   if(!admin&&user.app_metadata?.gav_password_change_required===true)fail("Troque sua senha antes de continuar.",403);
   const body=await req.json(),action=String(body.action||"");
+  if(action==="enabledCompanies"){
+   const ttm=data(await db.from("gav_offices").select("id").eq("code","TTM").maybeSingle());
+   if(!ttm)return respond({companyIds:[]});
+   let permitted:any[]=[];
+   if(admin){
+    permitted=data(await db.from("gav_companies").select("id")
+      .eq("office_id",ttm.id).eq("is_active",true).eq("allocations_enabled",true));
+   }else{
+    const memberships=data(await db.from("gav_memberships")
+      .select("company_id").eq("user_id",user.id).eq("active",true).eq("password_change_required",false));
+    const ids=memberships.map((x:any)=>x.company_id);
+    if(ids.length)permitted=data(await db.from("gav_companies").select("id")
+      .eq("office_id",ttm.id).eq("is_active",true).eq("allocations_enabled",true).in("id",ids));
+   }
+   return respond({companyIds:permitted.map((x:any)=>x.id)});
+  }
   if(!["list","saveLine","deleteLine","registerWorksite"].includes(action))fail("Ação inválida.",400);
   const companyId=String(body.companyId||"");
-  const company=data(await db.from("gav_companies").select("id,office_id,code,is_active")
+  const company=data(await db.from("gav_companies").select("id,office_id,code,is_active,allocations_enabled")
     .eq("id",companyId).eq("is_active",true).maybeSingle());
   if(!company)fail("Empresa não cadastrada ou inativa.",404);
   const office=data(await db.from("gav_offices").select("id,code")
     .eq("id",company.office_id).maybeSingle());
   if(!office||office.code!=="TTM")fail("Alocações disponíveis somente para empresas da TTM.",403);
+  if(!company.allocations_enabled)fail("Alocações não habilitadas no cadastro desta empresa.",403);
   if(!admin){
    const member=data(await db.from("gav_memberships")
     .select("company_id,password_change_required").eq("company_id",companyId)

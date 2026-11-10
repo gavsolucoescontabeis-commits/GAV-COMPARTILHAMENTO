@@ -132,7 +132,7 @@ Deno.serve(async req=>{
   let current:any=null;
   if(id){
    current=check(await db.from("gav_companies")
-    .select("id,office_id,cnpj,legal_name,code,folder_label,is_active").eq("id",id).maybeSingle());
+    .select("id,office_id,cnpj,legal_name,code,folder_label,is_active,allocations_enabled").eq("id",id).maybeSingle());
    if(!current||current.office_id!==officeId)fail("Empresa não pertence a este escritório.",403);
   }
   const duplicate=check(await db.from("gav_companies").select("id")
@@ -166,7 +166,9 @@ Deno.serve(async req=>{
    if(used.some((l:any)=>l.company_id!==id))fail("Esta pasta já está vinculada a outra empresa.",409);
   }
   const folderLabel=folder?.name||current?.folder_label||null;
-  const payload={office_id:officeId,cnpj,legal_name:name,code:code||null,folder_label:folderLabel};
+  const enableAllocations=b.allocationsEnabled===undefined?!!current?.allocations_enabled:b.allocationsEnabled===true;
+  if(office.code!=="TTM"&&enableAllocations)fail("Alocações somente para empresas TTM.",403);
+  const payload={office_id:officeId,cnpj,legal_name:name,code:code||null,folder_label:folderLabel,allocations_enabled:office.code==="TTM"&&enableAllocations};
   let companyId=id,created=false;
   if(current){
    check(await db.from("gav_companies").update(payload).eq("id",id).eq("office_id",officeId));

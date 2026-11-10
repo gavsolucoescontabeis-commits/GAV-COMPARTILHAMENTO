@@ -7,7 +7,7 @@ const sb=createClient(ROOT,PUB,{auth:{autoRefreshToken:true,persistSession:true,
 const logo="assets/logo-gav-sem-fundo.svg",lion="assets/leao-gav-sem-fundo.svg";
 const app=document.getElementById("app");
 
-const GAV_PORTAL_VERSION="0.13.22";
+const GAV_PORTAL_VERSION="0.13.23";
 let gavAvailableVersion="",gavVersionCheckRunning=false;
 const comparePortalVersions=(left,right)=>{
  const a=left.split(".").map(Number),b=right.split(".").map(Number);
@@ -75,7 +75,7 @@ if(invitationHash)history.replaceState(null,"",location.pathname+location.search
 let syncRuns=[],mappingReport=null,offices=[],officeId="";
 let folderLookup={officeId:"",loaded:false,items:[],error:""};
 let companyFolders={officeId:"",loaded:false,rootAvailable:false,items:[],notice:"",error:""};
-let companyEditorOpen=false,companyEditId="",companyDraft={cnpj:"",legalName:"",code:"",folderId:""};
+let companyEditorOpen=false,companyEditId="",companyDraft={cnpj:"",legalName:"",code:"",folderId:"",allocationsEnabled:false};
 let showInactiveCompanies=false;
 const initialCompetence=new Date();initialCompetence.setDate(1);initialCompetence.setMonth(initialCompetence.getMonth()-1);
 let processingYear=initialCompetence.getFullYear(),processingMonth=initialCompetence.getMonth()+1,processingViewFilter="all";
@@ -83,7 +83,11 @@ let processingData={officeId:"",year:0,month:0,loaded:false,companies:[],total:0
 try{officeId=sessionStorage.getItem("gav-selected-office")||""}catch(_e){}
 const adminView=()=>role==="admin"&&!previewAsClient;
 const TTM_ALLOCATION_OFFICE_ID="fc028f62-0a92-4e99-a4c9-4253d9438ad2";
-const canUseAllocations=()=>!previewAsClient&&!passwordChangeRequired&&(adminView()?currentOffice()?.code==="TTM":role==="client"&&companies.some(c=>c.id===selected&&c.office_id===TTM_ALLOCATION_OFFICE_ID&&c.is_active));
+let allocationEnabledIds=new Set();
+const canUseAllocations=()=>!previewAsClient&&!passwordChangeRequired&&(
+ adminView()?currentOffice()?.code==="TTM"&&officeCompanies().some(c=>allocationEnabledIds.has(c.id)):
+ role==="client"&&allocationEnabledIds.has(selected)&&companies.some(c=>c.id===selected&&c.office_id===TTM_ALLOCATION_OFFICE_ID&&c.is_active)
+);
 const displayDocs=()=>previewAsClient?clientDocs:docs;
 let previewId="",previewLoading=false,downloadBusy="";
 const navigationHistory=[];
@@ -142,7 +146,7 @@ async function publicActivation(action,body={}){
 const run=async task=>{busy=true;notice="";render();try{await task()}catch(e){notice=e.message||"Não foi possível concluir."}busy=false;render()};
 const allocations=window.GavAllocations?.({invoke,esc,notify:toastMessage,refresh:render,
  context:()=>({allowed:canUseAllocations(),admin:adminView(),ttmOfficeId:TTM_ALLOCATION_OFFICE_ID,selected,
-  companies:adminView()?officeCompanies():companies})});
+  companies:(adminView()?officeCompanies():companies).map(c=>({...c,allocations_enabled:allocationEnabledIds.has(c.id)}))})});
 async function loadDocs(){
  const company=selected;
  docs=[];
@@ -191,6 +195,13 @@ async function bootstrap(){
  if(session.provider_token)googleToken=session.provider_token;
  try{
   const me=await api("me");role=me.role;passwordChangeRequired=!!me.passwordChangeRequired;clientManaged=!!me.clientManaged;companies=me.companies||[];offices=role==="admin"?(me.offices||[]).sort((a,b)=>(officeSort[a.code]??99)-(officeSort[b.code]??99)):[];links=me.linked||[];candidates=me.candidate||[];syncRuns=me.sync||[];hasDriveSecret=me.driveSecretsConfigured;
+  allocationEnabledIds=new Set();
+  if(!passwordChangeRequired){
+   try{
+    const access=await invoke("gav-allocations","enabledCompanies");
+    allocationEnabledIds=new Set(access.companyIds||[]);
+   }catch(e){console.warn("Alocações: consulta de empresas habilitadas indisponível");}
+  }
   if(role==="admin"){
    if(!offices.some(o=>o.id===officeId)){
     officeId=offices.find(o=>o.code==="TTM")?.id||offices[0]?.id||"";
@@ -505,6 +516,7 @@ function companyEditorHtml(){
   '<div class="form-field"><label for="companyCode">Código (opcional)</label><input class="input" id="companyCode" maxlength="4" inputmode="numeric" placeholder="Ex.: 080" value="'+esc(companyDraft.code)+'"></div>'+
   '<div class="form-field"><label for="companyCnpj">CNPJ da empresa</label><input class="input" id="companyCnpj" inputmode="numeric" maxlength="18" placeholder="00.000.000/0000-00" value="'+esc(companyDraft.cnpj)+'" required></div>'+
   '<div class="form-field gav-company-name"><label for="companyLegalName">Razão social / nome</label><input class="input" id="companyLegalName" maxlength="180" value="'+esc(companyDraft.legalName)+'" required></div>'+
+  (currentOffice()?.code==="TTM"?'<div class="form-field"><label for="companyAllocationsEnabled">Disponibilizar Alocações</label><select class="input" id="companyAllocationsEnabled"><option value="false" '+(!companyDraft.allocationsEnabled?"selected":"")+'>Não</option><option value="true" '+(companyDraft.allocationsEnabled?"selected":"")+'>Sim</option></select><small>Somente empresas que informam dias, faltas e obras/CNO.</small></div>':"")+
   '<div class="form-field gav-company-name"><label for="companyFolderId">Pasta do Google Drive</label><select class="input" id="companyFolderId" '+(!f.rootAvailable?"disabled":"")+'>'+options+'</select></div></div>'+
   (current?.folder_label?'<p class="subtle">Pasta atualmente cadastrada: <strong>'+esc(current.folder_label)+'</strong></p>':"")+
   (folder?'<p class="subtle">Pasta selecionada: <strong>'+esc(folder.name)+'</strong>. O vínculo será conferido no Google Drive antes de salvar.</p>':"")+
@@ -750,7 +762,7 @@ function beginCompanyEditor(id="",folderId=""){
  const chosen=companyFolders.items.find(f=>f.id===folderId);
  const codeFromFolder=chosen?.name.match(/^\s*(\d{1,4})(?:\s|[_.-]|$)/)?.[1]||"";
  companyDraft={cnpj:company?fmt(company.cnpj):"",legalName:company?.legal_name||"",
-  code:company?.code||codeFromFolder,folderId:folderId||existing?.id||""};
+  code:company?.code||codeFromFolder,folderId:folderId||existing?.id||"",allocationsEnabled:allocationEnabledIds.has(company?.id)};
  companyEditorOpen=true;view="companies";
  render();
  // O formulário fica antes da relação de empresas; sem rolagem, clicar em
@@ -771,7 +783,7 @@ async function saveCompanyEditor(e){
  const d={cnpj:cn(app.querySelector("#companyCnpj")?.value),
   legalName:app.querySelector("#companyLegalName")?.value?.trim()||"",
   code:app.querySelector("#companyCode")?.value?.trim()||"",
-  folderId:app.querySelector("#companyFolderId")?.value||""};
+  folderId:app.querySelector("#companyFolderId")?.value||"",allocationsEnabled:app.querySelector("#companyAllocationsEnabled")?.value==="true"};
  if(d.cnpj.length!==14){notice="Informe os 14 números do CNPJ.";render();return}
  if(d.legalName.length<2){notice="Informe a razão social da empresa.";render();return}
  await run(async()=>{
@@ -786,7 +798,7 @@ async function saveCompanyEditor(e){
     syncMessage=" Pasta vinculada, mas a primeira sincronização precisa ser repetida em Google Drive: "+(syncError?.message||"falha temporária")+".";
    }
   }
-  companyEditorOpen=false;companyEditId="";companyDraft={cnpj:"",legalName:"",code:"",folderId:""};
+  companyEditorOpen=false;companyEditId="";companyDraft={cnpj:"",legalName:"",code:"",folderId:"",allocationsEnabled:false};
   selected=companyId;
   await bootstrap();
   view="companies";
@@ -800,7 +812,7 @@ async function changeOffice(id){
  if(keepProcessing)processingViewFilter="all";
  const keepCompanies=view==="companies"&&adminView();
  showInactiveCompanies=false;
- companyEditorOpen=false;companyEditId="";companyDraft={cnpj:"",legalName:"",code:"",folderId:""};
+ companyEditorOpen=false;companyEditId="";companyDraft={cnpj:"",legalName:"",code:"",folderId:"",allocationsEnabled:false};
  companyFolders={officeId:id,loaded:false,rootAvailable:false,items:[],notice:"",error:""};
  resetSelection();listPage=0;pilotTestCredential=null;previewAsClient=false;clientDocs=[];mappingReport=null;accessPanelOpen=false;accessStatus=null;clientCredential=null;
  clearPdfCache();officeId=id;
