@@ -7,7 +7,7 @@ const sb=createClient(ROOT,PUB,{auth:{autoRefreshToken:true,persistSession:true,
 const logo="assets/logo-gav-sem-fundo.svg",lion="assets/leao-gav-sem-fundo.svg";
 const app=document.getElementById("app");
 
-const GAV_PORTAL_VERSION="0.13.23";
+const GAV_PORTAL_VERSION="0.13.24";
 let gavAvailableVersion="",gavVersionCheckRunning=false;
 const comparePortalVersions=(left,right)=>{
  const a=left.split(".").map(Number),b=right.split(".").map(Number);
@@ -217,8 +217,19 @@ async function bootstrap(){
      selected=companies.find(c=>c.id===rememberedCompany)?.id||
        companies.find(c=>c.id===me.primaryCompanyId)?.id||companies[0]?.id||"";
   }
-  if(role==="admin"&&session.provider_refresh_token){
-   try{await api("connectDrive",{refreshToken:session.provider_refresh_token})}catch(e){notice="Autenticação concluída, mas não foi possível guardar o acesso offline do Drive: "+e.message}
+  let renewingDrive=false;
+  try{
+   const started=Number(sessionStorage.getItem("gav-drive-renew-start")||0);
+   renewingDrive=role==="admin"&&started>0&&Date.now()-started<15*60*1000;
+   if(started>0&&!renewingDrive)sessionStorage.removeItem("gav-drive-renew-start");
+  }catch(_e){}
+  if(renewingDrive){
+   try{
+    if(!session.provider_refresh_token)throw Error("O Google não forneceu permissão offline. Clique em Autorizar / renovar Google Drive novamente.");
+    await api("connectDrive",{refreshToken:session.provider_refresh_token});
+    notice="Google Drive renovado e validado. A sincronização automática voltará nos próximos ciclos; no Processamento clique em Atualizar.";
+   }catch(e){notice="A conexão Google Drive não foi restaurada: "+(e?.message||"autorize novamente pelo painel Google Drive");}
+   finally{try{sessionStorage.removeItem("gav-drive-renew-start")}catch(_e){}}
   }
   if(passwordChangeRequired){docs=[];view="home"}else await loadDocs();
   if(view==="allocations"&&canUseAllocations())await allocations?.load();
@@ -584,7 +595,14 @@ async function loadProcessing(){
 function processingPage(){
  const data=processingData.officeId===officeId&&processingData.year===processingYear&&processingData.month===processingMonth?
   processingData:{loaded:false,companies:[],total:0,concluded:0,pending:0,withoutMovement:0};
- return buildProcessingPage({data,officeLabel,officePicker,processingYear,processingMonth,
+ const sync=data.loaded?data.driveSync:null;
+ const stale=sync&&sync.autoFolders>0&&sync.staleFolders>0;
+ const when=sync?.lastSyncedAt?new Date(sync.lastSyncedAt).toLocaleString("pt-BR",{dateStyle:"short",timeStyle:"short"}):"sem registro";
+ const warning=stale?'<div class="gav-process-sync-warning" role="alert"><div><strong>Google Drive sem atualização recente</strong>'+
+  '<p>Última sincronização registrada: '+esc(when)+'. '+sync.staleFolders+' de '+sync.autoFolders+
+  ' pastas automáticas estão atrasadas. O Processamento só reconhece arquivos depois da sincronização.</p></div>'+
+  '<button class="btn btn-dark btn-small" type="button" data-do="google-drive">Autorizar / renovar Google Drive</button></div>':"";
+ return warning+buildProcessingPage({data,officeLabel,officePicker,processingYear,processingMonth,
   filter:processingViewFilter,M,esc,fmt,title});
 }
 function drivePage(){
@@ -891,9 +909,13 @@ async function google({renewDrive=false}={}){
  if(renewDrive){
   options.scopes="https://www.googleapis.com/auth/drive.readonly";
   options.queryParams={access_type:"offline",prompt:"consent"};
+  try{sessionStorage.setItem("gav-drive-renew-start",String(Date.now()))}catch(_e){}
  }
  const {error}=await sb.auth.signInWithOAuth({provider:"google",options});
- if(error)showError(error);
+ if(error){
+  if(renewDrive)try{sessionStorage.removeItem("gav-drive-renew-start")}catch(_e){}
+  showError(error);
+ }
 }
 
 async function handle(e){

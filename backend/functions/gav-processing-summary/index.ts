@@ -117,6 +117,16 @@ Deno.serve(async(req:Request)=>{
   const companyRows=check(await database.from("gav_companies").select("id,code,legal_name,cnpj").eq("office_id",officeId).eq("is_active",true).order("code"));
   const ids=companyRows.map((c:any)=>c.id);
   if(!ids.length)return respond({officeId,year,month,companies:[],total:0,concluded:0,pending:0});
+  const synchronizedFolders=check(await database.from("gav_drive_folders")
+    .select("company_id,last_synced_at")
+    .in("company_id",ids).eq("is_active",true).eq("auto_publish_new",true));
+  const staleLimit=Date.now()-40*60*1000;
+  const recentDates=synchronizedFolders.map((x:any)=>x.last_synced_at).filter(Boolean).sort();
+  const driveSync={
+    autoFolders:synchronizedFolders.length,
+    staleFolders:synchronizedFolders.filter((x:any)=>!x.last_synced_at||new Date(x.last_synced_at).getTime()<staleLimit).length,
+    lastSyncedAt:recentDates.at(-1)||null
+  };
   const services=check(await database.from("gav_services").select("company_id,service_key").in("service_key",["FOLHA","PARCELAMENTOS"]).eq("scope_status","CONFIRMADO").in("company_id",ids));
   const selectedCompanies=companyRows.flatMap((c:any)=>services.filter((service:any)=>service.company_id===c.id).map((service:any)=>({...c,serviceKey:service.service_key})));
   if(!selectedCompanies.length)return respond({officeId,year,month,companies:[],total:0,concluded:0,pending:0});
@@ -181,6 +191,6 @@ Deno.serve(async(req:Request)=>{
     withoutMovement:companies.filter((c:any)=>c.status==="SEM_MOVIMENTO").length,
     payrollPrepared:companies.filter((c:any)=>c.serviceKey==="FOLHA"&&c.status!=="SEM_MOVIMENTO"&&c.payrollPrepared).length,
     payrollTotal:companies.filter((c:any)=>c.serviceKey==="FOLHA"&&c.status!=="SEM_MOVIMENTO").length,
-    checkedDocuments:found.length});
+    checkedDocuments:found.length,driveSync});
  }catch(e:any){return respond({error:String(e?.message||"Falha ao conferir o processamento.")},e?.status||500)}
 });

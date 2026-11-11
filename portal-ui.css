@@ -343,3 +343,10 @@
 .gav-alloc-report-actions .btn:disabled{cursor:not-allowed;opacity:.50}
 .gav-company-form-grid #companyAllocationsEnabled{font-weight:700;color:#253542}
 @media(max-width:720px){.gav-alloc-report-actions{align-items:stretch}.gav-alloc-report-actions span{flex-basis:100%}}
+
+/* v0.13.24 — somente aviso de sincronização atrasada do Processamento */
+.gav-process-sync-warning{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;border:1px solid #B68A3C;background:#FFFBF0;border-radius:12px;padding:13px 16px;margin:0 0 16px;color:#253542}
+.gav-process-sync-warning strong{color:#7A3E52;font-size:13px}
+.gav-process-sync-warning p{font-size:12px;line-height:1.55;color:#546775;margin:5px 0 0}
+.gav-process-sync-warning .btn{flex-shrink:0}
+@media(max-width:750px){.gav-process-sync-warning .btn{width:100%}}

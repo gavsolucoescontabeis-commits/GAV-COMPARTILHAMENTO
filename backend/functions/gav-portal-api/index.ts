@@ -312,8 +312,21 @@ Deno.serve(async req=>{
   if(action==="connectDrive"){
    adminOnly();
    if(typeof b.refreshToken!=="string"||b.refreshToken.length<20)error("Google não forneceu autorização offline. Reconecte com consentimento.",409);
+   const clientId=Deno.env.get("GOOGLE_OAUTH_CLIENT_ID"),clientSecret=Deno.env.get("GOOGLE_OAUTH_CLIENT_SECRET");
+   if(!clientId||!clientSecret)error("Credenciais Google Drive indisponíveis no servidor.",409);
+   const oauth=await fetch("https://oauth2.googleapis.com/token",{
+    method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},
+    body:new URLSearchParams({client_id:clientId,client_secret:clientSecret,grant_type:"refresh_token",refresh_token:b.refreshToken})
+   });
+   if(!oauth.ok)error("O Google recusou a nova autorização. Clique em Autorizar / renovar Google Drive e permita o acesso.",409);
+   const current=await oauth.json();
+   if(!current.access_token)error("O Google não forneceu credenciais válidas para o Drive.",409);
+   const probe=await fetch("https://www.googleapis.com/drive/v3/files?pageSize=1&fields=files(id)",{
+    headers:{Authorization:"Bearer "+current.access_token}
+   });
+   if(!probe.ok)error("A autorização não permite consultar os arquivos do Drive. Ao renovar, autorize a leitura do Google Drive.",409);
    check(await supa.rpc("gav_store_drive_refresh",{p_refresh:b.refreshToken}));
-   return reply({connected:true});
+   return reply({connected:true,verified:true});
   }
   if(action==="linkPilot"){
    adminOnly();

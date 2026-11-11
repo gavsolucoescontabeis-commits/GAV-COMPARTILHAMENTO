@@ -286,3 +286,13 @@ O banco armazena gav_companies.allocations_enabled (boolean, NOT NULL, DEFAULT f
 Quando empresa fica Não, o histórico dos empregados, obras, lançamentos e períodos permanece intacto. O menu é exibido apenas quando existe empresa autorizada. Clientes vinculados à empresa e sem bloqueio de senha podem editar, sempre com isolamento por empresa.
 Relatório mensal por obra: CNO, nome obra, código/nome empregado, dias trabalhados, faltas, totais por obra e geral, empregados sem lançamento, empresa e competência. Abrir impressão/Salvar em PDF e exportar CSV para Excel com proteção contra fórmulas. O relatório só considera alocações já salvas no banco, atualizadas pelo botão Atualizar ou por nova abertura da aba.
 Manter segurança, layout aprovado, Drive, PDFs de origem e identidade azul-marinho + vinho + dourado.
+
+
+## v0.13.24 — Diagnóstico e correção da sincronização Google Drive (11/11/2026)
+
+- Foi verificado que o agendador executava a cada 15 minutos, porém o Google rejeitava o refresh token; respostas HTTP 409: `Reconecte a conta Google.` e tentativas manuais de leitura geravam Drive 403. A última sincronização geral concluída era 09/11/2026, 16h30 BRT. Nenhum documento original foi excluído.
+- A autorização offline do Google Drive **não é mais sobrescrita por logins Google comuns**. O navegador só envia novo refresh token após o administrador clicar expressamente em **Autorizar / renovar Google Drive**, com `drive.readonly`, `access_type=offline` e `prompt=consent`.
+- No servidor, a ação administrativa `connectDrive` valida a troca do refresh token e uma consulta à API do Google Drive antes de salvar o segredo. Erros de permissão são apresentados sem persistir credenciais inválidas.
+- No Processamento, indicador baseado no estado real de pastas automáticas (sincronização atrasada após 40 minutos), com última data de sucesso e botão **Autorizar / renovar Google Drive**.
+- A reconexão demanda autorização interativa do administrador na conta Google; não pode ser concluída apenas pelo código. Após autorização, o agendamento existente retoma na próxima rodada de 15 minutos.
+- Caso a configuração de consentimento OAuth do Google Cloud esteja no estado `Testing` (a confirmar no Cloud Console), os refresh tokens com escopo Drive podem expirar em sete dias; avaliar publicação `In production`/verificação da aplicação conforme requisitos do Google.

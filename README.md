@@ -1,6 +1,6 @@
 # GAV Compartilhar Docs — Portal seguro
 
-**Versão atual: v0.13.23 · Alocações por empresa e relatório mensal**
+**Versão atual: v0.13.24 · Correção da autorização Google Drive**
 
 **Acesso permanente:** https://gavsolucoescontabeis-commits.github.io/GAV-COMPARTILHAMENTO/
 
@@ -151,3 +151,13 @@ O histórico de competências sem movimento permanece visível após uma reativa
 - Relatório **por obra, empresa e competência**, com código e nome do empregado, dias trabalhados e faltas, subtotais por obra, total geral e empregados sem lançamentos.
 - **Relatório / PDF** permite impressão ou salvar como PDF pelo navegador; **Exportar para Excel (CSV)** baixa as informações salvas em formato com separador ponto e vírgula, UTF-8 e proteção contra fórmulas.
 - Somente registros salvos entram no relatório, sem somar faltas duas vezes quando o mesmo empregado está em obras diferentes. Documentos originais, permissões de outros módulos e identidade GAV são preservados.
+
+
+## v0.13.24 — Diagnóstico e correção da sincronização Google Drive (11/11/2026)
+
+- Foi verificado que o agendador executava a cada 15 minutos, porém o Google rejeitava o refresh token; respostas HTTP 409: `Reconecte a conta Google.` e tentativas manuais de leitura geravam Drive 403. A última sincronização geral concluída era 09/11/2026, 16h30 BRT. Nenhum documento original foi excluído.
+- A autorização offline do Google Drive **não é mais sobrescrita por logins Google comuns**. O navegador só envia novo refresh token após o administrador clicar expressamente em **Autorizar / renovar Google Drive**, com `drive.readonly`, `access_type=offline` e `prompt=consent`.
+- No servidor, a ação administrativa `connectDrive` valida a troca do refresh token e uma consulta à API do Google Drive antes de salvar o segredo. Erros de permissão são apresentados sem persistir credenciais inválidas.
+- No Processamento, indicador baseado no estado real de pastas automáticas (sincronização atrasada após 40 minutos), com última data de sucesso e botão **Autorizar / renovar Google Drive**.
+- A reconexão demanda autorização interativa do administrador na conta Google; não pode ser concluída apenas pelo código. Após autorização, o agendamento existente retoma na próxima rodada de 15 minutos.
+- Caso a configuração de consentimento OAuth do Google Cloud esteja no estado `Testing` (a confirmar no Cloud Console), os refresh tokens com escopo Drive podem expirar em sete dias; avaliar publicação `In production`/verificação da aplicação conforme requisitos do Google.

@@ -1,5 +1,5 @@
 {
-  "version": "0.13.23",
-  "release": "2026-11-10",
-  "notes": "Cadastro TTM: liberar Alocações Sim/Não; relatório por obra, empregados, dias e faltas em PDF/CSV."
+  "version": "0.13.24",
+  "release": "2026-11-11",
+  "notes": "Corrige renovação da autorização Google Drive e sinaliza sincronização atrasada no Processamento."
 }
