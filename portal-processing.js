@@ -1,4 +1,4 @@
-/* GAV Compartilhar v0.13.25 — INSS zerado e FGTS sem guia por competência. */
+/* GAV Compartilhar v0.13.26 — blocos INSS e FGTS clicáveis, verde quando justificados. */
 export function buildProcessingPage({data,officeLabel,officePicker,processingYear,processingMonth,filter,M,esc,fmt,title}){
  const info=data||{loaded:false,companies:[],total:0,concluded:0,pending:0,withoutMovement:0};
  const entries=info.companies||[];
@@ -66,19 +66,26 @@ export function buildProcessingPage({data,officeLabel,officePicker,processingYea
  };
  const obligationCell=(c,kind)=>{
   const isInss=kind==="INSS",doc=c.evidence?.[isInss?"darf":"fgts"];
-  const flag=!!c.obligationExceptions?.[kind]?.active;
+  const flagged=!!c.obligationExceptions?.[kind]?.active;
   const inactive=c.status==="SEM_MOVIMENTO";
-  const justified=isInss?"INSS zerado":"FGTS sem guia";
-  const hint=isInss?"DARF de INSS zerado registrado pela GAV":"Ausência de guia FGTS registrada pela GAV";
-  const status=doc?mark(doc):flag?
-   indicator("justified","✓ "+justified,"Justificado · sem guia",hint):
-   mark(null);
-  const base=' data-do="processing-obligation" data-val="'+esc(c.id)+'" data-kind="'+kind+'"';
-  const remove=flag?'<button type="button" class="gav-process-obligation-btn is-undo"'+base+
-    ' data-enable="false" title="Retirar justificativa">Desfazer</button>':"";
-  const add=!flag&&!doc&&!inactive?'<button type="button" class="gav-process-obligation-btn"'+base+
-    ' data-enable="true">'+(isInss?"Marcar INSS zerado":"Marcar FGTS sem guia")+'</button>':"";
-  return '<div class="gav-process-obligation">'+status+(remove||add)+'</div>';
+  // Guia encontrada: permanece como documento, sem oferecer marcação desnecessária.
+  // Se já existia uma justificativa, o mesmo retângulo permite desfazê-la.
+  if(doc&&!flagged)return mark(doc);
+  if(inactive&&!flagged)return mark(null);
+  const label=isInss?"INSS zerado":"FGTS sem guia";
+  const action=flagged?"Desfazer "+label:"Marcar "+label;
+  const state=doc?"found":flagged?"justified":"pending";
+  const heading=doc?"✓ Encontrado":flagged?"✓ "+label:"— Pendente";
+  const detail=doc?(flagged?"Guia encontrada · desfazer justificativa":doc.name):
+    flagged?"Justificado pela GAV · clique para desfazer":
+    "Clique para "+(isInss?"registrar INSS zerado":"registrar ausência de guia");
+  return '<button type="button" class="gav-process-indicator gav-process-obligation-tile is-'+state+'"'+
+    ' data-do="processing-obligation" data-val="'+esc(c.id)+'"'+
+    ' data-kind="'+kind+'" data-enable="'+(!flagged)+'"'+
+    ' aria-pressed="'+flagged+'" aria-label="'+esc(action+' — '+c.legalName)+'"'+
+    ' title="'+esc(action+' · competência selecionada')+'">'+
+    '<strong class="gav-process-indicator-state">'+esc(heading)+'</strong>'+
+    '<small class="gav-process-indicator-detail">'+esc(detail)+'</small></button>';
  };
  const receiptGps=c=>{
   const ev=c.evidence||{};

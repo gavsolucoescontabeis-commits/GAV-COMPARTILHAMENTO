@@ -1,5 +1,5 @@
 {
-  "version": "0.13.25",
+  "version": "0.13.26",
   "release": "2026-11-13",
-  "notes": "Controle de Processamento: marcar DARF INSS zerado ou FGTS sem guia por empresa/competência, com desfazer, sem alterar documentos."
+  "notes": "Processamento: retângulos INSS e FGTS clicáveis; justificativas aparecem verdes, sem botões separados."
 }

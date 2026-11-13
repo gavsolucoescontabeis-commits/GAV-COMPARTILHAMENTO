@@ -1,6 +1,6 @@
 # GAV Compartilhar Docs — Portal seguro
 
-**Versão atual: v0.13.25 · INSS zerado e FGTS sem guia no Processamento**
+**Versão atual: v0.13.26 · Indicadores de INSS/FGTS clicáveis e verdes**
 
 **Acesso permanente:** https://gavsolucoescontabeis-commits.github.io/GAV-COMPARTILHAMENTO/
 
@@ -172,3 +172,12 @@ O histórico de competências sem movimento permanece visível após uma reativa
 - **Sem movimento** é independente. Parcelamentos, recibos da Folha e regras de detecção de arquivos do Google Drive não foram alterados.
 - Backend: \`gav-processing-summary\` ação protegida \`setObligationException\`; somente administrador GAV autenticado e ativo, verificando escritório, empresa, competência e serviço FOLHA confirmado.
 - Tabela \`gav_processing_obligation_exceptions\` com RLS, sem permissões anônimas nem para clientes; permite reversão sem apagar o histórico de data e responsável. Nenhuma empresa foi marcada automaticamente.
+
+
+## v0.13.26 — Indicadores interativos e verdes no Controle de Processamento (13/11/2026)
+
+- Refinamento **somente visual/interativo** do Controle da Folha. Os próprios retângulos de **DARF de INSS** e **FGTS mensal** agora são botões acessíveis: clicar no retângulo pendente oferece confirmar `INSS zerado` ou `FGTS sem guia`; depois de salvar, **o retângulo inteiro fica verde**, com o nome da justificativa e a indicação de que foi registrada pela GAV.
+- Clicar novamente no retângulo verde permite **desfazer** a justificativa, mediante confirmação, restaurando a indicação Pendente caso nenhum documento tenha sido localizado.
+- **Sem segundo botão abaixo do retângulo**. Uma guia efetivamente encontrada continua verde como `✓ Encontrado` e não oferece uma marcação manual desnecessária.
+- Uma justificativa ativa com documento posteriormente localizado continua podendo ser desfeita, sem ocultar o arquivo de origem.
+- Mantém totalmente a segurança por empresa/competência, o backend `setObligationException`, os critérios de conclusão das obrigações, o fluxo de sincronização e o restante da interface aprovados. **Nenhuma alteração de banco de dados ou de arquivos do Google Drive**.
