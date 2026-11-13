@@ -1,13 +1,13 @@
 import {createClient} from "https://esm.sh/@supabase/supabase-js@2.76.1";
 import {pushCard,pushInit,pushToggle,pushLogout} from "./portal-push.js?v=0.13.17";
-import {buildProcessingPage} from "./portal-processing.js?v=0.13.20";
+import {buildProcessingPage} from "./portal-processing.js?v=0.13.25";
 const ROOT="https://kiunegfjbfhvvlkxqvos.supabase.co";
 const PUB="sb_publishable_QpDD6nZEdRPtvOeJCSOZ9A_FMaA2Za7";
 const sb=createClient(ROOT,PUB,{auth:{autoRefreshToken:true,persistSession:true,detectSessionInUrl:true}});
 const logo="assets/logo-gav-sem-fundo.svg",lion="assets/leao-gav-sem-fundo.svg";
 const app=document.getElementById("app");
 
-const GAV_PORTAL_VERSION="0.13.24";
+const GAV_PORTAL_VERSION="0.13.25";
 let gavAvailableVersion="",gavVersionCheckRunning=false;
 const comparePortalVersions=(left,right)=>{
  const a=left.split(".").map(Number),b=right.split(".").map(Number);
@@ -945,6 +945,33 @@ async function handle(e){
  if(a==="processing-filter"){
   if(!adminView()||view!=="processing"||!["all","ready","receipt","report","pending"].includes(v))return;
   processingViewFilter=v;render();return;
+ }
+ if(a==="processing-obligation"){
+  if(!adminView()||view!=="processing"||busy)return;
+  const kind=e.currentTarget.dataset.kind,enabled=e.currentTarget.dataset.enable==="true";
+  if(!["INSS","FGTS"].includes(kind))return;
+  const company=processingData.companies?.find(c=>c.id===v&&c.serviceKey==="FOLHA");
+  if(!company)return;
+  if(enabled&&(company.status==="SEM_MOVIMENTO"||company.evidence?.[kind==="INSS"?"darf":"fgts"])){
+   toastMessage("A guia já foi localizada ou a empresa está sem movimento. Atualize a conferência.");
+   return;
+  }
+  const label=kind==="INSS"?"DARF de INSS zerado":"FGTS sem guia",comp=M[processingMonth-1]+"/"+processingYear;
+  const message=enabled?
+   "Confirmar "+label+" na empresa "+company.legalName+" em "+comp+
+    "?\n\nÉ somente controle administrativo para esta competência. Não comprova pagamento, recolhimento nem transmissão.":
+   "Desfazer "+label+" da empresa "+company.legalName+" em "+comp+
+    "?\n\nSe não houver documento, o indicador voltará a PENDENTE.";
+  if(!window.confirm(message))return;
+  await run(async()=>{
+   await invoke("gav-processing-summary","setObligationException",{
+    officeId,companyId:v,year:processingYear,month:processingMonth,
+    obligation:kind,active:enabled
+   });
+   await loadProcessing();
+   toastMessage(enabled?label+" registrado para "+comp+".":"Justificativa desfeita.");
+  });
+  return;
  }
  if(a==="processing-inactive"||a==="processing-resume"){
    if(!adminView()||view!=="processing"||busy)return;

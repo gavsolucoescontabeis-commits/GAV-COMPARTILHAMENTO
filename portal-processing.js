@@ -1,4 +1,4 @@
-/* GAV Compartilhar v0.13.20 — indicadores padronizados só na tela Processamento. */
+/* GAV Compartilhar v0.13.25 — INSS zerado e FGTS sem guia por competência. */
 export function buildProcessingPage({data,officeLabel,officePicker,processingYear,processingMonth,filter,M,esc,fmt,title}){
  const info=data||{loaded:false,companies:[],total:0,concluded:0,pending:0,withoutMovement:0};
  const entries=info.companies||[];
@@ -64,6 +64,22 @@ export function buildProcessingPage({data,officeLabel,officePicker,processingYea
   if(report)return indicator("pending","◐ Incompleto","Faltam recibos",detailHint);
   return indicator("pending","— Pendente","Faltam recibos e relatório",detailHint);
  };
+ const obligationCell=(c,kind)=>{
+  const isInss=kind==="INSS",doc=c.evidence?.[isInss?"darf":"fgts"];
+  const flag=!!c.obligationExceptions?.[kind]?.active;
+  const inactive=c.status==="SEM_MOVIMENTO";
+  const justified=isInss?"INSS zerado":"FGTS sem guia";
+  const hint=isInss?"DARF de INSS zerado registrado pela GAV":"Ausência de guia FGTS registrada pela GAV";
+  const status=doc?mark(doc):flag?
+   indicator("justified","✓ "+justified,"Justificado · sem guia",hint):
+   mark(null);
+  const base=' data-do="processing-obligation" data-val="'+esc(c.id)+'" data-kind="'+kind+'"';
+  const remove=flag?'<button type="button" class="gav-process-obligation-btn is-undo"'+base+
+    ' data-enable="false" title="Retirar justificativa">Desfazer</button>':"";
+  const add=!flag&&!doc&&!inactive?'<button type="button" class="gav-process-obligation-btn"'+base+
+    ' data-enable="true">'+(isInss?"Marcar INSS zerado":"Marcar FGTS sem guia")+'</button>':"";
+  return '<div class="gav-process-obligation">'+status+(remove||add)+'</div>';
+ };
  const receiptGps=c=>{
   const ev=c.evidence||{};
   if(!ev.dctf&&!ev.gps)return mark(null);
@@ -75,7 +91,7 @@ export function buildProcessingPage({data,officeLabel,officePicker,processingYea
  const folharow=c=>{
   const ev=c.evidence||{};
   return '<div class="gav-process-row gav-process-payroll-row">'+companyCell(c)+
-   '<div>'+payrollCell(c)+'</div><div>'+mark(ev.darf)+'</div><div>'+mark(ev.fgts)+'</div>'+
+   '<div>'+payrollCell(c)+'</div><div>'+obligationCell(c,"INSS")+'</div><div>'+obligationCell(c,"FGTS")+'</div>'+
    '<div>'+receiptGps(c)+'</div>'+statusCell(c)+open(c)+'</div>';
  };
  const parcelrow=c=>'<div class="gav-process-row gav-process-installment-row">'+companyCell(c)+
@@ -119,6 +135,6 @@ export function buildProcessingPage({data,officeLabel,officePicker,processingYea
  html+='<div class="card gav-process-table gav-process-table-scroll"><div class="gav-process-row gav-process-header gav-process-installment-row">'+
   '<span>Empresa</span><span>DARF de parcelamento</span><span>Situação</span><span>Abrir</span></div>'+
   (parcels.length?parcels.map(parcelrow).join(""):'<div class="gav-process-empty">Nenhum parcelamento configurado neste escritório.</div>')+'</div></section>';
- html+='<p class="gav-process-note"><strong>Conferência documental:</strong> Verde em recibos/relatório indica arquivos localizados na competência, não envio ao eSocial nem pagamento. O fechamento das obrigações permanece independente: DARF de INSS + FGTS mensal, ou recibo DCTFWeb, ou GPS. Parcelamentos dependem do DARF mensal; FGTS rescisório, relatório FGTS e declaração DCTFWeb sem recibo não concluem a folha. Sem movimento é controle administrativo válido até reativação. Dados baseados nos documentos já indexados no Drive.</p>';
+ html+='<p class="gav-process-note"><strong>Conferência documental:</strong> Verde em recibos/relatório indica arquivos localizados na competência, não envio ao eSocial nem pagamento. O fechamento mantém os critérios existentes: DARF de INSS + FGTS mensal, ou recibo DCTFWeb, ou GPS; quando autorizadas pela GAV, as justificativas de INSS zerado ou FGTS sem guia substituem exclusivamente a guia correspondente na competência. Parcelamentos dependem do DARF mensal; FGTS rescisório, relatório FGTS e declaração DCTFWeb sem recibo não concluem a folha. Justificativas são controles internos, não comprovam pagamento nem envio; sem movimento é controle distinto. Dados baseados nos documentos já indexados no Drive.</p>';
  return html+'</div>';
 }

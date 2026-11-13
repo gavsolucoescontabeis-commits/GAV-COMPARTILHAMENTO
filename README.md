@@ -1,6 +1,6 @@
 # GAV Compartilhar Docs — Portal seguro
 
-**Versão atual: v0.13.24 · Correção da autorização Google Drive**
+**Versão atual: v0.13.25 · INSS zerado e FGTS sem guia no Processamento**
 
 **Acesso permanente:** https://gavsolucoescontabeis-commits.github.io/GAV-COMPARTILHAMENTO/
 
@@ -161,3 +161,14 @@ O histórico de competências sem movimento permanece visível após uma reativa
 - No Processamento, indicador baseado no estado real de pastas automáticas (sincronização atrasada após 40 minutos), com última data de sucesso e botão **Autorizar / renovar Google Drive**.
 - A reconexão demanda autorização interativa do administrador na conta Google; não pode ser concluída apenas pelo código. Após autorização, o agendamento existente retoma na próxima rodada de 15 minutos.
 - Caso a configuração de consentimento OAuth do Google Cloud esteja no estado `Testing` (a confirmar no Cloud Console), os refresh tokens com escopo Drive podem expirar em sete dias; avaliar publicação `In production`/verificação da aplicação conforme requisitos do Google.
+
+
+## v0.13.25 — Justificativas da Folha: INSS zerado / FGTS sem guia (13/11/2026)
+
+- Controle de Processamento da Folha: em **DARF de INSS**, botão **Marcar INSS zerado** quando a guia não for localizada (por exemplo, compensação de retenções). Em **FGTS mensal**, botão **Marcar FGTS sem guia** quando não houver recolhimento, como em folha somente de pró-labore.
+- Marcação **manual, explícita e reversível**; exige confirmação do administrador, registra a empresa, competência, tipo, responsável e data de atualização no banco. Um botão **Desfazer** restaura pendência se nenhum documento for localizado. A marcação não é automática nem permanente entre competências.
+- Situações diferenciadas visualmente: **Encontrado** = documento existente no Drive; **Justificado** = informação administrativa sem guia; **Pendente** = documento não localizado nem justificativa. Uma justificativa nunca é apresentada como PDF encontrado, documento pago ou obrigação transmitida.
+- O fechamento documental permanece com os critérios aprovados: DCTFWeb, GPS ou par INSS+FGTS, admitindo exclusivamente nesta última combinação que INSS zerado substitua o DARF e FGTS sem guia substitua a guia mensal. Quando realmente não existe documento nem justificativa, a obrigação permanece pendente.
+- **Sem movimento** é independente. Parcelamentos, recibos da Folha e regras de detecção de arquivos do Google Drive não foram alterados.
+- Backend: \`gav-processing-summary\` ação protegida \`setObligationException\`; somente administrador GAV autenticado e ativo, verificando escritório, empresa, competência e serviço FOLHA confirmado.
+- Tabela \`gav_processing_obligation_exceptions\` com RLS, sem permissões anônimas nem para clientes; permite reversão sem apagar o histórico de data e responsável. Nenhuma empresa foi marcada automaticamente.

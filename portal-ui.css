@@ -350,3 +350,23 @@
 .gav-process-sync-warning p{font-size:12px;line-height:1.55;color:#546775;margin:5px 0 0}
 .gav-process-sync-warning .btn{flex-shrink:0}
 @media(max-width:750px){.gav-process-sync-warning .btn{width:100%}}
+
+
+/* v0.13.25 — justificativas manuais INSS/FGTS no Controle de Processamento */
+.gav-processing-fullscreen .gav-process-obligation{display:flex;flex-direction:column;gap:6px;align-items:stretch}
+.gav-processing-fullscreen .gav-process-indicator.is-justified{
+ background:#F6F3EC;border-color:#B68A3C;color:#244B66;
+}
+.gav-processing-fullscreen .gav-process-obligation-btn{
+ display:block;width:100%;min-height:29px;padding:5px 6px;
+ border:1px solid #B68A3C;border-radius:7px;background:#FFFFFF;
+ color:#244B66;font-size:10px;line-height:1.35;font-weight:750;
+ cursor:pointer;text-align:center;
+}
+.gav-processing-fullscreen .gav-process-obligation-btn:hover{background:#F1F4F3;color:#17364D}
+.gav-processing-fullscreen .gav-process-obligation-btn.is-undo{
+ color:#7A3E52;border-color:#D4DEE1;background:#F1F4F3;
+}
+.gav-processing-fullscreen .gav-process-obligation-btn:focus-visible{
+ outline:2px solid #244B66;outline-offset:2px;
+}

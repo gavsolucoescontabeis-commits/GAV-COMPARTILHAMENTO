@@ -1,5 +1,5 @@
 {
-  "version": "0.13.24",
-  "release": "2026-11-11",
-  "notes": "Corrige renovação da autorização Google Drive e sinaliza sincronização atrasada no Processamento."
+  "version": "0.13.25",
+  "release": "2026-11-13",
+  "notes": "Controle de Processamento: marcar DARF INSS zerado ou FGTS sem guia por empresa/competência, com desfazer, sem alterar documentos."
 }

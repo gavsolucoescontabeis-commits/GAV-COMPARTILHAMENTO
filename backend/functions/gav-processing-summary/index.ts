@@ -81,12 +81,32 @@ Deno.serve(async(req:Request)=>{
   const admin=check(await database.from("gav_admin_users").select("user_id").eq("user_id",user.id).eq("active",true).maybeSingle());
   if(!admin)fail("Acesso administrativo inativo.",403);
   const body=await req.json();
-  if(!["summary","markWithoutMovement","resumeMovement"].includes(body.action))fail("Ação inválida.",400);
+  if(!["summary","markWithoutMovement","resumeMovement","setObligationException"].includes(body.action))fail("Ação inválida.",400);
   const officeId=String(body.officeId||"");
   const year=Number(body.year),month=Number(body.month);
   if(!Number.isInteger(year)||year<2020||year>2100||!Number.isInteger(month)||month<1||month>13)fail("Competência inválida.",400);
   const office=check(await database.from("gav_offices").select("id,code,display_name").eq("id",officeId).maybeSingle());
   if(!office)fail("Escritório não encontrado.",404);
+  if(body.action==="setObligationException"){
+   const companyId=String(body.companyId||"");
+   const obligation=String(body.obligation||"");
+   const active=body.active;
+   if(!["INSS","FGTS"].includes(obligation)||typeof active!=="boolean")
+    fail("Selecione DARF INSS zerado ou FGTS sem guia.",400);
+   const company=check(await database.from("gav_companies").select("id")
+    .eq("id",companyId).eq("office_id",officeId).eq("is_active",true).maybeSingle());
+   if(!company)fail("Empresa não encontrada neste escritório.",404);
+   const folha=check(await database.from("gav_services").select("company_id")
+    .eq("company_id",companyId).eq("service_key","FOLHA")
+    .eq("scope_status","CONFIRMADO").maybeSingle());
+   if(!folha)fail("Esta empresa não possui Folha confirmada no controle.",409);
+   const reason=obligation==="INSS"?"DARF_ZERADO":"SEM_GUIA";
+   check(await database.from("gav_processing_obligation_exceptions").upsert({
+     company_id:companyId,year,month,obligation,reason,active,updated_by:user.id,
+     updated_at:new Date().toISOString()
+   },{onConflict:"company_id,year,month,obligation"}).select("obligation").single());
+   return respond({ok:true,obligation,active,year,month});
+  }
   if(body.action==="markWithoutMovement"||body.action==="resumeMovement"){
    const companyId=String(body.companyId||"");
    const company=check(await database.from("gav_companies")
@@ -131,6 +151,14 @@ Deno.serve(async(req:Request)=>{
   const selectedCompanies=companyRows.flatMap((c:any)=>services.filter((service:any)=>service.company_id===c.id).map((service:any)=>({...c,serviceKey:service.service_key})));
   if(!selectedCompanies.length)return respond({officeId,year,month,companies:[],total:0,concluded:0,pending:0});
   const selected=[...new Set(selectedCompanies.map((c:any)=>c.id))];
+  const exceptions=check(await database.from("gav_processing_obligation_exceptions")
+   .select("company_id,obligation,updated_at").in("company_id",selected)
+   .eq("year",year).eq("month",month).eq("active",true).limit(1500));
+  const exceptionsByCompany=new Map<string,any>();
+  for(const ex of exceptions){
+   if(!exceptionsByCompany.has(ex.company_id))exceptionsByCompany.set(ex.company_id,{});
+   exceptionsByCompany.get(ex.company_id)[ex.obligation]={active:true,updatedAt:ex.updated_at};
+  }
   const inactivePeriods=check(await database.from("gav_processing_inactivity")
      .select("company_id,service_key,start_year,start_month,end_year,end_month")
      .in("company_id",selected).eq("service_key","FOLHA"));
@@ -168,8 +196,14 @@ Deno.serve(async(req:Request)=>{
   const companies=selectedCompanies.map((c:any)=>{
    const records=evidenceByCompany.get(c.id)||{darf:null,fgts:null,dctf:null,gps:null,parcelamento:null,payrollReceipt:null,payrollReport:null};
    const parcelService=c.serviceKey==="PARCELAMENTOS";
+   const exception=exceptionsByCompany.get(c.id)||{};
+   const inssZero=!!exception.INSS?.active;
+   const fgtsNoGuide=!!exception.FGTS?.active;
+   // Mantém as formas de conclusão já aprovadas; justificativas substituem somente
+   // a guia correspondente, na competência e empresa expressamente marcadas.
    const concluded=parcelService?!!records.parcelamento:
-     !!records.gps||!!records.dctf||!!(records.darf&&records.fgts);
+     !!records.gps||!!records.dctf||
+     ((!!records.darf||inssZero)&&(!!records.fgts||fgtsNoGuide));
    const withoutMovement=activePeriod(c.id,c.serviceKey);
    const reason=withoutMovement?
       "Sem movimento registrado pela GAV desde "+String(withoutMovement.start_month).padStart(2,"0")+"/"+withoutMovement.start_year+" (controle interno)":
@@ -177,13 +211,19 @@ Deno.serve(async(req:Request)=>{
       (records.parcelamento?"DARF de parcelamento da competência localizado":"DARF de parcelamento da competência não localizado"):
      records.gps?"GPS da competência localizada":
      records.dctf?"Recibo de entrega da DCTFWeb localizado":
-     records.darf&&records.fgts?"DARF de INSS e guia mensal do FGTS localizados":
+     ((!!records.darf||inssZero)&&(!!records.fgts||fgtsNoGuide))?
+      (inssZero||fgtsNoGuide?
+       (inssZero?"DARF de INSS zerado registrado":"DARF de INSS localizado")+
+       " + "+(fgtsNoGuide?"FGTS sem guia registrado":"FGTS mensal localizado")+
+       " (controle administrativo)":
+       "DARF de INSS e guia mensal do FGTS localizados"):
      "Faltam documentos para o fechamento documental";
    return {id:c.id,code:c.code,legalName:c.legal_name,cnpj:c.cnpj,serviceKey:c.serviceKey,
      serviceLabel:parcelService?"Parcelamentos":"Folha",
      status:withoutMovement?"SEM_MOVIMENTO":concluded?"CONCLUIDA":"PENDENTE",
      inactivityActive:!!withoutMovement&&withoutMovement.end_year===null,
-     reason,evidence:records,payrollPrepared:!parcelService&&!!records.payrollReceipt&&!!records.payrollReport};
+     reason,evidence:records,obligationExceptions:exception,
+     payrollPrepared:!parcelService&&!!records.payrollReceipt&&!!records.payrollReport};
   });
   return respond({officeId,year,month,companies,total:companies.length,
     concluded:companies.filter((c:any)=>c.status==="CONCLUIDA").length,
