@@ -387,3 +387,11 @@
 @media (prefers-reduced-motion:reduce){
  .gav-processing-fullscreen .gav-process-obligation-tile{transition:none}
 }
+
+/* v0.13.28 — cadastro de empresa e erros de validação */
+.gav-company-save-error{margin:12px 0 17px;padding:14px 16px;background:#FFF8F2;border:1px solid #CC9773;border-left:4px solid #A54A34;border-radius:9px;color:#713B2D}
+.gav-company-save-error strong{font-size:13px}
+.gav-company-save-error p{margin:5px 0 0;font-size:12px;line-height:1.5}
+.gav-company-service-option{display:flex;align-items:center;gap:10px;cursor:pointer;color:#203B56;font-size:13px;font-weight:750}
+.gav-company-service-option input{height:18px;width:18px;accent-color:#244B66;cursor:pointer;flex:0 0 auto}
+.gav-company-form-grid .gav-company-name small{display:block;margin-top:5px;color:#546775;line-height:1.4;font-size:11px}

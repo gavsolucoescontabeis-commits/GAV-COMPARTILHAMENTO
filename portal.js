@@ -7,7 +7,7 @@ const sb=createClient(ROOT,PUB,{auth:{autoRefreshToken:true,persistSession:true,
 const logo="assets/logo-gav-sem-fundo.svg",lion="assets/leao-gav-sem-fundo.svg";
 const app=document.getElementById("app");
 
-const GAV_PORTAL_VERSION="0.13.27";
+const GAV_PORTAL_VERSION="0.13.28";
 let gavAvailableVersion="",gavVersionCheckRunning=false;
 const comparePortalVersions=(left,right)=>{
  const a=left.split(".").map(Number),b=right.split(".").map(Number);
@@ -74,7 +74,8 @@ try{
 if(invitationHash)history.replaceState(null,"",location.pathname+location.search);
 let syncRuns=[],mappingReport=null,offices=[],officeId="";
 let folderLookup={officeId:"",loaded:false,items:[],error:""};
-let companyFolders={officeId:"",loaded:false,rootAvailable:false,items:[],notice:"",error:"",lastCheckedAt:null,stale:false};
+let companyFolders={officeId:"",loaded:false,rootAvailable:false,items:[],notice:"",error:"",lastCheckedAt:null,stale:false,payrollCompanyIds:[]};
+let companySaveError="";
 let folderPollRunning=false,lastFolderPollAt=0;
 let companyEditorOpen=false,companyEditId="",companyDraft={cnpj:"",legalName:"",code:"",folderId:"",allocationsEnabled:false};
 let showInactiveCompanies=false;
@@ -110,19 +111,19 @@ async function loadCompanyFolders({forceRefresh=false}={}){
  const requested=officeId;
  const prior=companyFolders.officeId===requested?companyFolders:null;
  if(!prior?.loaded)companyFolders={officeId:requested,loaded:false,rootAvailable:false,
-  items:[],notice:"",error:"",lastCheckedAt:null,stale:false};
+  items:[],notice:"",error:"",lastCheckedAt:null,stale:false,payrollCompanyIds:[]};
  try{
   const result=await invoke("gav-company-admin","folders",{officeId:requested,forceRefresh});
   if(requested===officeId)companyFolders={officeId:requested,loaded:true,
    rootAvailable:!!result.rootAvailable,items:result.folders||[],
    notice:result.notice||"",error:"",stale:!!result.stale,
-   lastCheckedAt:result.lastCheckedAt||null};
+   lastCheckedAt:result.lastCheckedAt||null,payrollCompanyIds:result.payrollCompanyIds||[]};
  }catch(e){
   if(requested===officeId)companyFolders={officeId:requested,loaded:true,
    rootAvailable:prior?.rootAvailable||false,
    items:prior?.items||[],notice:prior?.notice||"",
    error:e?.message||"Não foi possível consultar as pastas.",
-   stale:true,lastCheckedAt:prior?.lastCheckedAt||null};
+   stale:true,lastCheckedAt:prior?.lastCheckedAt||null,payrollCompanyIds:prior?.payrollCompanyIds||[]};
  }
 }
 async function refreshCompanyFoldersInView(){
@@ -540,12 +541,14 @@ function companyEditorHtml(){
  return '<div id="gavCompanyEditor" class="card card-pad gav-company-editor" role="region" aria-label="Cadastro de empresa" style="margin:16px 0" tabindex="-1">'+
   '<h3 class="block-title">'+(current?"Editar empresa":folder?"Cadastrar empresa da pasta "+esc(folder.name):"Cadastrar nova empresa")+'</h3>'+
   '<p class="subtle">Informe os dados corretos e selecione a pasta que você criou dentro do diretório deste escritório. O CNPJ é validado antes de salvar.</p>'+
+  (companySaveError?'<div class="gav-company-save-error" role="alert" tabindex="-1" id="gavCompanySaveError"><strong>Cadastro não concluído</strong><p>'+esc(companySaveError)+'</p></div>':"")+
   '<form id="companyEditorForm"><div class="gav-company-form-grid">'+
   '<div class="form-field"><label for="companyCode">Código (opcional)</label><input class="input" id="companyCode" maxlength="4" inputmode="numeric" placeholder="Ex.: 080" value="'+esc(companyDraft.code)+'"></div>'+
   '<div class="form-field"><label for="companyCnpj">CNPJ da empresa</label><input class="input" id="companyCnpj" inputmode="numeric" maxlength="18" placeholder="00.000.000/0000-00" value="'+esc(companyDraft.cnpj)+'" required></div>'+
   '<div class="form-field gav-company-name"><label for="companyLegalName">Razão social / nome</label><input class="input" id="companyLegalName" maxlength="180" value="'+esc(companyDraft.legalName)+'" required></div>'+
   (currentOffice()?.code==="TTM"?'<div class="form-field"><label for="companyAllocationsEnabled">Disponibilizar Alocações</label><select class="input" id="companyAllocationsEnabled"><option value="false" '+(!companyDraft.allocationsEnabled?"selected":"")+'>Não</option><option value="true" '+(companyDraft.allocationsEnabled?"selected":"")+'>Sim</option></select><small>Somente empresas que informam dias, faltas e obras/CNO.</small></div>':"")+
-  '<div class="form-field gav-company-name"><label for="companyFolderId">Pasta do Google Drive</label><select class="input" id="companyFolderId" '+(!f.rootAvailable?"disabled":"")+'>'+options+'</select></div></div>'+
+  '<div class="form-field gav-company-name"><label for="companyFolderId">Pasta do Google Drive</label><select class="input" id="companyFolderId" '+(!f.rootAvailable?"disabled":"")+'>'+options+'</select></div>'+
+  '<div class="form-field gav-company-name"><label class="gav-company-service-option"><input type="checkbox" id="companyPayrollEnabled" '+(companyDraft.payrollEnabled?"checked":"")+'> Incluir no Controle de Processamento da Folha</label><small>Com esta opção marcada, a empresa aparecerá no Processamento após salvar. Desmarque somente se não precisar acompanhar a folha.</small></div></div>'+
   (current?.folder_label?'<p class="subtle">Pasta atualmente cadastrada: <strong>'+esc(current.folder_label)+'</strong></p>':"")+
   (folder?'<p class="subtle">Pasta selecionada: <strong>'+esc(folder.name)+'</strong>. O vínculo será conferido no Google Drive antes de salvar.</p>':"")+
   (f.error?'<p class="gav-company-warning">'+esc(f.error)+'</p>':"")+
@@ -796,11 +799,13 @@ function beginCompanyEditor(id="",folderId=""){
  const company=id?companies.find(c=>c.id===id&&c.office_id===officeId):null;
  if(id&&!company){toastMessage("Empresa não encontrada neste escritório.");return}
  companyEditId=company?.id||"";
+ companySaveError="";
  const existing=companyFolders.items.find(f=>f.linkedCompanyId===companyEditId);
  const chosen=companyFolders.items.find(f=>f.id===folderId);
  const codeFromFolder=chosen?.name.match(/^\s*(\d{1,4})(?:\s|[_.-]|$)/)?.[1]||"";
  companyDraft={cnpj:company?fmt(company.cnpj):"",legalName:company?.legal_name||"",
-  code:company?.code||codeFromFolder,folderId:folderId||existing?.id||"",allocationsEnabled:allocationEnabledIds.has(company?.id)};
+  code:company?.code||codeFromFolder,folderId:folderId||existing?.id||"",allocationsEnabled:allocationEnabledIds.has(company?.id),
+  payrollEnabled:company?companyFolders.payrollCompanyIds?.includes(company.id)===true:currentOffice()?.code==="DS CONTÁBIL"};
  companyEditorOpen=true;view="companies";
  render();
  // O formulário fica antes da relação de empresas; sem rolagem, clicar em
@@ -818,31 +823,53 @@ function beginCompanyEditor(id="",folderId=""){
 async function saveCompanyEditor(e){
  e.preventDefault();
  if(!adminView()||!companyEditorOpen||busy)return;
- const d={cnpj:cn(app.querySelector("#companyCnpj")?.value),
+ const d={
+  cnpj:cn(app.querySelector("#companyCnpj")?.value),
   legalName:app.querySelector("#companyLegalName")?.value?.trim()||"",
   code:app.querySelector("#companyCode")?.value?.trim()||"",
-  folderId:app.querySelector("#companyFolderId")?.value||"",allocationsEnabled:app.querySelector("#companyAllocationsEnabled")?.value==="true"};
- if(d.cnpj.length!==14){notice="Informe os 14 números do CNPJ.";render();return}
- if(d.legalName.length<2){notice="Informe a razão social da empresa.";render();return}
- await run(async()=>{
+  folderId:app.querySelector("#companyFolderId")?.value||"",
+  allocationsEnabled:app.querySelector("#companyAllocationsEnabled")?.value==="true",
+  payrollEnabled:!!app.querySelector("#companyPayrollEnabled")?.checked
+ };
+ companyDraft={...d};companySaveError="";notice="";
+ const failForm=(message)=>{
+  companySaveError=message;busy=false;render();
+  const el=document.getElementById("gavCompanySaveError");
+  if(el){el.scrollIntoView({behavior:"auto",block:"center"});el.focus({preventScroll:true})}
+ };
+ if(d.cnpj.length!==14){failForm("Confira o CNPJ: informe os 14 números.");return}
+ if(d.legalName.length<2){failForm("Preencha a razão social ou nome da empresa.");return}
+ if(!d.folderId&&!companyEditId){failForm("Selecione a pasta do Google Drive antes de cadastrar a empresa.");return}
+ busy=true;render();
+ let committed=false,companyId="",message="";
+ try{
   const result=await invoke("gav-company-admin","save",{officeId,companyId:companyEditId,...d});
-  const companyId=result.companyId;
-  let syncMessage="";
+  if(!result?.ok||!result?.companyId)throw Error("O servidor não confirmou o cadastro.");
+  committed=true;companyId=result.companyId;
+  companyEditorOpen=false;companyEditId="";companySaveError="";
+  companyDraft={cnpj:"",legalName:"",code:"",folderId:"",allocationsEnabled:false,payrollEnabled:false};
+  message="Empresa cadastrada com sucesso."+(result.payrollEnabled?
+   " Incluída no Controle de Processamento da Folha.":" Sem controle de Folha, conforme seleção.");
+  selected=companyId;view="companies";
+  await bootstrap();
+  await loadCompanyFolders();
   if(result.linked){
    try{
     const sync=await invoke("gav-drive-index","index",{companyId});
-    syncMessage=" Primeira sincronização: "+sync.indexed+" documento(s) conferido(s) no índice.";
+    message+=" Pasta vinculada. "+sync.indexed+" documento(s) conferido(s) no Drive.";
    }catch(syncError){
-    syncMessage=" Pasta vinculada, mas a primeira sincronização precisa ser repetida em Google Drive: "+(syncError?.message||"falha temporária")+".";
+    message+=" Pasta vinculada, mas a importação dos documentos não terminou: "+
+     (syncError?.message||"falha temporária")+
+     ". Os dados cadastrais estão salvos; sincronize novamente na aba Google Drive.";
    }
-  }
-  companyEditorOpen=false;companyEditId="";companyDraft={cnpj:"",legalName:"",code:"",folderId:"",allocationsEnabled:false};
-  selected=companyId;
-  await bootstrap();
-  view="companies";
-  await loadCompanyFolders();
-  notice=result.notice+syncMessage;
- });
+  }else message+=" Pasta já vinculada ou cadastro atualizado.";
+  notice=message;
+ }catch(e){
+  if(!committed){failForm(e?.message||"O servidor não concluiu o cadastro.");return}
+  companyEditorOpen=false;view="companies";
+  notice="Cadastro salvo no banco, mas a atualização da tela não terminou: "+(e?.message||"erro temporário")+
+   ". Entre novamente em Empresas para conferir.";
+ }finally{busy=false;render()}
 }
 async function changeOffice(id){
  if(role!=="admin"||!offices.some(o=>o.id===id))return;
@@ -1060,7 +1087,7 @@ async function handle(e){
   beginCompanyEditor("",picked.id);
   return;
  }
- if(a==="company-cancel"){companyEditorOpen=false;companyEditId="";render();return}
+ if(a==="company-cancel"){companyEditorOpen=false;companyEditId="";companySaveError="";render();return}
  if(a==="company-reload-folders"){if(adminView())await run(()=>loadCompanyFolders({forceRefresh:true}));return}
  if(a==="back"){resetSelection();listPage=0;view="home";cat="";year="ALL";month="ALL";navigationHistory.length=0;render();return}
  if(a==="cat"){resetSelection();listPage=0;navigationHistory.push({view,cat,year,month});cat=v;view="category";suggestDocumentPeriod(cat);render();return}

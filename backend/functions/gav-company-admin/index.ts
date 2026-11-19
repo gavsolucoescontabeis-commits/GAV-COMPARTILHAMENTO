@@ -7,7 +7,18 @@ const origin="https://gavsolucoescontabeis-commits.github.io";
 const cors={"Access-Control-Allow-Origin":origin,"Access-Control-Allow-Headers":"authorization,apikey,content-type,x-client-info","Access-Control-Allow-Methods":"POST,OPTIONS","Cache-Control":"no-store"};
 const json=(v:unknown,status=200)=>new Response(JSON.stringify(v),{status,headers:{...cors,"Content-Type":"application/json"}});
 function fail(message:string,status=400):never{throw {message,status}}
-function check<T=any>(r:{data:T,error:any}):T{if(r.error){console.error("company-admin-db",r.error.code);if(r.error.code==="23505")fail("CNPJ, código ou pasta já cadastrados. Confira os dados.",409);fail("Não foi possível salvar o cadastro.",502)}return r.data}
+function check<T=any>(r:{data:T,error:any}):T{
+ if(r.error){
+  console.error("company-admin-db",r.error.code);
+  if(r.error.code==="23505")fail("Cadastro não realizado: CNPJ, código de empresa ativa ou pasta já utilizado.",409);
+  const message=String(r.error.message||"");
+  const friendly=["código","CNPJ","Empresa","empresa","pasta","Pasta","Alocações","Razão social","Escritório","Cadastro","administrador"];
+  if(r.error.code==="P0001"&&friendly.some(x=>message.includes(x)))
+   fail("Cadastro não realizado: "+message,409);
+  fail("Cadastro não realizado por erro no banco. Nenhum registro parcial foi salvo.",502);
+ }
+ return r.data
+}
 const digits=(value:unknown)=>String(value??"").replace(/\D/g,"");
 function validCnpj(n:string){
  if(n.length!==14||/^(\d)\1+$/.test(n))return false;
@@ -142,7 +153,12 @@ Deno.serve(async req=>{
     const retired=links.find((x:any)=>x.drive_folder_id===f.id&&!x.is_active&&retiredIds.has(x.company_id));
     return {id:f.id,name:f.name,linkedCompanyId:active?.company_id||null,retired:!!retired};
    }).sort((a:any,b:any)=>a.name.localeCompare(b.name,"pt-BR",{numeric:true}));
-   return json({officeId,folders:folderRows,rootAvailable:true,lastCheckedAt,stale,notice});
+   const officeCompanies=check(await db.from("gav_companies").select("id").eq("office_id",officeId));
+   const companyIds=officeCompanies.map((c:any)=>c.id);
+   const enabledPayroll=companyIds.length?check(await db.from("gav_services").select("company_id")
+    .eq("service_key","FOLHA").eq("scope_status","CONFIRMADO").in("company_id",companyIds)):[];
+   return json({officeId,folders:folderRows,rootAvailable:true,lastCheckedAt,stale,notice,
+    payrollCompanyIds:enabledPayroll.map((x:any)=>x.company_id)});
   }
   const id=String(b.companyId||"");
   if(id&&!/^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(id))fail("Identificador inválido.",400);
@@ -186,20 +202,27 @@ Deno.serve(async req=>{
     .select("id,office_id,cnpj,legal_name,code,folder_label,is_active,allocations_enabled").eq("id",id).maybeSingle());
    if(!current||current.office_id!==officeId)fail("Empresa não pertence a este escritório.",403);
   }
-  const duplicate=check(await db.from("gav_companies").select("id")
+  // Repetições seguras (mesmo CNPJ/pasta) são resolvidas atomicamente no RPC.
+  // Um CNPJ já existente com outra pasta/escritório será recusado pelo RPC.
+  const duplicate=check(await db.from("gav_companies").select("id,office_id,is_active")
     .eq("cnpj",cnpj).maybeSingle());
-  if(duplicate&&duplicate.id!==id)fail("Este CNPJ já está cadastrado. Use Editar empresa, não crie outro registro.",409);
+  if(duplicate&&(duplicate.office_id!==officeId||!duplicate.is_active))
+   fail("Este CNPJ já pertence a outro cadastro. Confira o escritório e a empresa.",409);
+  if(id&&duplicate&&duplicate.id!==id)
+   fail("O CNPJ pertence a outra empresa. Confira o cadastro.",409);
+  const targetId=id||duplicate?.id||"";
   if(code){
    const others=check(await db.from("gav_companies").select("id")
-    .eq("office_id",officeId).eq("code",code));
-   if(others.some((c:any)=>c.id!==id))fail("Código já utilizado por outra empresa deste escritório.",409);
+    .eq("office_id",officeId).eq("code",code).eq("is_active",true));
+   if(others.some((c:any)=>c.id!==targetId))
+    fail("Este código já pertence a outra empresa ATIVA. Códigos de empresas desativadas podem ser reutilizados.",409);
   }
   if(current&&current.cnpj!==cnpj){
    const members=check(await db.from("gav_memberships").select("user_id").eq("company_id",id).limit(1));
    if(members.length)fail("CNPJ com acesso de cliente vinculado. Para alterar, regularize primeiro o login existente.",409);
   }
-  const existingLink=id?check(await db.from("gav_drive_folders")
-   .select("id,drive_folder_id").eq("company_id",id).eq("is_active",true)):[];
+  const existingLink=targetId?check(await db.from("gav_drive_folders")
+   .select("id,drive_folder_id").eq("company_id",targetId).eq("is_active",true)):[];
   if(existingLink.length>1)fail("A empresa possui múltiplas pastas vinculadas. Confira antes de editar.",409);
   if(existingLink.length&&folderId&&existingLink[0].drive_folder_id!==folderId)
    fail("A empresa já possui pasta vinculada. Não trocamos o vínculo automaticamente para proteger os documentos existentes.",409);
@@ -214,42 +237,34 @@ Deno.serve(async req=>{
    if(prefix&&code&&prefix!==code)fail("O código informado é diferente do início do nome da pasta. Confira antes de salvar.",409);
    const used=check(await db.from("gav_drive_folders")
     .select("company_id").eq("drive_folder_id",folder.id).eq("is_active",true));
-   if(used.some((l:any)=>l.company_id!==id))fail("Esta pasta já está vinculada a outra empresa.",409);
+   if(used.some((l:any)=>l.company_id!==targetId))fail("Esta pasta já está vinculada a outra empresa.",409);
   }
   const folderLabel=folder?.name||current?.folder_label||null;
   const enableAllocations=b.allocationsEnabled===undefined?!!current?.allocations_enabled:b.allocationsEnabled===true;
   if(office.code!=="TTM"&&enableAllocations)fail("Alocações somente para empresas TTM.",403);
-  const payload={office_id:officeId,cnpj,legal_name:name,code:code||null,folder_label:folderLabel,allocations_enabled:office.code==="TTM"&&enableAllocations};
-  let companyId=id,created=false;
-  if(current){
-   check(await db.from("gav_companies").update(payload).eq("id",id).eq("office_id",officeId));
+  let payrollEnabled:boolean;
+  if(typeof b.payrollEnabled==="boolean"){
+   payrollEnabled=b.payrollEnabled;
+  }else if(id){
+   const service=check(await db.from("gav_services").select("scope_status")
+    .eq("company_id",id).eq("service_key","FOLHA").maybeSingle());
+   payrollEnabled=service?.scope_status==="CONFIRMADO";
   }else{
-   const record=check(await db.from("gav_companies").insert({...payload,is_active:true}).select("id").single());
-   companyId=record.id;created=true;
+   payrollEnabled=office.code==="DS CONTÁBIL";
   }
-  let linked=false;
-  if(folder&&!existingLink.length){
-   check(await db.from("gav_drive_candidates").upsert({
-    company_id:companyId,folder_id:folder.id,expected_parent_id:root,
-    label:folder.name,verified_at:new Date().toISOString()
-   },{onConflict:"company_id"}));
-   check(await db.from("gav_drive_folders").insert({
-    company_id:companyId,drive_folder_id:folder.id,drive_parent_id:root,
-    approved_by:user.id,is_active:true,auto_publish_new:false
-   }));
-   linked=true;
-  }else if(folder&&existingLink.length){
-   check(await db.from("gav_drive_candidates").upsert({
-    company_id:companyId,folder_id:folder.id,expected_parent_id:root,
-    label:folder.name,verified_at:new Date().toISOString()
-   },{onConflict:"company_id"}));
-  }
-  check(await db.from("gav_audit_events").insert({
-   actor_user_id:user.id,company_id:companyId,
-   action:created?"COMPANY_CREATED":linked?"COMPANY_FOLDER_LINKED":"COMPANY_UPDATED"
+  // Uma transação garante cadastro, pasta, folha e auditoria.
+  const result=check(await db.rpc("gav_save_company_with_folder",{
+   p_actor_id:user.id,
+   p_office_id:officeId,
+   p_company_id:id||null,
+   p_cnpj:cnpj,p_legal_name:name,p_code:code||null,
+   p_folder_id:folder?.id||null,p_folder_label:folderLabel,
+   p_folder_parent_id:folder?root:null,
+   p_allocations_enabled:enableAllocations,
+   p_payroll_enabled:payrollEnabled
   }));
-  return json({ok:true,companyId,created,linked,
-   notice:folder? "Cadastro salvo e pasta validada. Os documentos históricos não serão publicados automaticamente.":
-   "Cadastro salvo sem pasta. Vincule uma pasta antes de liberar acesso ao cliente."});
+  return json({...result,notice:folder?
+   "Empresa cadastrada, pasta do Google Drive vinculada e controle da Folha atualizado. Nenhum documento antigo foi publicado automaticamente.":
+   "Empresa cadastrada e Controle da Folha atualizado. Vincule a pasta para sincronizar documentos."});
  }catch(e:any){return json({error:String(e?.message||"Falha ao cadastrar empresa.")},e?.status||500)}
 });

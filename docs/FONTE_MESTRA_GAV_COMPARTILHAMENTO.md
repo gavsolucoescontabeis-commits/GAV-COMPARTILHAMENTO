@@ -330,3 +330,13 @@ Manter segurança, layout aprovado, Drive, PDFs de origem e identidade azul-mari
 - A tela **Empresas** da carteira selecionada agora mostra **Última conferência do Drive**, a periodicidade da detecção automática, e se atualiza de 60 em 60 segundos enquanto aberta e visível. Ao entrar na tela ou clicar **Atualizar pastas do Drive**, consulta imediatamente o Google. Nunca interromper cadastro em andamento para atualizar a tela.
 - Teste inicial no servidor em 19/11/2026, 17h41 BRT: **16 pastas da DS Contábil** detectadas; `039 IATZAKI`, `JESSICA` e `Norte Sul Balancas` ficaram sem vínculo ativo de empresa. O CNPJ/razão social ainda devem ser validados ao cadastrar.
 - Uma tentativa de conexão inicial falhou, a repetição obteve resposta 200 e listou pastas; portanto, não afirmar conexão Google permanentemente quebrada. Se falhas de renovação ocorrerem a cada 7 dias, verificar o status **Testing** na seção Audience do OAuth do Google Cloud; escopo Google Drive pode levar à expiração de refresh tokens em testes. Mudança para In production poderá exigir verificações, conforme políticas do Google.
+
+
+## v0.13.28 — Cadastro de empresas com vínculo seguro e integração à Folha
+
+- Corrigido o conflito de código causado por empresas desativadas: `gav_companies` agora exige código único somente entre empresas ATIVAS do mesmo escritório. A antiga mantém seu código e histórico; o CNPJ continua globalmente único.
+- `gav_save_company_with_folder`: operação única, transacional e restrita ao service_role, que grava cadastro, pasta aprovada, serviço FOLHA e auditoria. Qualquer falha desfaz tudo sem deixar empresa parcial.
+- O cadastro de empresas novas da DS Contábil já traz a opção **Incluir no Controle de Processamento da Folha** marcada. É possível desmarcar. Para empresas existentes, o formulário reflete o estado já confirmado da Folha, sem mudança silenciosa.
+- Em caso de erro ao Salvar, o formulário mantém CNPJ, razão social, código, pasta e configuração da Folha. O erro aparece junto dos campos; o usuário não perde seu trabalho.
+- Após cadastro confirmado, o portal atualiza a lista de Empresas e indexa o Drive. Se a indexação falhar, o cadastro continua salvo e o aplicativo explica qual etapa deve ser repetida. A marcação do serviço de Folha permite aparecer no Processamento mesmo que ainda não haja documentos indexados.
+- Nenhum registro de empresa foi criado ou alterado manualmente para contornar o problema.
