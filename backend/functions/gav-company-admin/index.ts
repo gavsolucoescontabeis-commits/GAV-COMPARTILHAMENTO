@@ -78,20 +78,71 @@ Deno.serve(async req=>{
   if(action==="folders"){
    if(!root)return json({officeId,folders:[],rootAvailable:false,
      notice:"Este escritório ainda não tem diretório principal do Drive configurado. É possível cadastrar a empresa sem vincular pasta."});
-   const access=await driveAccess();
-   const found=await listFolder(root,access);
+   const status=check(await db.from("gav_drive_discovery_status")
+     .select("last_success_at,last_error").eq("office_id",officeId).maybeSingle());
+   const lastTime=status?.last_success_at?new Date(status.last_success_at).getTime():0;
+   const fresh=lastTime>0&&Date.now()-lastTime<8*60*1000;
+   const force=b.forceRefresh===true;
+   let folderList:any[]=[],lastCheckedAt=status?.last_success_at||null;
+   let stale=false,notice="";
+   if(fresh&&!force){
+    if(status?.last_error){
+     stale=true;
+     notice="Descoberta automática interrompida: "+status.last_error+
+      ". A lista abaixo é da última conferência bem-sucedida; novas pastas aguardam reconexão do Google Drive.";
+    }
+    const cached=check(await db.from("gav_drive_discovered_folders")
+     .select("drive_folder_id,folder_name").eq("office_id",officeId).eq("is_present",true).limit(3000));
+    folderList=cached.map((f:any)=>({id:f.drive_folder_id,name:f.folder_name}));
+   }else{
+    const startedAt=new Date().toISOString();
+    try{
+     const access=await driveAccess();
+     const found=await listFolder(root,access);
+     folderList=found;
+     for(let i=0;i<found.length;i+=150){
+      const batch=found.slice(i,i+150).map((f:any)=>({
+        office_id:officeId,drive_folder_id:f.id,folder_name:f.name,
+        last_seen_at:startedAt,is_present:true
+      }));
+      check(await db.from("gav_drive_discovered_folders").upsert(batch,{onConflict:"office_id,drive_folder_id"}));
+     }
+     check(await db.from("gav_drive_discovered_folders").update({is_present:false})
+      .eq("office_id",officeId).lt("last_seen_at",startedAt).eq("is_present",true));
+     lastCheckedAt=new Date().toISOString();
+     check(await db.from("gav_drive_discovery_status").upsert({
+      office_id:officeId,last_attempt_at:startedAt,last_success_at:lastCheckedAt,
+      last_error:null,updated_at:lastCheckedAt
+     },{onConflict:"office_id"}));
+    }catch(e:any){
+     const message=String(e?.message||"Falha na consulta").slice(0,150);
+     // Falhas de autorização nunca apagam pastas antes detectadas.
+     const at=new Date().toISOString();
+     check(await db.from("gav_drive_discovery_status").upsert({
+      office_id:officeId,last_attempt_at:startedAt,
+      last_success_at:status?.last_success_at||null,last_error:message,updated_at:at
+     },{onConflict:"office_id"}));
+     if(!status?.last_success_at)throw e;
+     const old=check(await db.from("gav_drive_discovered_folders")
+      .select("drive_folder_id,folder_name").eq("office_id",officeId).eq("is_present",true).limit(3000));
+     folderList=old.map((f:any)=>({id:f.drive_folder_id,name:f.folder_name}));
+     stale=true;
+     notice="Consulta do Google Drive temporariamente indisponível: "+message+
+      ". Mostrando a última relação conferida. Novas pastas só aparecerão após restaurar o acesso.";
+    }
+   }
    // Pastas de empresas desativadas não podem reaparecer como "sem cadastro".
    const links=check(await db.from("gav_drive_folders")
      .select("company_id,drive_folder_id,is_active"));
    const retiredCompanies=check(await db.from("gav_companies")
      .select("id").eq("office_id",officeId).eq("is_active",false));
    const retiredIds=new Set(retiredCompanies.map((c:any)=>c.id));
-   const folderRows=found.map((f:any)=>{
+   const folderRows=folderList.map((f:any)=>{
     const active=links.find((x:any)=>x.drive_folder_id===f.id&&x.is_active);
     const retired=links.find((x:any)=>x.drive_folder_id===f.id&&!x.is_active&&retiredIds.has(x.company_id));
     return {id:f.id,name:f.name,linkedCompanyId:active?.company_id||null,retired:!!retired};
    }).sort((a:any,b:any)=>a.name.localeCompare(b.name,"pt-BR",{numeric:true}));
-   return json({officeId,folders:folderRows,rootAvailable:true});
+   return json({officeId,folders:folderRows,rootAvailable:true,lastCheckedAt,stale,notice});
   }
   const id=String(b.companyId||"");
   if(id&&!/^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(id))fail("Identificador inválido.",400);

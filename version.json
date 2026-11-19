@@ -1,5 +1,5 @@
 {
-  "version": "0.13.26",
-  "release": "2026-11-13",
-  "notes": "Processamento: retângulos INSS e FGTS clicáveis; justificativas aparecem verdes, sem botões separados."
+  "version": "0.13.27",
+  "release": "2026-11-19",
+  "notes": "Descoberta automática de pastas de empresas a cada 5 minutos com status de consulta no cadastro, sem cadastrar CNPJs automaticamente."
 }

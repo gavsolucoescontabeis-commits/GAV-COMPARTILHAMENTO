@@ -7,7 +7,7 @@ const sb=createClient(ROOT,PUB,{auth:{autoRefreshToken:true,persistSession:true,
 const logo="assets/logo-gav-sem-fundo.svg",lion="assets/leao-gav-sem-fundo.svg";
 const app=document.getElementById("app");
 
-const GAV_PORTAL_VERSION="0.13.26";
+const GAV_PORTAL_VERSION="0.13.27";
 let gavAvailableVersion="",gavVersionCheckRunning=false;
 const comparePortalVersions=(left,right)=>{
  const a=left.split(".").map(Number),b=right.split(".").map(Number);
@@ -74,7 +74,8 @@ try{
 if(invitationHash)history.replaceState(null,"",location.pathname+location.search);
 let syncRuns=[],mappingReport=null,offices=[],officeId="";
 let folderLookup={officeId:"",loaded:false,items:[],error:""};
-let companyFolders={officeId:"",loaded:false,rootAvailable:false,items:[],notice:"",error:""};
+let companyFolders={officeId:"",loaded:false,rootAvailable:false,items:[],notice:"",error:"",lastCheckedAt:null,stale:false};
+let folderPollRunning=false,lastFolderPollAt=0;
 let companyEditorOpen=false,companyEditId="",companyDraft={cnpj:"",legalName:"",code:"",folderId:"",allocationsEnabled:false};
 let showInactiveCompanies=false;
 const initialCompetence=new Date();initialCompetence.setDate(1);initialCompetence.setMonth(initialCompetence.getMonth()-1);
@@ -105,17 +106,33 @@ const officeName=o=>o?.code==="REL GAV"?"GAV":o?.display_name||"Selecione o escr
 const officeLabel=()=>officeName(currentOffice());
 const officeSort={TTM:0,"DS CONTÁBIL":1,"REL GAV":2,AVULSOS:3};
 const supportsOfficeCatalog=()=>["DS CONTÁBIL","REL GAV"].includes(currentOffice()?.code||"");
-async function loadCompanyFolders(){
+async function loadCompanyFolders({forceRefresh=false}={}){
  const requested=officeId;
- companyFolders={officeId:requested,loaded:false,rootAvailable:false,items:[],notice:"",error:""};
+ const prior=companyFolders.officeId===requested?companyFolders:null;
+ if(!prior?.loaded)companyFolders={officeId:requested,loaded:false,rootAvailable:false,
+  items:[],notice:"",error:"",lastCheckedAt:null,stale:false};
  try{
-  const result=await invoke("gav-company-admin","folders",{officeId:requested});
-  if(requested===officeId)companyFolders={officeId:requested,loaded:true,rootAvailable:!!result.rootAvailable,
-   items:result.folders||[],notice:result.notice||"",error:""};
+  const result=await invoke("gav-company-admin","folders",{officeId:requested,forceRefresh});
+  if(requested===officeId)companyFolders={officeId:requested,loaded:true,
+   rootAvailable:!!result.rootAvailable,items:result.folders||[],
+   notice:result.notice||"",error:"",stale:!!result.stale,
+   lastCheckedAt:result.lastCheckedAt||null};
  }catch(e){
-  if(requested===officeId)companyFolders={officeId:requested,loaded:true,rootAvailable:false,
-   items:[],notice:"",error:e?.message||"Não foi possível consultar as pastas."};
+  if(requested===officeId)companyFolders={officeId:requested,loaded:true,
+   rootAvailable:prior?.rootAvailable||false,
+   items:prior?.items||[],notice:prior?.notice||"",
+   error:e?.message||"Não foi possível consultar as pastas.",
+   stale:true,lastCheckedAt:prior?.lastCheckedAt||null};
  }
+}
+async function refreshCompanyFoldersInView(){
+ if(folderPollRunning||!adminView()||view!=="companies"||companyEditorOpen||busy||document.hidden)return;
+ folderPollRunning=true;
+ try{
+  await loadCompanyFolders();
+  lastFolderPollAt=Date.now();
+  if(adminView()&&view==="companies"&&!companyEditorOpen&&!busy)render();
+ }finally{folderPollRunning=false}
 }
 async function loadOfficeFolders(){
  const requested=officeId;
@@ -542,12 +559,15 @@ function companiesPage(){
  const sorter=(a,b)=>(a.code||"").localeCompare(b.code||"","pt-BR",{numeric:true})||a.legal_name.localeCompare(b.legal_name,"pt-BR");
  const list=officeCompanies().slice().sort(sorter);
  const inactive=companies.filter(c=>c.office_id===officeId&&!c.is_active).slice().sort(sorter);
- const folder=companyFolders.officeId===officeId?companyFolders:{loaded:false,items:[],rootAvailable:false,notice:"",error:""};
+ const folder=companyFolders.officeId===officeId?companyFolders:{loaded:false,items:[],rootAvailable:false,notice:"",error:"",lastCheckedAt:null,stale:false};
  const unmatched=folder.items.filter(x=>!x.linkedCompanyId&&!x.retired);
  let out=title("Cadastro de empresas — "+officeLabel(),"Cadastre e organize as empresas que fazem parte da carteira ativa.");
  out+='<div class="gav-company-toolbar">'+officePicker()+'<div class="admin-actions"><button class="btn btn-dark" data-do="company-new">+ Nova empresa</button>'+
   '<button class="btn btn-line" data-do="company-reload-folders">Atualizar pastas do Drive</button></div></div>';
+ const when=folder.lastCheckedAt?new Date(folder.lastCheckedAt).toLocaleString("pt-BR",{dateStyle:"short",timeStyle:"short"}):"ainda não realizada";
  out+='<div class="card card-pad"><strong>'+list.length+' empresa(s) ativa(s)</strong>'+
+  '<p class="subtle" style="margin-top:8px"><strong>Descoberta automática do Drive: a cada 5 minutos.</strong> Última conferência: '+esc(when)+
+   '. Esta tela atualiza a lista enquanto estiver aberta. Pastas novas ficam aguardando cadastro e validação do CNPJ.</p>'+
   '<p class="subtle">Desativar retira a empresa da carteira, do Processamento e da sincronização, preservando documentos e pasta no Google Drive.</p>'+
   (folder.error?'<p class="gav-company-warning">'+esc(folder.error)+'</p>':"")+
   (folder.notice?'<p class="subtle">'+esc(folder.notice)+'</p>':"")+
@@ -1001,7 +1021,7 @@ async function handle(e){
   if(v==="recent")suggestDocumentPeriod();
   if(v==="processing"&&adminView())await run(loadProcessing);
   else if(v==="allocations"&&canUseAllocations())await run(async()=>{if(!allocations)throw Error("Módulo de alocações indisponível.");await allocations.load()});
-  else if(v==="companies"&&adminView()){if(companyFolders.officeId!==officeId||!companyFolders.loaded)await run(loadCompanyFolders);else render()}
+  else if(v==="companies"&&adminView())await run(()=>loadCompanyFolders({forceRefresh:true}));
   else render();return;
  }
  if(a==="company-toggle-inactive"){
@@ -1041,7 +1061,7 @@ async function handle(e){
   return;
  }
  if(a==="company-cancel"){companyEditorOpen=false;companyEditId="";render();return}
- if(a==="company-reload-folders"){if(adminView())await run(loadCompanyFolders);return}
+ if(a==="company-reload-folders"){if(adminView())await run(()=>loadCompanyFolders({forceRefresh:true}));return}
  if(a==="back"){resetSelection();listPage=0;view="home";cat="";year="ALL";month="ALL";navigationHistory.length=0;render();return}
  if(a==="cat"){resetSelection();listPage=0;navigationHistory.push({view,cat,year,month});cat=v;view="category";suggestDocumentPeriod(cat);render();return}
  if(a==="google"){await google();return}
@@ -1237,10 +1257,16 @@ async function handle(e){
  }
  if(a==="index"){await syncPilot({interactive:true});render();return}
 }
-document.addEventListener("visibilitychange",()=>{if(!document.hidden){void syncPilot();void checkPortalUpdate()}});
+document.addEventListener("visibilitychange",()=>{
+ if(!document.hidden){
+  void syncPilot();void checkPortalUpdate();
+  if(Date.now()-lastFolderPollAt>60*1000)void refreshCompanyFoldersInView();
+ }
+});
 window.addEventListener("focus",()=>{void checkPortalUpdate()});
 setInterval(()=>{void checkPortalUpdate()},4*60*1000);
 setInterval(()=>{if(!document.hidden)void syncPilot()},15*60*1000);
+setInterval(()=>{void refreshCompanyFoldersInView()},60*1000);
 sb.auth.onAuthStateChange((event,s)=>{if(event==="TOKEN_REFRESHED"&&s)session=s;if(event==="SIGNED_OUT"){resetSelection();pilotTestCredential=null;previewAsClient=false;clientDocs=[];clearPdfCache();role="";session=null;render()}});
 void checkPortalUpdate();
 await bootstrap();

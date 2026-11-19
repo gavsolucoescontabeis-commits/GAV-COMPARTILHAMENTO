@@ -1,6 +1,6 @@
 # GAV Compartilhar Docs — Portal seguro
 
-**Versão atual: v0.13.26 · Indicadores de INSS/FGTS clicáveis e verdes**
+**Versão atual: v0.13.27 · Descoberta automática de pastas do Drive**
 
 **Acesso permanente:** https://gavsolucoescontabeis-commits.github.io/GAV-COMPARTILHAMENTO/
 
@@ -181,3 +181,14 @@ O histórico de competências sem movimento permanece visível após uma reativa
 - **Sem segundo botão abaixo do retângulo**. Uma guia efetivamente encontrada continua verde como `✓ Encontrado` e não oferece uma marcação manual desnecessária.
 - Uma justificativa ativa com documento posteriormente localizado continua podendo ser desfeita, sem ocultar o arquivo de origem.
 - Mantém totalmente a segurança por empresa/competência, o backend `setObligationException`, os critérios de conclusão das obrigações, o fluxo de sincronização e o restante da interface aprovados. **Nenhuma alteração de banco de dados ou de arquivos do Google Drive**.
+
+
+## v0.13.27 — Descoberta automática de pastas no Drive (19/11/2026)
+
+- Separada a **descoberta de pastas novas** da sincronização dos documentos das empresas já vinculadas. Um novo agendamento `gav-drive-folder-discovery-5m` executa a cada 5 minutos no servidor, escaneando exclusivamente as três raízes aprovadas de TTM, DS Contábil e REL GAV. Nada é automaticamente cadastrado como empresa e nenhum documento é publicado ou removido por essa descoberta.
+- Edge Function `gav-folder-watch` verifica o token interno existente via RPC `gav_validate_drive_scheduler`, renova a credencial Google Drive e lista as pastas-filhas diretamente na raiz de cada escritório, com paginação e conferência de parentesco.
+- Registro do resultado nas tabelas protegidas `gav_drive_discovered_folders` e `gav_drive_discovery_status`: nome, ID do Drive, último momento encontrado, presente/ausente, data da última descoberta bem-sucedida e mensagem de falha quando houver. Erro de conexão nunca apaga o inventário anterior, cadastros ou arquivos. Apenas administrador autenticado pode consultar o catálogo pelo endpoint protegido `gav-company-admin`.
+- `gav-company-admin` usa inventário atualizado recentemente (até 8 minutos) e consulta direta o Drive em caso de lista desatualizada ou atualização manual. Se o Google estiver indisponível, mostra a última lista bem-sucedida com aviso explícito de que novas pastas podem não aparecer.
+- A tela **Empresas** da carteira selecionada agora mostra **Última conferência do Drive**, a periodicidade da detecção automática, e se atualiza de 60 em 60 segundos enquanto aberta e visível. Ao entrar na tela ou clicar **Atualizar pastas do Drive**, consulta imediatamente o Google. Nunca interromper cadastro em andamento para atualizar a tela.
+- Teste inicial no servidor em 19/11/2026, 17h41 BRT: **16 pastas da DS Contábil** detectadas; `039 IATZAKI`, `JESSICA` e `Norte Sul Balancas` ficaram sem vínculo ativo de empresa. O CNPJ/razão social ainda devem ser validados ao cadastrar.
+- Uma tentativa de conexão inicial falhou, a repetição obteve resposta 200 e listou pastas; portanto, não afirmar conexão Google permanentemente quebrada. Se falhas de renovação ocorrerem a cada 7 dias, verificar o status **Testing** na seção Audience do OAuth do Google Cloud; escopo Google Drive pode levar à expiração de refresh tokens em testes. Mudança para In production poderá exigir verificações, conforme políticas do Google.
