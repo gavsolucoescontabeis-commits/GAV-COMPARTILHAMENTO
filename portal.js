@@ -7,7 +7,7 @@ const sb=createClient(ROOT,PUB,{auth:{autoRefreshToken:true,persistSession:true,
 const logo="assets/logo-gav-sem-fundo.svg",lion="assets/leao-gav-sem-fundo.svg";
 const app=document.getElementById("app");
 
-const GAV_PORTAL_VERSION="0.13.28";
+const GAV_PORTAL_VERSION="0.13.29";
 let gavAvailableVersion="",gavVersionCheckRunning=false;
 const comparePortalVersions=(left,right)=>{
  const a=left.split(".").map(Number),b=right.split(".").map(Number);
@@ -90,7 +90,9 @@ const canUseAllocations=()=>!previewAsClient&&!passwordChangeRequired&&(
  adminView()?currentOffice()?.code==="TTM"&&officeCompanies().some(c=>allocationEnabledIds.has(c.id)):
  role==="client"&&allocationEnabledIds.has(selected)&&companies.some(c=>c.id===selected&&c.office_id===TTM_ALLOCATION_OFFICE_ID&&c.is_active)
 );
-const displayDocs=()=>previewAsClient?clientDocs:docs;
+const canUseExperience=()=>!passwordChangeRequired&&!previewAsClient&&
+  (role==="admin"||role==="client")&&!!selected;
+ const displayDocs=()=>previewAsClient?clientDocs:docs;
 let previewId="",previewLoading=false,downloadBusy="";
 const navigationHistory=[];
 const pdfCache=new Map();
@@ -162,7 +164,9 @@ async function publicActivation(action,body={}){
  return j;
 }
 const run=async task=>{busy=true;notice="";render();try{await task()}catch(e){notice=e.message||"Não foi possível concluir."}busy=false;render()};
-const allocations=window.GavAllocations?.({invoke,esc,notify:toastMessage,refresh:render,
+const experience=window.GavExperience?.({invoke,esc,notify:toastMessage,refresh:render,
+  context:()=>({selected})});
+ const allocations=window.GavAllocations?.({invoke,esc,notify:toastMessage,refresh:render,
  context:()=>({allowed:canUseAllocations(),admin:adminView(),ttmOfficeId:TTM_ALLOCATION_OFFICE_ID,selected,
   companies:(adminView()?officeCompanies():companies).map(c=>({...c,allocations_enabled:allocationEnabledIds.has(c.id)}))})});
 async function loadDocs(){
@@ -251,6 +255,7 @@ async function bootstrap(){
   }
   if(passwordChangeRequired){docs=[];view="home"}else await loadDocs();
   if(view==="allocations"&&canUseAllocations())await allocations?.load();
+   if(view==="experience"&&canUseExperience())await experience?.load();
   render();
   if(role==="admin")void syncPilot();
   if(role==="client"&&clientManaged&&!passwordChangeRequired)void pushInit({userId:session?.user?.id,invoke,render,notify:toastMessage});
@@ -311,7 +316,7 @@ function login(){
  if(activationToken)return invitationLogin();
  return `<div class="login-wrap"><section class="login-brand"><div>${brand()}</div><div><div class="gold-line"></div><div class="gav-lion-login"><img src="${lion}" alt="Símbolo GAV"></div><h1>Seus documentos.<br>Em um só lugar.</h1><p>Documentos originais organizados por empresa, competência e categoria, com acesso individual e protegido.</p></div><span class="login-foot">Compromisso, organização e responsabilidade.</span></section><section class="login-panel"><div class="eyebrow">GAV COMPARTILHAR DOCS · PORTAL SEGURO</div><h2>Bem-vindo!</h2>${notice?`<div class="error" style="display:block;margin-bottom:15px">${esc(notice)}</div>`:""}<p class="subtle">Entre com o CNPJ e a senha que você cadastrou.</p><form id="clientLogin"><div class="form-field"><label for="cnpj">CNPJ da empresa</label><input id="cnpj" class="input" placeholder="00.000.000/0000-00" autocomplete="username" required></div><div class="form-field"><label for="pwd">Senha</label><input id="pwd" class="input" type="password" autocomplete="current-password" required></div><button class="btn btn-dark login-action" type="submit">Acessar documentos</button></form><div style="margin-top:24px;border-top:1px solid #e3e3e3;padding-top:20px"><div class="subtle" style="font-size:12px;margin-bottom:10px">Acesso da administração GAV</div><button class="btn btn-line" data-do="google" ${busy?"disabled":""}>Entrar com Google · Administrador</button></div><p class="subtle" style="font-size:11px;margin-top:22px">Sua empresa precisa estar autorizada. No primeiro acesso, use o convite individual enviado pela GAV no WhatsApp. <button class="btn btn-line btn-small" data-do="activation-help" type="button">Primeiro acesso: criar minha senha</button> Para recuperar a senha, solicite à GAV.</p>${installButton()}</section></div>`;
 }
-const nav=()=>adminView()?[["offices","Escritórios"],["home","Início"],["processing","Processamento"],...(canUseAllocations()?[["allocations","Alocações"]]:[]),["drive","Google Drive"],["companies","Empresas"]]:clientManaged?[["home","Início"],...(canUseAllocations()?[["allocations","Alocações"]]:[]),["security","Minha senha"]]:[["home","Início"],...(canUseAllocations()?[["allocations","Alocações"]]:[])];
+const nav=()=>adminView()?[["offices","Escritórios"],["home","Início"],["processing","Processamento"],["experience","Experiência"],...(canUseAllocations()?[["allocations","Alocações"]]:[]),["drive","Google Drive"],["companies","Empresas"]]:clientManaged?[["home","Início"],["experience","Experiência"],...(canUseAllocations()?[["allocations","Alocações"]]:[]),["security","Minha senha"]]:[["home","Início"],["experience","Experiência"],...(canUseAllocations()?[["allocations","Alocações"]]:[])];
 function shell(){
  const firm=current(),navLinks=nav(),processingWide=adminView()&&view==="processing";
  const clientSwitch=role==="client"&&!previewAsClient&&companies.length>1&&!passwordChangeRequired?
@@ -660,7 +665,7 @@ function drivePage(){
  }).join("")}
  </div></div>`;
 }
-function content(){if(view==="companies"&&adminView())return companiesPage();if(clientManaged&&(passwordChangeRequired||view==="security"))return clientPasswordHtml();if(!companies.length)return title("Sem empresas autorizadas","O acesso está ativo, mas não há vínculo de empresa. Solicite liberação à GAV.");if(view==="offices"&&adminView())return officesPage();if(view==="companies"&&adminView())return companiesPage();if(view==="drive"&&adminView())return drivePage();if(view==="processing"&&adminView())return processingPage();if(view==="allocations"&&canUseAllocations())return allocations?allocations.page():title("Alocações","Carregamento indisponível.");if(view==="recent"||view==="category")return recent();return home()}
+function content(){if(view==="companies"&&adminView())return companiesPage();if(clientManaged&&(passwordChangeRequired||view==="security"))return clientPasswordHtml();if(!companies.length)return title("Sem empresas autorizadas","O acesso está ativo, mas não há vínculo de empresa. Solicite liberação à GAV.");if(view==="offices"&&adminView())return officesPage();if(view==="companies"&&adminView())return companiesPage();if(view==="drive"&&adminView())return drivePage();if(view==="processing"&&adminView())return processingPage();if(view==="allocations"&&canUseAllocations())return allocations?allocations.page():title("Alocações","Carregamento indisponível.");if(view==="experience"&&canUseExperience())return experience?experience.page():title("Experiência","Carregamento indisponível.");if(view==="recent"||view==="category")return recent();return home()}
 function toastMessage(message){
  document.querySelectorAll(".gav-toast").forEach(e=>e.remove());
  const node=document.createElement("div");
@@ -760,6 +765,7 @@ async function downloadPdf(id){
 function render(){
  app.innerHTML=role?shell():login();
  if(view==="allocations"&&canUseAllocations())allocations?.attach(app);
+ if(view==="experience"&&canUseExperience())experience?.attach(app);
  app.querySelectorAll("[data-do]").forEach(b=>b.addEventListener("click",handle));
  app.querySelectorAll("[data-check-id]").forEach(b=>b.addEventListener("change",()=>{
   if(b.checked)checkedDocs.add(b.dataset.checkId);else checkedDocs.delete(b.dataset.checkId);
@@ -876,6 +882,7 @@ async function changeOffice(id){
  const keepProcessing=view==="processing"&&adminView();
  if(keepProcessing)processingViewFilter="all";
  const keepCompanies=view==="companies"&&adminView();
+ const keepExperience=view==="experience"&&adminView();
  showInactiveCompanies=false;
  companyEditorOpen=false;companyEditId="";companyDraft={cnpj:"",legalName:"",code:"",folderId:"",allocationsEnabled:false};
  companyFolders={officeId:id,loaded:false,rootAvailable:false,items:[],notice:"",error:""};
@@ -883,13 +890,14 @@ async function changeOffice(id){
  clearPdfCache();officeId=id;
  try{sessionStorage.setItem("gav-selected-office",id)}catch(_e){}
  selected=officeCompanies()[0]?.id||"";
- view=keepProcessing?"processing":keepCompanies?"companies":"home";cat="";year="ALL";month="ALL";
+ view=keepProcessing?"processing":keepCompanies?"companies":keepExperience?"experience":"home";cat="";year="ALL";month="ALL";
  folderLookup={officeId:id,loaded:false,items:[],error:""};
  await run(async()=>{
   await loadDocs();
   await loadOfficeFolders();
   if(keepProcessing)await loadProcessing();
   if(keepCompanies)await loadCompanyFolders();
+  if(keepExperience)await experience?.load();
  });
 }
 async function changeCompany(id){
@@ -898,9 +906,10 @@ async function changeCompany(id){
  }
  if(!companies.some(c=>c.id===id))return;
  resetSelection();listPage=0;pilotTestCredential=null;previewAsClient=false;clientDocs=[];accessPanelOpen=false;accessStatus=null;clientCredential=null;clearPdfCache();
- selected=id;view="home";cat="";year="ALL";month="ALL";
+ const keepExperience=view==="experience";
+ selected=id;view=keepExperience?"experience":"home";cat="";year="ALL";month="ALL";
  if(role==="client")try{sessionStorage.setItem("gav-client-company",id)}catch(_e){}
- await run(async()=>{await loadDocs()});
+ await run(async()=>{await loadDocs();if(keepExperience)await experience?.load()});
 }
 async function saveClientPassword(e){
  e.preventDefault();
@@ -1048,6 +1057,7 @@ async function handle(e){
   if(v==="recent")suggestDocumentPeriod();
   if(v==="processing"&&adminView())await run(loadProcessing);
   else if(v==="allocations"&&canUseAllocations())await run(async()=>{if(!allocations)throw Error("Módulo de alocações indisponível.");await allocations.load()});
+  else if(v==="experience"&&canUseExperience())await run(async()=>{if(!experience)throw Error("Módulo de experiência indisponível.");await experience.load()});
   else if(v==="companies"&&adminView())await run(()=>loadCompanyFolders({forceRefresh:true}));
   else render();return;
  }

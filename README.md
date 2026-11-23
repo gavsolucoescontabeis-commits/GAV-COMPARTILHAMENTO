@@ -1,6 +1,6 @@
 # GAV Compartilhar Docs — Portal seguro
 
-**Versão atual: v0.13.28 · Cadastro e vínculo de empresa com controle de Folha**
+**Versão atual: v0.13.29 · Experiência de empregados por empresa**
 
 **Acesso permanente:** https://gavsolucoescontabeis-commits.github.io/GAV-COMPARTILHAMENTO/
 
@@ -202,3 +202,13 @@ O histórico de competências sem movimento permanece visível após uma reativa
 - Em caso de erro ao Salvar, o formulário mantém CNPJ, razão social, código, pasta e configuração da Folha. O erro aparece junto dos campos; o usuário não perde seu trabalho.
 - Após cadastro confirmado, o portal atualiza a lista de Empresas e indexa o Drive. Se a indexação falhar, o cadastro continua salvo e o aplicativo explica qual etapa deve ser repetida. A marcação do serviço de Folha permite aparecer no Processamento mesmo que ainda não haja documentos indexados.
 - Nenhum registro de empresa foi criado ou alterado manualmente para contornar o problema.
+
+
+## v0.13.29 — Experiência de empregados por empresa (23/11/2026)
+
+- Nova aba **Experiência** para cada cliente autenticado e também administração GAV. A consulta retorna exclusivamente empregados de empresas autorizadas no login via gav_memberships; função `gav-experience` verifica empresa ativa, usuário e senha definitiva. CPF e salário não são compartilhados.
+- Importadas as datas de admissão e rescisão dos relatórios `RELATÓRIO FOLHA 102026.pdf` existentes no Drive, relacionados aos arquivos já indexados pela GAV. 206 linhas de empregados únicas, incluindo desligamentos, em 28 relatórios; fonte original rastreada por `source_document_id`.
+- A contagem de dias é **inclusiva**: admissão = dia 1; vencimentos estimados no dia 45 (admissão +44) e no dia 90 (admissão +89). Não confundir previsão com contrato de experiência efetivamente firmado; folha isolada não contém modalidade contratual. Campos `contract_status` e dias individuais permitem futura conferência manual antes de declarar um prazo confirmado.
+- Interface sem formulário de cliente, com busca por empregado/código, status visuais, **Em andamento**, **Próximos 30 dias**, **Todos** e **Histórico**. Rescindidos ou prazos de referência encerrados permanecem visíveis apenas em Todos/Histórico.
+- Dados restritos por empresa na API, com RLS sem leitura direta por cliente; nenhuma informação da TTM aparece no acesso de empresa da DS Contábil, e vice-versa. O login que tem várias empresas autorizadas pode alternar sem misturar listas.
+- Esta carga inicial usa outubro de 2026. Para contratos admitidos depois da competência processada, será necessária nova carga a partir de relatórios de folha posteriores; o botão `Atualizar consulta` relê o banco, não realiza extração automática de um PDF novo. Não prometer atualização de novos empregados sem implementar importação automatizada.
