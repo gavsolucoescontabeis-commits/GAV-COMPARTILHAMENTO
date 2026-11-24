@@ -1,5 +1,5 @@
-/* GAV Compartilhar v0.13.29 — consulta de experiência por empresa. */
-window.GavExperience=({invoke,esc,refresh,notify,context})=>{
+/* GAV Compartilhar v0.13.30 — consulta de experiência por empresa. */
+export function createExperience({invoke,esc,refresh,notify,context}){
  let data=null,loadedFor="",loading=false,error="",filter="current",search="";
  const calc=(iso,days)=>{
   const m=String(iso||"").match(/^(\d{4})-(\d{2})-(\d{2})$/);
@@ -38,7 +38,8 @@ window.GavExperience=({invoke,esc,refresh,notify,context})=>{
  }
  function page(){
   const id=company();
-  const head='<div class="gav-exp-head"><div><h1>Experiência dos empregados</h1><p>Consulte facilmente os vencimentos de 45 e 90 dias.</p></div>'+
+  const head='<button type="button" class="btn btn-line btn-small gav-exp-back" data-do="back">← Voltar aos meus documentos</button>'+
+   '<div class="gav-exp-head"><div><h1>Experiência dos empregados</h1><p>Consulte facilmente os vencimentos de 45 e 90 dias.</p></div>'+
    '<button type="button" class="btn btn-line btn-small" data-exp-action="reload" '+(loading?'disabled':'')+'>Atualizar consulta</button></div>';
   if(!id)return head+'<div class="card card-pad">Escolha uma empresa para consultar.</div>';
   if(loadedFor!==id)return head+'<div class="card card-pad">'+(loading?'Carregando empregados…':'Selecione Atualizar consulta para carregar os empregados.')+'</div>';
@@ -100,4 +101,4 @@ window.GavExperience=({invoke,esc,refresh,notify,context})=>{
   });
  }
  return {load,page,attach};
-};
+}

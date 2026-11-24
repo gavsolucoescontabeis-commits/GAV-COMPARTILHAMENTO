@@ -1,5 +1,5 @@
 {
-  "version": "0.13.29",
-  "release": "2026-11-23",
-  "notes": "Consulta individual de experiência 45+45 dias para clientes com datas extraídas das folhas de outubro/2026, filtros e alertas de vencimento."
+  "version": "0.13.30",
+  "release": "2026-11-24",
+  "notes": "Experiência acessada no sétimo cartão de Meus Documentos na mesma fileira, integração obrigatória ao carregamento do portal, mantendo listas isoladas por empresa."
 }

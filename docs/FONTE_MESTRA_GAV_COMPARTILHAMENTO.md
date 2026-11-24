@@ -351,3 +351,14 @@ Manter segurança, layout aprovado, Drive, PDFs de origem e identidade azul-mari
 - Interface sem formulário de cliente, com busca por empregado/código, status visuais, **Em andamento**, **Próximos 30 dias**, **Todos** e **Histórico**. Rescindidos ou prazos de referência encerrados permanecem visíveis apenas em Todos/Histórico.
 - Dados restritos por empresa na API, com RLS sem leitura direta por cliente; nenhuma informação da TTM aparece no acesso de empresa da DS Contábil, e vice-versa. O login que tem várias empresas autorizadas pode alternar sem misturar listas.
 - Esta carga inicial usa outubro de 2026. Para contratos admitidos depois da competência processada, será necessária nova carga a partir de relatórios de folha posteriores; o botão `Atualizar consulta` relê o banco, não realiza extração automática de um PDF novo. Não prometer atualização de novos empregados sem implementar importação automatizada.
+
+---
+
+## v0.13.30 — Experiência integrada em Meus Documentos (24/11/2026)
+
+- Corrigido o problema de carregamento que apresentava `Módulo de experiência indisponível`: `experience.js` agora exporta `createExperience` como módulo ECMAScript e `portal.js` **importa diretamente** a função, deixando de depender de um global opcional `window.GavExperience` que podia não existir na sessão. Uma falha de carregamento não é mais escondida por fallback genérico.
+- Removido o atalho independente de **Experiência** da barra lateral e da navegação móvel. A consulta está **dentro da empresa selecionada → Meus Documentos → Categorias**, como **sétimo cartão** junto às seis categorias originais.
+- O conjunto de sete cartões fica em **uma única linha**, mais compacto, sem criar segunda fileira. Em telas pequenas é possível deslizar horizontalmente na mesma fileira, mantendo textos legíveis.
+- Ao clicar, a própria consulta exibe um botão **Voltar aos meus documentos**. O mecanismo continua usando a empresa selecionada e preserva a autorização individual do cliente no `gav-experience`. Nenhuma publicação de PDF é necessária para abrir a consulta da empresa.
+- Banco verificado: 206 empregados de 28 empresas referentes à folha de outubro/2026, com 21 rescisões identificadas. O cálculo 45+45 é uma projeção, e a base não se atualiza automaticamente a partir de novas folhas até a importação mensal estar implementada.
+- Mantidos os módulos Processamento, Google Drive, Alocações e documentos existentes, além das regras de acesso. A entrada para a consulta foi testada por código; o acesso real com login de cliente ainda requer validação interativa.
