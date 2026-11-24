@@ -362,3 +362,12 @@ Manter segurança, layout aprovado, Drive, PDFs de origem e identidade azul-mari
 - Ao clicar, a própria consulta exibe um botão **Voltar aos meus documentos**. O mecanismo continua usando a empresa selecionada e preserva a autorização individual do cliente no `gav-experience`. Nenhuma publicação de PDF é necessária para abrir a consulta da empresa.
 - Banco verificado: 206 empregados de 28 empresas referentes à folha de outubro/2026, com 21 rescisões identificadas. O cálculo 45+45 é uma projeção, e a base não se atualiza automaticamente a partir de novas folhas até a importação mensal estar implementada.
 - Mantidos os módulos Processamento, Google Drive, Alocações e documentos existentes, além das regras de acesso. A entrada para a consulta foi testada por código; o acesso real com login de cliente ainda requer validação interativa.
+
+---
+
+## v0.13.31 — Recuperação do portal após falha de carregamento (24/11/2026)
+
+- Removida a dependência obrigatória do arquivo adicional `experience.js` na inicialização. A função de Experiência foi incorporada ao `portal.js`; o módulo principal não precisa mais buscar esse arquivo adicional para abrir. Isso evita uma falha total por indisponibilidade do novo arquivo.
+- Mantidos o sétimo cartão Experiência na mesma linha de Meus Documentos, cálculos e autorização individual por empresa; nenhuma alteração nos documentos, cadastros ou banco.
+- Versionado o `index.html` para carregar `portal.js?v=0.13.31`, impedindo reaproveitamento da importação anterior. `experience.js` permanece no repositório como fonte original, porém não é importado pelo site.
+- A causa específica no navegador do usuário ainda precisa de confirmação pelo console de erros; esta correção elimina a dependência nova introduzida na v0.13.30 que podia bloquear todo o portal.

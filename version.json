@@ -1,5 +1,5 @@
 {
-  "version": "0.13.30",
+  "version": "0.13.31",
   "release": "2026-11-24",
-  "notes": "Experiência acessada no sétimo cartão de Meus Documentos na mesma fileira, integração obrigatória ao carregamento do portal, mantendo listas isoladas por empresa."
+  "notes": "Correção de inicialização do portal: módulo Experiência integrado diretamente ao arquivo principal para não derrubar o acesso a todos os documentos por falha de dependência."
 }
