@@ -1,6 +1,6 @@
 # GAV Compartilhar Docs — Portal seguro
 
-**Versão atual: v0.13.31 · Recuperação do portal e módulo Experiência integrado**
+**Versão atual: v0.13.32 · Experiência sem aviso no rodapé**
 
 **Acesso permanente:** https://gavsolucoescontabeis-commits.github.io/GAV-COMPARTILHAMENTO/
 
@@ -229,3 +229,9 @@ O histórico de competências sem movimento permanece visível após uma reativa
 - Mantidos o sétimo cartão Experiência na mesma linha de Meus Documentos, cálculos e autorização individual por empresa; nenhuma alteração nos documentos, cadastros ou banco.
 - Versionado o `index.html` para carregar `portal.js?v=0.13.31`, impedindo reaproveitamento da importação anterior. `experience.js` permanece no repositório como fonte original, porém não é importado pelo site.
 - A causa específica no navegador do usuário ainda precisa de confirmação pelo console de erros; esta correção elimina a dependência nova introduzida na v0.13.30 que podia bloquear todo o portal.
+
+## v0.13.32 — Consulta de Experiência sem aviso de rodapé (25/11/2026)
+
+- Removida a caixa **Importante** situada abaixo da lista de empregados, inclusive o texto orientando procurar a contabilidade.
+- Mantidos integralmente os cálculos inclusivos 45 + 45 dias, admissões, rescisões, filtros, autenticação e acesso por empresa. Nenhuma alteração no banco ou nos documentos.
+- Atualizada também a fonte independente `experience.js`, ainda que o portal utilize a versão integrada em `portal.js`.

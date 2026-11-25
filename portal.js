@@ -80,13 +80,8 @@ function createExperience({invoke,esc,refresh,notify,context}){
   const empty=search?'Nenhum empregado corresponde à pesquisa.':
    filter==='current'?'Sem vencimentos em andamento nos relatórios disponíveis. Use Todos ou Histórico para consultar empregados.':
    filter==='soon'?'Nenhum vencimento previsto nos próximos 30 dias.':'Nenhum empregado nesta lista.';
-  const latest=all.length?Math.max(...all.map(x=>x.source_year*100+x.source_month)):0;
-  const source=latest?String(latest%100).padStart(2,'0')+'/'+Math.floor(latest/100):'não disponível';
-  const note='<div class="gav-exp-note"><strong>Importante:</strong> os vencimentos são calculados como referência de 45 + 45 dias corridos, incluindo a data de admissão. '+
-   'Informações extraídas da folha (última competência consultada: '+esc(source)+'). '+
-   'A folha não confirma o tipo de contrato, a prorrogação nem situações posteriores. Para decisões trabalhistas, confira o contrato individual com a contabilidade.</div>';
   return head+totals+tools+(error?'<div class="gav-exp-error">'+esc(error)+'</div>':'')+
-   '<div class="gav-exp-list">'+(cards||'<div class="gav-exp-empty">'+esc(empty)+'</div>')+'</div>'+note;
+   '<div class="gav-exp-list">'+(cards||'<div class="gav-exp-empty">'+esc(empty)+'</div>')+'</div>';
  }
  function attach(root){
   root.querySelectorAll('[data-exp-action]').forEach(btn=>btn.addEventListener('click',()=>{
@@ -113,7 +108,7 @@ const sb=createClient(ROOT,PUB,{auth:{autoRefreshToken:true,persistSession:true,
 const logo="assets/logo-gav-sem-fundo.svg",lion="assets/leao-gav-sem-fundo.svg";
 const app=document.getElementById("app");
 
-const GAV_PORTAL_VERSION="0.13.31";
+const GAV_PORTAL_VERSION="0.13.32";
 let gavAvailableVersion="",gavVersionCheckRunning=false;
 const comparePortalVersions=(left,right)=>{
  const a=left.split(".").map(Number),b=right.split(".").map(Number);
