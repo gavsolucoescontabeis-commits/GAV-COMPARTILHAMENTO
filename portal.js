@@ -100,7 +100,7 @@ function createExperience({invoke,esc,refresh,notify,context}){
 
 import {createClient} from "https://esm.sh/@supabase/supabase-js@2.76.1";
 import {pushCard,pushInit,pushToggle,pushLogout} from "./portal-push.js?v=0.13.17";
-import {buildProcessingPage} from "./portal-processing.js?v=0.13.26";
+import {buildProcessingPage} from "./portal-processing.js?v=0.13.33";
 /* Experiência agora integrada ao próprio portal: carregamento independente. */
 const ROOT="https://kiunegfjbfhvvlkxqvos.supabase.co";
 const PUB="sb_publishable_QpDD6nZEdRPtvOeJCSOZ9A_FMaA2Za7";
@@ -108,7 +108,7 @@ const sb=createClient(ROOT,PUB,{auth:{autoRefreshToken:true,persistSession:true,
 const logo="assets/logo-gav-sem-fundo.svg",lion="assets/leao-gav-sem-fundo.svg";
 const app=document.getElementById("app");
 
-const GAV_PORTAL_VERSION="0.13.32";
+const GAV_PORTAL_VERSION="0.13.33";
 let gavAvailableVersion="",gavVersionCheckRunning=false;
 const comparePortalVersions=(left,right)=>{
  const a=left.split(".").map(Number),b=right.split(".").map(Number);

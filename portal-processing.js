@@ -1,4 +1,4 @@
-/* GAV Compartilhar v0.13.26 — blocos INSS e FGTS clicáveis, verde quando justificados. */
+/* GAV Compartilhar v0.13.33 — 13º 1ª parcela em azul; sem movimento em verde. */
 export function buildProcessingPage({data,officeLabel,officePicker,processingYear,processingMonth,filter,M,esc,fmt,title}){
  const info=data||{loaded:false,companies:[],total:0,concluded:0,pending:0,withoutMovement:0};
  const entries=info.companies||[];
@@ -48,18 +48,27 @@ export function buildProcessingPage({data,officeLabel,officePicker,processingYea
   const action=c.serviceKey==="PARCELAMENTOS"?"":inactive?
    (c.inactivityActive?'<button type="button" class="gav-process-toggle" data-do="processing-resume" data-val="'+esc(c.id)+'">Reativar</button>':""):
    !done?'<button type="button" class="gav-process-toggle" data-do="processing-inactive" data-val="'+esc(c.id)+'">Sem movimento</button>':"";
-  const state=inactive?"neutral":done?"found":"pending";
-  const description=inactive?"Controle interno":done?"Documentação localizada":"Falta concluir obrigações";
-  return '<div class="gav-process-result">'+indicator(state,(inactive?'○ ':done?'✓ ':'• ')+name,description)+
+  const state=inactive?"found":done?"found":"pending";
+  const description=inactive?"Competência sem movimento":done?"Documentação localizada":"Falta concluir obrigações";
+  return '<div class="gav-process-result">'+indicator(state,(inactive?'✓ ':done?'✓ ':'• ')+name,description)+
    action+'</div>';
  };
+ const isFirst13Receipt=doc=>{
+  if(processingMonth!==13||!doc?.name)return false;
+  const name=String(doc.name).normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase();
+  return /(?:^|\s)(?:1\s*(?:A|O|ª|º)?|PRIMEIR[AO])\s*PARC(?:ELA)?(?:\s|$)/.test(name);
+ };
  const payrollCell=c=>{
+  // Sem movimento é uma situação administrativa resolvida, não documento encontrado.
+  if(c.status==="SEM_MOVIMENTO")return indicator("found","✓ Sem movimento","Competência sem movimento");
   const ev=c.evidence||{},receipt=ev.payrollReceipt,report=ev.payrollReport;
   const detailHint=[
    "Recibos: "+(receipt?.name||"Não localizado"),
    "Relatório Folha: "+(report?.name||"Não localizado")
   ].join(" | ");
   if(receipt&&report)return indicator("found","✓ Encontrados","Recibos + Relatório Folha",detailHint);
+  if(receipt&&isFirst13Receipt(receipt))
+   return indicator("advance","◐ Incompleto","✓ Recibo da 1ª parcela salvo",detailHint);
   if(receipt)return indicator("pending","◐ Incompleto","Falta relatório",detailHint);
   if(report)return indicator("pending","◐ Incompleto","Faltam recibos",detailHint);
   return indicator("pending","— Pendente","Faltam recibos e relatório",detailHint);
@@ -70,8 +79,8 @@ export function buildProcessingPage({data,officeLabel,officePicker,processingYea
   const inactive=c.status==="SEM_MOVIMENTO";
   // Guia encontrada: permanece como documento, sem oferecer marcação desnecessária.
   // Se já existia uma justificativa, o mesmo retângulo permite desfazê-la.
+  if(inactive)return indicator("found","✓ Sem movimento","Competência sem movimento");
   if(doc&&!flagged)return mark(doc);
-  if(inactive&&!flagged)return mark(null);
   const label=isInss?"INSS zerado":"FGTS sem guia";
   const action=flagged?"Desfazer "+label:"Marcar "+label;
   const state=doc?"found":flagged?"justified":"pending";
@@ -88,6 +97,7 @@ export function buildProcessingPage({data,officeLabel,officePicker,processingYea
     '<small class="gav-process-indicator-detail">'+esc(detail)+'</small></button>';
  };
  const receiptGps=c=>{
+  if(c.status==="SEM_MOVIMENTO")return indicator("found","✓ Sem movimento","Competência sem movimento");
   const ev=c.evidence||{};
   if(!ev.dctf&&!ev.gps)return mark(null);
   if(ev.dctf&&ev.gps)return indicator("found","✓ Encontrados","DCTFWeb + GPS",
@@ -97,7 +107,7 @@ export function buildProcessingPage({data,officeLabel,officePicker,processingYea
  const open=c=>'<div><button type="button" class="btn btn-line btn-small" data-do="pick" data-val="'+esc(c.id)+'">Abrir</button></div>';
  const folharow=c=>{
   const ev=c.evidence||{};
-  return '<div class="gav-process-row gav-process-payroll-row">'+companyCell(c)+
+  return '<div class="gav-process-row gav-process-payroll-row'+(c.status==="SEM_MOVIMENTO"?" is-without-movement":"")+'">'+companyCell(c)+
    '<div>'+payrollCell(c)+'</div><div>'+obligationCell(c,"INSS")+'</div><div>'+obligationCell(c,"FGTS")+'</div>'+
    '<div>'+receiptGps(c)+'</div>'+statusCell(c)+open(c)+'</div>';
  };
@@ -131,7 +141,7 @@ export function buildProcessingPage({data,officeLabel,officePicker,processingYea
    (selected===f.id?' is-active':'')+'" aria-pressed="'+(selected===f.id)+'">'+
    esc(f.name)+' <strong>'+f.count+'</strong></button>').join("")+'</div>';
  html+='<div class="card gav-process-table gav-process-table-scroll"><div class="gav-process-row gav-process-header gav-process-payroll-row">'+
-  '<span>Empresa</span><span>Recibos / Relatório Folha<small>Ambos necessários</small></span>'+
+  '<span>Empresa</span><span>Recibos / Relatório Folha<small>'+(processingMonth===13?"1ª parcela destacada":"Ambos necessários")+'</small></span>'+
   '<span>DARF de INSS</span><span>FGTS mensal</span><span>Recibo DCTFWeb<small>ou GPS</small></span>'+
   '<span>Situação das obrigações</span><span>Abrir</span></div>'+
   (visible.length?visible.map(folharow).join(""):'<div class="gav-process-empty">Nenhuma folha nesta seleção. Escolha outro filtro ou competência.</div>')+'</div></section>';

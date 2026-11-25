@@ -1,6 +1,6 @@
 # GAV Compartilhar Docs — Portal seguro
 
-**Versão atual: v0.13.32 · Experiência sem aviso no rodapé**
+**Versão atual: v0.13.33 · 13º primeira parcela destacada e Sem movimento verde**
 
 **Acesso permanente:** https://gavsolucoescontabeis-commits.github.io/GAV-COMPARTILHAMENTO/
 
@@ -235,3 +235,12 @@ O histórico de competências sem movimento permanece visível após uma reativa
 - Removida a caixa **Importante** situada abaixo da lista de empregados, inclusive o texto orientando procurar a contabilidade.
 - Mantidos integralmente os cálculos inclusivos 45 + 45 dias, admissões, rescisões, filtros, autenticação e acesso por empresa. Nenhuma alteração no banco ou nos documentos.
 - Atualizada também a fonte independente `experience.js`, ainda que o portal utilize a versão integrada em `portal.js`.
+
+
+## v0.13.33 — Controle da Folha: 13º 1ª parcela e Sem movimento (25/11/2026)
+
+- Na competência **13º**, se existir recibo da **1ª parcela** (nome com "1ª PARC" ou "PRIMEIRA PARCELA") e não existir relatório de folha correspondente, o retângulo **Recibos / Relatório Folha** fica **azul** e informa **"◐ Incompleto" + "✓ Recibo da 1ª parcela salvo"**. É distinguível das pendências amarelas, sem declarar que a segunda parcela já existe.
+- Quando existirem recibo e relatório, continua o indicador verde "Encontrados" aprovado; quando não houver recibo da primeira parcela reconhecido, permanecem os critérios e cores anteriores. Nenhuma marcação manual adicional.
+- Ao registrar **Sem movimento** para a empresa/competência, todos os indicadores da linha ficam **verdes**, incluindo Recibos/Relatório, INSS, FGTS, DCTFWeb/GPS e Situação das obrigações, com o texto explícito **"✓ Sem movimento"**. A linha também tem fundo verde-claro e o botão **Reativar** permanece operacional.
+- **Sem movimento não cria documentos, não gera nem confirma pagamentos e não altera o status do banco:** continua `SEM_MOVIMENTO` para preservar a trilha administrativa e o controle diferenciado. A mudança é somente de apresentação. Ao reativar, a conferência volta às evidências existentes.
+- Regra de sincronização com Drive, classificação de PDF, outras competências, obrigações, permissões de clientes e módulos aprovados não alterados.

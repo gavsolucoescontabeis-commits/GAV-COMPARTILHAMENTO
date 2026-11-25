@@ -489,3 +489,16 @@
  }
  .cat-grid.gav-cat-grid-seven .cat-name{font-size:12px}
 }
+
+/* v0.13.33 — competência 13º: recibo da 1ª parcela confirmado, controle ainda incompleto */
+.gav-processing-fullscreen .gav-process-indicator.is-advance{
+ background:#e7f2fb;border-color:#8bb8d7;color:#205878;
+}
+/* Sem movimento: resolução administrativa verde em TODAS as colunas sem simular guias pagas */
+.gav-processing-fullscreen .gav-process-row.gav-process-payroll-row.is-without-movement,
+.gav-processing-fullscreen .gav-process-row.gav-process-payroll-row.is-without-movement:nth-child(odd){
+ background:#f1faf4;
+}
+.gav-processing-fullscreen .gav-process-row.gav-process-payroll-row.is-without-movement:hover{
+ background:#e9f7ee;
+}
