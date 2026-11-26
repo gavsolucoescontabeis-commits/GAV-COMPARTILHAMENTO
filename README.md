@@ -1,6 +1,6 @@
 # GAV Compartilhar Docs — Portal seguro
 
-**Versão atual: v0.13.33 · 13º primeira parcela destacada e Sem movimento verde**
+**Versão atual: v0.13.34 · Status de experiência encerrada mais claro**
 
 **Acesso permanente:** https://gavsolucoescontabeis-commits.github.io/GAV-COMPARTILHAMENTO/
 
@@ -244,3 +244,8 @@ O histórico de competências sem movimento permanece visível após uma reativa
 - Ao registrar **Sem movimento** para a empresa/competência, todos os indicadores da linha ficam **verdes**, incluindo Recibos/Relatório, INSS, FGTS, DCTFWeb/GPS e Situação das obrigações, com o texto explícito **"✓ Sem movimento"**. A linha também tem fundo verde-claro e o botão **Reativar** permanece operacional.
 - **Sem movimento não cria documentos, não gera nem confirma pagamentos e não altera o status do banco:** continua `SEM_MOVIMENTO` para preservar a trilha administrativa e o controle diferenciado. A mudança é somente de apresentação. Ao reativar, a conferência volta às evidências existentes.
 - Regra de sincronização com Drive, classificação de PDF, outras competências, obrigações, permissões de clientes e módulos aprovados não alterados.
+
+## v0.13.34 — Texto do status da experiência (26/11/2026)
+
+- Substituído **“Prazo de referência encerrado”** por **“Prazo de experiência encerrado”** na consulta individual dos clientes, sem alteração dos critérios de contagem, datas, rescisões, filtros, permissões e documentos.
+- Atualizadas ambas as fontes (`portal.js` integrado e `experience.js` histórico) para manter consistência.

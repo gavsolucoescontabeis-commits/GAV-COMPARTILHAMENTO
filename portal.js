@@ -65,7 +65,7 @@ function createExperience({invoke,esc,refresh,notify,context}){
    let cls='normal',status='Em acompanhamento';
    if(w.dismissed){cls='archive';status='Rescisão registrada'}
    else if(w.contract_status==='NAO_APLICAVEL'){cls='archive';status='Não aplicável'}
-   else if(w.ended){cls='archive';status='Prazo de referência encerrado'}
+   else if(w.ended){cls='archive';status='Prazo de experiência encerrado'}
    else if(w.due<=7){cls='urgent';status='Prazo próximo'}
    else if(w.due<=30){cls='attention';status='Acompanhar'}
    const cell=(label,value,sub)=>'<div class="gav-exp-date"><small>'+label+'</small><strong>'+esc(value)+'</strong>'+(sub?'<span>'+esc(sub)+'</span>':'')+'</div>';
@@ -108,7 +108,7 @@ const sb=createClient(ROOT,PUB,{auth:{autoRefreshToken:true,persistSession:true,
 const logo="assets/logo-gav-sem-fundo.svg",lion="assets/leao-gav-sem-fundo.svg";
 const app=document.getElementById("app");
 
-const GAV_PORTAL_VERSION="0.13.33";
+const GAV_PORTAL_VERSION="0.13.34";
 let gavAvailableVersion="",gavVersionCheckRunning=false;
 const comparePortalVersions=(left,right)=>{
  const a=left.split(".").map(Number),b=right.split(".").map(Number);

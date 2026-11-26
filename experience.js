@@ -65,7 +65,7 @@ export function createExperience({invoke,esc,refresh,notify,context}){
    let cls='normal',status='Em acompanhamento';
    if(w.dismissed){cls='archive';status='Rescisão registrada'}
    else if(w.contract_status==='NAO_APLICAVEL'){cls='archive';status='Não aplicável'}
-   else if(w.ended){cls='archive';status='Prazo de referência encerrado'}
+   else if(w.ended){cls='archive';status='Prazo de experiência encerrado'}
    else if(w.due<=7){cls='urgent';status='Prazo próximo'}
    else if(w.due<=30){cls='attention';status='Acompanhar'}
    const cell=(label,value,sub)=>'<div class="gav-exp-date"><small>'+label+'</small><strong>'+esc(value)+'</strong>'+(sub?'<span>'+esc(sub)+'</span>':'')+'</div>';
